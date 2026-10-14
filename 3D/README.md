@@ -25,13 +25,19 @@ Godot, Unity, Unreal, Blender, Three.js, and other modern tools.
 | `alternatives/option-03-kenney-graveyard/` | Rejected comparison pack retained for reference | 91 |
 | `alternatives/option-04-kenney-platformer/` | Rejected comparison pack retained for reference | 153 |
 | `alternatives/option-05-kenney-mini-characters/` | Rejected comparison pack retained for reference | 26 |
+| `character-tests/quaternius-universal-base-standard/` | Sleek rigged base bodies plus modular hair test pieces | 10 |
 
-Total: **1,027 models**.
+Total: **1,037 models**.
 
 The original blocky set and three Kenney alternatives remain available for comparison,
 but the five KayKit collections in [`alternatives/`](alternatives/) are the recommended
 non-Minecraft-like, non-Kenney direction. Each shortlisted option has its own models,
 preview gallery, source, license, and decision notes.
+
+The current sleek-character test is the free Quaternius Standard pack in
+[`character-tests/quaternius-universal-base-standard/`](character-tests/quaternius-universal-base-standard/).
+The matching environment direction is documented in
+[`research/ARCHITECTURE_SHORTLIST.md`](research/ARCHITECTURE_SHORTLIST.md).
 
 ## Finding the right model
 
@@ -62,7 +68,7 @@ new folder, copy the corresponding `Textures/` folder too.
 
 ## Licensing and provenance
 
-All models and previews in this folder come from Kenney or KayKit and are released
+All models and previews in this folder come from Kenney, KayKit, or Quaternius and are released
 under **Creative Commons Zero (CC0 1.0)**. They may be used, changed, and distributed
 for personal, educational, or commercial purposes. Attribution is appreciated but is
 not required.

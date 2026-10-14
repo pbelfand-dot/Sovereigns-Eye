@@ -68,6 +68,11 @@ COLLECTIONS = {
         "license": "alternatives/option-05-kaykit-halloween/LICENSE.txt",
         "preview_root": "alternatives/option-05-kaykit-halloween/previews",
     },
+    "quaternius-universal-base-standard": {
+        "source": "https://quaternius.com/packs/universalbasecharacters.html",
+        "license": "character-tests/quaternius-universal-base-standard/LICENSE.txt",
+        "preview_root": "character-tests/quaternius-universal-base-standard/previews",
+    },
 }
 
 
@@ -100,6 +105,11 @@ def collection_for(path: Path) -> tuple[str, str]:
     relative = path.relative_to(ASSET_ROOT)
     if relative.parts[0] == "alternatives" and relative.parts[2] == "models":
         return relative.parts[1], "alternative"
+    if relative.parts[:2] == (
+        "character-tests",
+        "quaternius-universal-base-standard",
+    ):
+        return "quaternius-universal-base-standard", relative.parts[3]
     if relative.parts[:2] == ("characters", "blocky"):
         return "blocky-characters", "characters"
     if relative.parts[:2] == ("environments", "castle-kit"):
