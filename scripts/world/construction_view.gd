@@ -20,6 +20,8 @@ var _steps := 14
 var _shown := -1
 var _pieces: Array = []      # [module, Transform3D] sorted bottom-up
 var _top := 4.0
+## Pieces standing from the start (an upgrade keeps the ground floor).
+var _kept := 0
 var _structure: MeshInstance3D
 var _scaffold: MeshInstance3D
 var _stakes: Node3D
@@ -34,12 +36,23 @@ func setup(s: ConstructionSite) -> void:
 	rotation.y = b.rotation
 	_steps = maxi(2, int(TerritorySystem.section("construction").get("visual_steps", 14)))
 	_top = float(b.type_def().get("wall_height", 3.0)) + 2.0
+	var tier := s.target_tier if s.is_upgrade() else b.tier
 	if VillageKit.has_prefab(b.type):
-		var p := VillageKit.prefab(b.type, b.variant)
+		var p := VillageKit.prefab(b.type, b.variant, tier)
 		_pieces = (p.get("parts", []) as Array).duplicate()
 		_pieces.sort_custom(func(x: Array, y: Array) -> bool: return piece_order(x) < piece_order(y))
 		_top = float(p.get("height", _top))
-	_build_ground()
+		if s.is_upgrade():
+			# The floors the home already has stay; the roof comes off.
+			var walls_top := VillageKit.wall_height(b.type, b.variant, b.tier)
+			for part: Array in _pieces:
+				if (part[1] as Transform3D).origin.y < walls_top - 0.01:
+					_kept += 1
+	if not s.is_upgrade():
+		_build_ground()
+	else:
+		_stakes = Node3D.new()
+		add_child(_stakes)
 	_build_piles()
 	_structure = MeshInstance3D.new()
 	_structure.name = "Structure"
@@ -56,13 +69,13 @@ static func piece_order(part: Array) -> float:
 	return snappedf(o.y, 0.5) * 1000.0 + fposmod(atan2(o.z, o.x), TAU)
 
 
-## How many pieces are standing at this progress.
-static func pieces_shown(progress: float, total: int) -> int:
-	if progress < STAKE_UNTIL:
-		return 0
+## How many pieces are standing at this progress (`kept` stand from the start).
+static func pieces_shown(progress: float, total: int, kept: int = 0) -> int:
 	if progress >= 1.0:
 		return total
-	return clampi(ceili((progress - STAKE_UNTIL) / (1.0 - STAKE_UNTIL) * total), 1, total)
+	if progress < STAKE_UNTIL:
+		return kept
+	return clampi(kept + ceili((progress - STAKE_UNTIL) / (1.0 - STAKE_UNTIL) * (total - kept)), maxi(kept, 1), total)
 
 
 func set_progress(progress: float) -> void:
@@ -75,7 +88,7 @@ func set_progress(progress: float) -> void:
 	_piles.visible = p < 0.9
 	var height := 0.0
 	if not _pieces.is_empty():
-		var n := pieces_shown(p, _pieces.size())
+		var n := pieces_shown(p, _pieces.size(), _kept)
 		_structure.mesh = VillageKit.assemble(_pieces.slice(0, n)) if n > 0 else null
 		if n > 0:
 			height = (_pieces[n - 1][1] as Transform3D).origin.y + 2.2

@@ -33,10 +33,13 @@ var _used_full_names: Dictionary = {}
 var _used_surnames: Dictionary = {}
 ## [{ family, template, head, spouse, children: Array, elder, child_slots: int, elder_slot: bool }]
 var _households: Array[Dictionary] = []
+## Year that life stories count back from (the calendar start, or "now" for settlers).
+var _year_now := 0
 
 
 func generate(world: WorldState) -> void:
 	state = world
+	_year_now = Calendar.start_year()
 	var s := world.world_seed
 	rng_people = Seeds.rng(s, "people")
 	rng_looks = Seeds.rng(s, "looks")
@@ -567,7 +570,7 @@ func _build_social_relationships() -> void:
 # --- 8. Histories ------------------------------------------------------------------------
 
 func _event_year(c: CharacterData, at_age: int) -> int:
-	return Calendar.start_year() - (c.age - clampi(at_age, 0, c.age))
+	return _year_now - (c.age - clampi(at_age, 0, c.age))
 
 
 func _season() -> String:
@@ -765,3 +768,101 @@ func _place_everyone_at_home() -> void:
 			c.inside_building_id = home.id
 		c.activity = "sleep"
 		c.activity_text = "Asleep"
+
+
+
+# --- Settlers (Phase 3) -------------------------------------------------------------------
+
+## A family of settlers arriving to live at `home`, made exactly like the
+## founding villagers (names, looks, traits, talents, family ties, life
+## stories with hints of hidden talent), from its own seeded streams so the
+## same village always draws the same newcomers. Adults without a trade
+## work as laborers. Returns the new family; its members are in the state.
+static func settle_family(world: WorldState, tpl: Dictionary, home: BuildingData, stream: String) -> FamilyData:
+	var gen := CharacterGenerator.new()
+	gen._begin_settlers(world, stream)
+	var h := gen._create_household(tpl)
+	for i in int(h["child_slots"]):
+		if gen.rng_people.randf() < 0.5:
+			gen._add_child(h)
+	if h["elder_slot"]:
+		gen._add_elder(h)
+	var fam: FamilyData = h["family"]
+	fam.home_building_id = home.id if home else -1
+	for c in gen._members(h):
+		c.home_building_id = fam.home_building_id
+	gen._assign_settler_jobs(h)
+	gen._roll_personalities_and_looks()
+	gen._roll_talents()
+	gen._build_family_relationships()
+	gen._write_settler_histories(h)
+	var court_rng := Seeds.rng(world.world_seed, stream + "/court")
+	for c in gen._members(h):
+		c.stress = gen.rng_social.randf_range(5.0, 30.0)
+		c.happiness = 50.0
+		c.happiness = clampf(MoodSystem.happiness_target(c, world) + gen.rng_social.randf_range(-6.0, 6.0), 5.0, 98.0)
+		c.loyalty = clampf(MoodSystem.loyalty_target(c, world) + gen.rng_social.randf_range(-6.0, 6.0), 5.0, 98.0)
+		if world.house:
+			c.player_opinion = CourtSystem.roll_opinion(world, c, court_rng)
+	return fam
+
+
+func _begin_settlers(world: WorldState, stream: String) -> void:
+	state = world
+	_year_now = world.current_year()
+	var s := world.world_seed
+	rng_people = Seeds.rng(s, stream + "/people")
+	rng_looks = Seeds.rng(s, stream + "/looks")
+	rng_talent = Seeds.rng(s, stream + "/talent")
+	rng_social = Seeds.rng(s, stream + "/social")
+	rng_story = Seeds.rng(s, stream + "/story")
+	rng_figure = Seeds.rng(s, stream + "/figure")
+	for c in world.characters:
+		_next_character_id = maxi(_next_character_id, c.id + 1)
+		_used_full_names[c.full_name()] = true
+	for f in world.families:
+		_next_family_id = maxi(_next_family_id, f.id + 1)
+		_used_surnames[f.name] = true
+
+
+func _assign_settler_jobs(h: Dictionary) -> void:
+	var fam: FamilyData = h["family"]
+	var bg := GameData.background(fam.background)
+	for child: CharacterData in h["children"]:
+		if child.age < 12:
+			child.occupation_id = str(bg.get("young_job", "child"))
+		elif child.age < 16:
+			child.occupation_id = str(bg.get("teen_job", "child"))
+		else:
+			child.occupation_id = "laborer"
+		child.social_status = _status_for(child.occupation_id, fam)
+	var head: CharacterData = h["head"]
+	for c in _members(h):
+		c.work_building_id = _choose_workplace(c, head)
+
+
+func _write_settler_histories(h: Dictionary) -> void:
+	var head: CharacterData = h["head"]
+	var spouse: CharacterData = h["spouse"]
+	var hamlet := str(Seeds.pick(rng_story, HAMLETS))
+	var season := state.current_season()
+	for c in _members(h):
+		c.add_history(_event_year(c, 0), _season(), "life", "Born in the hamlet of %s" % (hamlet if c != spouse else Seeds.pick(rng_story, HAMLETS)))
+		_write_career(c, "", null)
+		c.add_history(_year_now, season, "life", "Settled in %s with the %s family" % [state.village_name, c.last_name])
+	if spouse:
+		var oldest_child := 0
+		for child: CharacterData in h["children"]:
+			oldest_child = maxi(oldest_child, child.age)
+		var max_years := mini(head.age, spouse.age) - 16
+		var year := _year_now - clampi(oldest_child + rng_story.randi_range(1, 3), 1, maxi(1, max_years))
+		head.add_history(year, _season(), "family", "Married %s" % spouse.full_name())
+		spouse.add_history(year, _season(), "family", "Married %s" % head.full_name())
+	for child: CharacterData in h["children"]:
+		for p in _parents_of(h):
+			var kind := "son" if child.gender == "male" else "daughter"
+			p.add_history(_year_now - child.age, _season(), "family", "Welcomed a %s, %s" % [kind, child.first_name])
+	for c in _members(h):
+		_write_achievements(c)
+		_write_hidden_talent_hints(c)
+		c.history.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["year"]) < int(b["year"]))

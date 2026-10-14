@@ -157,3 +157,60 @@ func test_building_rises_in_the_live_world() -> void:
 	check(path.size() >= 2, "the new door is on the road network")
 	world.queue_free()
 	await frames(2)
+
+
+func test_settlers_walk_into_the_live_world() -> void:
+	var world: VillageWorld = await _boot("smoke-settlers")
+	var st := world.state
+	for r: String in TerritorySystem.RESOURCES:
+		st.territory.stock[r] = 600.0
+	var site := GrowthSystem.order_home(st)
+	check(site != null, "the village orders a cottage")
+	if site == null:
+		world.queue_free()
+		return
+	world._on_growth_event({"text": "test", "kind": "info", "site": site.id()})
+	check(world.builder.site_nodes.has(site.id()), "the cottage site is drawn")
+	site.work_done = site.work_needed
+	world._finish_site(site)
+	check(world.builder.building_nodes.has(site.id()), "the finished cottage is drawn")
+	var fam := GrowthSystem.settle(st)
+	check(fam != null, "a family settles")
+	if fam == null:
+		world.queue_free()
+		return
+	var start := {}
+	for id in fam.member_ids:
+		start[id] = st.get_character(id).position
+	world._on_growth_event({"text": "test", "kind": "join", "arrived": fam.member_ids.duplicate()})
+	for id in fam.member_ids:
+		check(world.npc_of(id) != null, "settler %d has a body" % id)
+	world.set_speed(2)
+	for i in 200:
+		world._process(0.1)
+	var walked := 0
+	for id in fam.member_ids:
+		var npc := world.npc_of(id)
+		if npc and npc.global_position.distance_to(start[id]) > 8.0:
+			walked += 1
+	check_eq(walked, fam.member_ids.size(), "every settler walks in from the edge of the map")
+	world.queue_free()
+	await frames(2)
+
+
+func test_buildings_can_be_clicked() -> void:
+	var world: VillageWorld = await _boot("smoke-pick-building")
+	var tavern := world.state.layout.buildings_of_type("tavern")[0]
+	world.camera_rig.look_at_point(tavern.position, 40.0, true)
+	await frames(2)
+	var cam := world.camera_rig.camera
+	var screen := cam.unproject_position(TerrainHeight.on_ground(tavern.position) + Vector3(0, 3.0, 0))
+	check_eq(world.pick_building(screen), tavern.id, "clicking the tavern picks the tavern")
+	world._on_clicked(screen)
+	check_eq(world.selected_building, tavern.id, "the tavern is selected")
+	check(world.ui.is_building_card_open(), "its card opens")
+	world.deselect()
+	check(not world.ui.is_building_card_open(), "deselecting closes it")
+	check(world.pick_building(cam.unproject_position(world.state.layout.square_center)) == -1, "the empty square picks nothing")
+	world.queue_free()
+	await frames(2)

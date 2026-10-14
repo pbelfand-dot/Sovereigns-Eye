@@ -3,7 +3,7 @@ extends RefCounted
 ## Everything that defines one playthrough: the seed, the clock, the village
 ## layout, families and characters. Saving the game = saving this object.
 
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4
 
 var seed_text: String = ""
 var world_seed: int = 0
@@ -153,4 +153,9 @@ static func from_dict(d: Dictionary) -> WorldState:
 		w.add_family(FamilyData.from_dict(f))
 	for c: Dictionary in d.get("characters", []):
 		w.add_character(CharacterData.from_dict(c))
+	# An upgrade site works on the home itself, not a copy.
+	if w.territory:
+		for s in w.territory.sites:
+			if s.is_upgrade() and w.layout.get_building(s.id()):
+				s.building = w.layout.get_building(s.id())
 	return w

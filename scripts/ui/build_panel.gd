@@ -46,6 +46,7 @@ func refresh() -> void:
 	if st.territory == null:
 		return
 	_stores(st)
+	_growth(st)
 	_orders(st)
 	_sites(st)
 	_overseer(st)
@@ -79,6 +80,72 @@ func _stores(st: WorldState) -> void:
 	var food_f := TerritorySystem.season_factor(st, "food")
 	if food_f != 1.0:
 		_body.add_child(_wrap("%s: fields yield %d%% of their usual food." % [season, roundi(food_f * 100.0)], 13, UITheme.TEXT_DIM))
+
+
+func _growth(st: WorldState) -> void:
+	_heading("Village growth")
+	var t := st.territory
+	var homes := GrowthSystem.homes(st)
+	var empty := GrowthSystem.empty_homes(st).size()
+	var cap := int(GrowthSystem.growth_cfg().get("max_population", 110))
+	_body.add_child(UITheme.label("%d people (room for %d)  -  %d homes, %d empty" % [GrowthSystem.population(st), cap, homes.size(), empty], 15))
+	var counts := []
+	for tier in GrowthSystem.max_tier() + 1:
+		counts.append(0)
+	var farms := 0
+	for b in homes:
+		if GrowthSystem.can_level(b):
+			counts[b.tier] += 1
+		else:
+			farms += 1
+	var levels: Array[String] = []
+	for tier in counts.size():
+		levels.append("%d %s" % [counts[tier], str(GrowthSystem.tier_def(tier).get("name", "")).to_lower() + ("s" if counts[tier] != 1 else "")])
+	if farms > 0:
+		levels.append("%d farm%s" % [farms, "s" if farms != 1 else ""])
+	var rent := GrowthSystem.rent(st)
+	_body.add_child(_wrap(", ".join(levels) + (".  Rent %+d gold a day." % roundi(rent) if rent > 0.0 else "."), 14, UITheme.TEXT_DIM))
+	# Settler bar.
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.add_child(UITheme.label("Settlers", 15, UITheme.ACCENT))
+	var bar := ProgressBar.new()
+	bar.max_value = 100.0
+	bar.value = t.settler_progress
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 10)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(bar)
+	row.add_child(UITheme.label("%d%%" % floori(t.settler_progress), 14))
+	_body.add_child(row)
+	var per_day := GrowthSystem.progress_per_day(st)
+	var note := ""
+	if GrowthSystem.at_capacity(st):
+		note = "The village is as large as it can grow for now."
+	elif per_day <= 0.0:
+		note = "No one wants to settle here: make the village more appealing."
+	elif empty == 0 and t.settler_progress >= 100.0:
+		note = "A family is waiting for an empty home."
+	else:
+		note = "Next family in about %s." % BuildPanel._duration((100.0 - t.settler_progress) / per_day) if t.settler_progress < 100.0 else "A family arrives tomorrow."
+		if empty == 0:
+			note += " They will need an empty home."
+	_body.add_child(_wrap(note, 14, UITheme.TEXT))
+	var appeal := GrowthSystem.appeal(st)
+	_body.add_child(UITheme.label("Appeal %+d" % roundi(appeal), 15, UITheme.value_color(appeal)))
+	for f in GrowthSystem.appeal_factors(st):
+		_body.add_child(UITheme.label("   %+d  %s" % [roundi(float(f["value"])), str(f["label"])], 13, UITheme.value_color(float(f["value"]))))
+	var toggle := CheckButton.new()
+	toggle.text = "Villagers build homes and upgrades by themselves"
+	toggle.button_pressed = t.auto_homes
+	toggle.add_theme_font_size_override("font_size", 14)
+	toggle.toggled.connect(func(on: bool) -> void:
+		t.auto_homes = on
+		refresh())
+	_body.add_child(toggle)
+	var reserve: Dictionary = GrowthSystem.growth_cfg().get("auto", {}).get("reserve", {})
+	_body.add_child(_wrap("They always leave %s in the stores for your own orders." % TerritorySystem.cost_text(reserve), 13, UITheme.TEXT_DIM))
 
 
 func _orders(st: WorldState) -> void:
@@ -128,7 +195,12 @@ func _sites(st: WorldState) -> void:
 		box.add_theme_constant_override("separation", 2)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
-		var name_l := UITheme.label(s.building.name, 15, UITheme.ACCENT)
+		var title := s.building.name
+		if s.is_upgrade():
+			title = "%s: adding a floor (%s)" % [s.building.name, str(GrowthSystem.tier_def(s.target_tier).get("name", ""))]
+		elif s.kind == "home":
+			title = "New cottage for settlers"
+		var name_l := UITheme.label(title, 15, UITheme.ACCENT)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name_l.clip_text = true
 		row.add_child(name_l)

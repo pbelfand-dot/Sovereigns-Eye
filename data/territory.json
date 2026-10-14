@@ -32,7 +32,8 @@
     "herbalist":   { "food": 1.0 },
     "woodcutter":  { "wood": 8.0 },
     "carpenter":   { "wood": 2.0 },
-    "stonecutter": { "stone": 6.0 }
+    "stonecutter": { "stone": 6.0 },
+    "laborer":     { "food": 2.5 }
   },
 
   "productivity": {
@@ -57,7 +58,7 @@
     "crew": 3,
     "builder_min_age": 14,
     "builder_max_age": 59,
-    "builders": { "carpenter": 1.5, "farmhand": 1.0, "tavern_hand": 0.9, "apprentice": 0.8 },
+    "builders": { "carpenter": 1.5, "laborer": 1.0, "farmhand": 1.0, "tavern_hand": 0.9, "apprentice": 0.8 },
     "overseer_office": "master_of_works",
     "overseer_divisor": 100.0,
     "clear_tree_wood": 3,
@@ -68,7 +69,8 @@
   },
 
   "placement": {
-    "_comment": "Meters. New buildings snap beside a road and face it; lanes are laid automatically from the door to the nearest road.",
+    "_comment": "Meters. New buildings snap beside a road and face it; lanes are laid automatically from the door to the nearest road. Nothing is built in the manor's forecourt (manor_clear around its door).",
+    "manor_clear": 11.0,
     "road_snap": 8.0,
     "setback": 2.6,
     "building_gap": 1.5,
@@ -83,9 +85,74 @@
 
   "hiring": {
     "_comment": "Who takes the jobs at a finished building, in order of preference. Adults only.",
-    "from": ["farmhand", "tavern_hand", "apprentice", "herbalist"],
+    "from": ["laborer", "farmhand", "tavern_hand", "apprentice", "herbalist"],
     "min_age": 16,
     "max_age": 59
+  },
+
+  "homes": {
+    "_comment": "Homes grow on their own (step 2). Each family lives in its own home. When every home is full, the village builds a cottage beside a main road; homes whose needs are met are upgraded by adding floors. Rent is gold per day for each lived-in home at that level.",
+    "types": ["cottage", "farmhouse"],
+    "upgrade_types": ["cottage"],
+    "build_type": "cottage",
+    "build_cost": { "wood": 35, "stone": 10 },
+    "build_work": 24,
+    "tiers": [
+      { "name": "Cottage", "rent": 0, "happiness": 0 },
+      {
+        "name": "Timber House", "rent": 1, "happiness": 4, "cost": { "wood": 30, "stone": 15 }, "work": 20,
+        "needs": [
+          { "id": "settled", "days": 3, "label": "Lived here for 3 days" },
+          { "id": "food_days", "days": 5, "label": "5 days of food in the granary" },
+          { "id": "content", "happiness": 45, "label": "The family is content (happiness 45+)" },
+          { "id": "near_any", "types": ["chapel", "tavern"], "radius": 60, "label": "A chapel or tavern within 60 m" }
+        ]
+      },
+      {
+        "name": "Townhouse", "rent": 2, "happiness": 8, "cost": { "wood": 40, "stone": 30, "gold": 10 }, "work": 30,
+        "needs": [
+          { "id": "settled", "days": 8, "label": "Lived here 8 days as a Timber House" },
+          { "id": "food_days", "days": 10, "label": "10 days of food in the granary" },
+          { "id": "content", "happiness": 55, "label": "The family is happy (happiness 55+)" },
+          { "id": "near_all", "types": ["chapel", "tavern"], "radius": 75, "label": "Both a chapel and a tavern within 75 m" },
+          { "id": "near_any", "types": ["bakery"], "radius": 80, "label": "A bakery within 80 m" },
+          { "id": "market", "radius": 60, "label": "The market square within 60 m" }
+        ]
+      }
+    ]
+  },
+
+  "growth": {
+    "_comment": "New families settle when the village is appealing and a home stands empty. Appeal fills the settler bar each day (appeal x progress_per_appeal); at 100 a family arrives. Families walk in along a road from the edge of the map.",
+    "max_population": 110,
+    "progress_per_appeal": 2.0,
+    "appeal": {
+      "base": 10,
+      "happiness_weight": 0.6,
+      "food_days_good": 10,
+      "food_good": 10,
+      "food_days_short": 3,
+      "food_short": -15,
+      "hungry": -40,
+      "renown_divisor": 10,
+      "renown_cap": 15,
+      "open_jobs": 6,
+      "in_debt": -10
+    },
+    "settlers": [
+      { "background": "farming", "head": "laborer", "spouse": "laborer", "spouse_chance": 0.7, "children": [0, 3], "elder_chance": 0.15, "elder_job": "elder", "weight": 6 },
+      { "background": "craft", "head": "carpenter", "spouse": "laborer", "spouse_chance": 0.6, "children": [0, 2], "elder_chance": 0.1, "elder_job": "elder", "weight": 2 },
+      { "background": "farming", "head": "woodcutter", "spouse": "laborer", "spouse_chance": 0.6, "children": [0, 2], "elder_chance": 0.1, "elder_job": "elder", "weight": 2 }
+    ],
+    "entry_roads": ["west", "east", "south"],
+    "auto": {
+      "_comment": "Homes and upgrades the village orders by itself. They never spend below the reserve, so your own orders keep their materials.",
+      "max_sites": 2,
+      "reserve": { "wood": 60, "stone": 25 },
+      "spot_min": 14,
+      "spot_max": 78,
+      "spot_step": 4
+    }
   },
 
   "buildable": [

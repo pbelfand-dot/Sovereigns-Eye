@@ -15,6 +15,16 @@ var cleared_trees: Array[int] = []
 var next_building_id: int = 1
 ## Net change of each resource on the last day, for the HUD and ledger.
 var last_change: Dictionary = {}
+## Day the stores were set up (homes count as settled since then).
+var founded_day: int = 0
+## Home building id -> day its family moved in or it last went up a level.
+var home_since: Dictionary = {}
+## 0..100: when full and a home stands empty, a family of settlers arrives.
+var settler_progress: float = 0.0
+## Families that have come to settle so far.
+var settler_families: int = 0
+## Let the village build homes and upgrades by itself.
+var auto_homes: bool = true
 
 
 func amount(resource: String) -> float:
@@ -45,6 +55,11 @@ func to_dict() -> Dictionary:
 		"cleared_trees": cleared_trees.duplicate(),
 		"next_building_id": next_building_id,
 		"last_change": change_out,
+		"founded_day": founded_day,
+		"home_since": home_since.duplicate(),
+		"settler_progress": snappedf(settler_progress, 0.01),
+		"settler_families": settler_families,
+		"auto_homes": auto_homes,
 	}
 
 
@@ -63,4 +78,11 @@ static func from_dict(d: Dictionary) -> TerritoryData:
 	var change_in: Dictionary = d.get("last_change", {})
 	for k: String in change_in:
 		t.last_change[k] = float(change_in[k])
+	t.founded_day = int(d.get("founded_day", 0))
+	var since: Dictionary = d.get("home_since", {})
+	for k: Variant in since:
+		t.home_since[int(k)] = int(since[k])
+	t.settler_progress = float(d.get("settler_progress", 0.0))
+	t.settler_families = int(d.get("settler_families", 0))
+	t.auto_homes = bool(d.get("auto_homes", true))
 	return t

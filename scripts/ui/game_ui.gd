@@ -17,6 +17,7 @@ var _card: CharacterCard
 var _ledger: LedgerPanel
 var _court: CourtPanel
 var _build: BuildPanel
+var _building_card: BuildingCard
 var _stores_row: HBoxContainer
 var _stores_key := ""
 var _place_hint: PanelContainer
@@ -41,6 +42,7 @@ func setup(owner_world: VillageWorld) -> void:
 	_build_ledger()
 	_build_court()
 	_build_build_panel()
+	_build_building_card()
 	_build_stores_bar()
 	_build_place_hint()
 	_build_toasts()
@@ -51,6 +53,7 @@ func setup(owner_world: VillageWorld) -> void:
 	world.day_passed.connect(func(_d: int) -> void: refresh())
 	world.territory_changed.connect(_on_territory_changed)
 	world.placing_changed.connect(_on_placing_changed)
+	world.building_selected.connect(_on_building_selected)
 	_on_speed_changed(world.time_scale())
 	var p := world.state.player()
 	if p:
@@ -208,7 +211,7 @@ func _build_card() -> void:
 	_card.anchor_bottom = 1.0
 	_card.offset_left = -CharacterCard.WIDTH - 12
 	_card.offset_right = -12
-	_card.offset_top = 60
+	_card.offset_top = 96
 	_card.offset_bottom = -12
 	_card.visible = false
 	_root.add_child(_card)
@@ -291,6 +294,8 @@ func is_court_open() -> bool:
 
 
 func _on_selection_changed(c: CharacterData) -> void:
+	if c:
+		_building_card.visible = false
 	if c and not _card.visible:
 		Audio.play("card_open")
 	_card.show_character(c)
@@ -313,6 +318,33 @@ func refresh() -> void:
 
 
 # --- Building (Phase 3) -------------------------------------------------------------------
+
+func _build_building_card() -> void:
+	_building_card = BuildingCard.new()
+	_building_card.world = world
+	_building_card.anchor_left = 1.0
+	_building_card.anchor_right = 1.0
+	_building_card.anchor_top = 0.0
+	_building_card.anchor_bottom = 1.0
+	_building_card.offset_left = -BuildingCard.WIDTH - 12
+	_building_card.offset_right = -12
+	_building_card.offset_top = 96
+	_building_card.offset_bottom = -12
+	_building_card.visible = false
+	_root.add_child(_building_card)
+	_building_card.close_requested.connect(world.deselect)
+	_building_card.character_chosen.connect(func(id: int) -> void: world.select_character(id, true))
+
+
+func _on_building_selected(building_id: int) -> void:
+	if building_id >= 0 and not _building_card.visible:
+		Audio.play("card_open")
+	_building_card.show_building(building_id)
+
+
+func is_building_card_open() -> bool:
+	return _building_card != null and _building_card.visible
+
 
 func _build_build_panel() -> void:
 	_build = BuildPanel.new()
@@ -350,6 +382,10 @@ func _build_stores_bar() -> void:
 		l.name = r
 		l.mouse_filter = Control.MOUSE_FILTER_PASS
 		_stores_row.add_child(l)
+	var people := UITheme.label("", 15, UITheme.TEXT)
+	people.name = "people"
+	people.mouse_filter = Control.MOUSE_FILTER_PASS
+	_stores_row.add_child(people)
 	var sites := UITheme.label("", 15, UITheme.ACCENT)
 	sites.name = "sites"
 	_stores_row.add_child(sites)
@@ -363,7 +399,7 @@ func _update_stores_bar() -> void:
 	var key := ""
 	for r: String in TerritorySystem.RESOURCES:
 		key += "%d|" % floori(st.territory.amount(r))
-	key += "%d|%d" % [st.territory.sites.size(), int(TerritorySystem.is_hungry(st))]
+	key += "%d|%d|%d" % [st.territory.sites.size(), int(TerritorySystem.is_hungry(st)), st.characters.size()]
 	if net.is_empty() and key == _stores_key:
 		return
 	if net.is_empty():
@@ -377,6 +413,9 @@ func _update_stores_bar() -> void:
 		l.tooltip_text = "%s: %d of %d stored, %+.1f per day" % [TerritorySystem.resource_name(r), floori(amount), roundi(cap), float(net[r])]
 		var hungry := r == "food" and TerritorySystem.is_hungry(st)
 		l.add_theme_color_override("font_color", UITheme.BAD if hungry else Color(str(TerritorySystem.resource_def(r).get("color", "#ffffff"))))
+	var people: Label = _stores_row.get_node("people")
+	people.text = "People %d" % st.characters.size()
+	people.tooltip_text = "Villagers, homes and the settler bar: open Build (B)"
 	var sites: Label = _stores_row.get_node("sites")
 	sites.visible = not st.territory.sites.is_empty()
 	sites.text = "Building %d" % st.territory.sites.size()
@@ -435,6 +474,8 @@ func _on_territory_changed() -> void:
 		_build.refresh()
 	if _card.visible:
 		_card.refresh()
+	if _building_card.visible:
+		_building_card.refresh()
 
 
 # --- Toasts & help ------------------------------------------------------------------------
@@ -575,7 +616,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_on_slots_cancelled()
 			else:
 				close_pause_menu()
-		elif _card.visible:
+		elif _card.visible or _building_card.visible:
 			world.deselect()
 		elif _ledger.visible:
 			toggle_ledger()

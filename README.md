@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 3 in progress: building your village** (internal codename "Project Appraisal").
+> **Status: Phase 3 in progress: your village builds, grows and attracts settlers** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The village](docs/screenshots/village.jpg)
@@ -74,6 +74,9 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 15 | Order a building | Press **B** → pick a building → click beside a road. It turns to face the road, a lane is laid to its door, and trees in the way are felled for wood. **T** turns it, **Shift+click** places another, **Esc** cancels |
 | 16 | Watch it go up | A crew (carpenters first) stakes out the ground, then the walls rise inside a scaffold and the roof goes on. When it's finished, villagers take the new jobs |
 | 17 | Build faster | Appraise villagers for a hidden **Administration** talent, recruit them and appoint them **Master of Works** (Court tab). Every site speeds up with their Administration |
+| 18 | Watch it grow | Keep food in store and people happy. The **settler bar** (Build panel) fills, and new families walk in from the edge of the map. Appraise them: newcomers can hide great talent too |
+| 19 | Homes build themselves | When every home is full, villagers build a new cottage beside a road. Cottages near the square gain floors (**Timber House**, then **Townhouse**) once their needs are met, and pay rent |
+| 20 | Inspect a building | Click any building: who lives and works there, what it makes, and for homes a checklist of what the next level needs |
 
 The same seed always creates the same village and the same people.
 
@@ -81,10 +84,10 @@ The same seed always creates the same village and the same people.
 ![A retainer's office and training](docs/screenshots/court_retainer.jpg)
 ![The Court panel (K)](docs/screenshots/court_panel.jpg)
 
-### Building (Phase 3, step 1)
+### Building and growth (Phase 3, steps 1–2)
 
 You decide **what** goes up and **where**, and the village builds it. Homes
-growing on their own and town charters come next.
+build and upgrade themselves; town charters come next.
 
 | Building | Cost | What it adds |
 |---|---|---|
@@ -98,6 +101,29 @@ New jobs are filled by farmhands, tavern hands and older apprentices, so buildin
 moves people around: a new farm promotes a farmhand to farmer, and a quarry takes
 hands away from the fields. Builders don't do their normal work while they build.
 All costs, rates and limits are in `data/territory.json`.
+
+**Growth.** Appeal (food in store, happiness, renown, open jobs) fills a settler
+bar each day. When it's full and a home stands empty, a family arrives. Their
+names, looks, traits, talents and life stories are generated the same way as the
+founding villagers'. Adults without a trade work as **laborers** in the fields and
+on building crews, and are first in line for new jobs. When every home is full,
+the village builds a cottage on its own. Settlers waiting for a home come before
+upgrades, and these automatic jobs always leave 60 wood and 25 stone for your own
+orders. You can switch them off in the Build panel.
+
+| Home level | Needs | Gives |
+|---|---|---|
+| Cottage | – | – |
+| Timber House (+1 floor, 30 wood, 15 stone) | lived there 3 days, 5 days of food, happiness 45+, chapel or tavern within 60 m | 1 gold rent a day, +4 happiness |
+| Townhouse (+2 floors and a balcony, 40 wood, 30 stone, 10 gold) | 8 days as a Timber House, 10 days of food, happiness 55+, chapel **and** tavern within 75 m, bakery within 80 m, market square within 60 m | 2 gold rent a day, +8 happiness |
+
+An upgrade keeps the house's existing floors exactly. The roof comes off and the
+new floors rise inside scaffolding.
+
+![Day 1 and day 60 of the same village](docs/screenshots/growth_before_after.jpg)
+![A cottage gaining floors, a Timber House and a Townhouse](docs/screenshots/home_levels.jpg)
+![A home's card: who lives there and what the next level needs](docs/screenshots/home_card.jpg)
+![Settlers arriving, one with hidden S+ talent](docs/screenshots/settlers.jpg)
 
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
@@ -117,6 +143,7 @@ All costs, rates and limits are in `data/territory.json`.
 | Village ledger | Top bar | L |
 | Your court | Top bar | K |
 | Build menu / stores | Top bar | B |
+| Inspect a building | Left-click it | — |
 | Turn building being placed | — | T |
 | Place another of the same | Shift + left-click | — |
 | Quicksave / quickload | — | F5 / F9 |
@@ -311,13 +338,16 @@ godot --path . res://tools/capture.tscn -- 12345 /tmp/shots build
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 3, step 1)
+## 9. Known limitations (Phase 3, step 2)
 
-* The population is fixed at about 50 for now. New jobs are filled by moving
-  people around, so after a few buildings no one is free to work or build. New
-  families and homes that grow on their own come in step 2.
-* Only five building types can be ordered. Taverns, chapels, markets and the town
-  charters (Hamlet → Village → Market Town → Town) come in step 3.
+* The village stops growing at 110 people for now. The town charters in step 3
+  (Hamlet → Village → Market Town → Town) will raise that limit.
+* People don't age, have children, move away or die yet, so a village only ever
+  grows.
+* Only five building types can be ordered. Taverns, chapels and markets come with
+  the charters in step 3. Farms don't gain levels; only cottages do.
+* With 100+ villagers the overview reaches about 2,300 draw calls. That's fine on
+  desktop; phones haven't been tested.
 * Placing or finishing a building rebuilds the ground, grass and props
   (about 0.1 s, one hitch per click).
 * There is no demolition yet. You can cancel a site (full refund before work

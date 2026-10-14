@@ -687,6 +687,22 @@ func add_building_node(b: BuildingData) -> Node3D:
 	return node
 
 
+## Rebuilds a building's look (e.g. after a home gains a floor).
+func replace_building_node(b: BuildingData) -> Node3D:
+	var old: Node = building_nodes.get(b.id, null)
+	if old:
+		old.get_parent().remove_child(old)
+		old.queue_free()
+	return add_building_node(b)
+
+
+## Shows or hides a building (a home is hidden while its site rebuilds it).
+func set_building_visible(building_id: int, on: bool) -> void:
+	var node: Node3D = building_nodes.get(building_id, null)
+	if node:
+		node.visible = on
+
+
 # --- Building sites & refreshing (Phase 3) ------------------------------------------------
 
 func _site_buildings() -> Array[BuildingData]:
@@ -711,6 +727,8 @@ func add_site(site: ConstructionSite) -> ConstructionView:
 	get_node("Sites").add_child(view)
 	view.setup(site)
 	site_nodes[site.id()] = view
+	if site.is_upgrade():
+		set_building_visible(site.id(), false)
 	return view
 
 

@@ -84,6 +84,7 @@ static func initialize(state: WorldState) -> void:
 		for b in state.layout.buildings:
 			top = maxi(top, b.id)
 	t.next_building_id = top + 1
+	t.founded_day = state.day()
 	state.territory = t
 
 
@@ -381,6 +382,13 @@ static func check_placement(state: WorldState, type: String, pos: Vector3, rot: 
 		if str(p["type"]) != "rock" and point_in_rect(p["pos"], pos, rot, half, pgap):
 			out["reason"] = "The %s is in the way." % str(p["type"])
 			return out
+	var manor_clear := float(cfg.get("manor_clear", 11.0))
+	for m in layout.buildings_of_type("manor"):
+		var gate := m.door_position()
+		for s in _rect_grid(pos, rot, half, 3):
+			if Vector2(s.x - gate.x, s.z - gate.z).length() < manor_clear:
+				out["reason"] = "Keep the manor's forecourt clear."
+				return out
 	# The door opens onto open ground, and a lane can reach a road from it.
 	var door := pos + basis * Vector3(0, 0, half.y + 1.2)
 	for b in layout.buildings:
@@ -446,22 +454,39 @@ static func place(state: WorldState, type: String, pos: Vector3, rot: float) -> 
 	var check := check_placement(state, type, pos, rot)
 	if not check["ok"]:
 		return {"ok": false, "text": check["reason"]}
-	var t := state.territory
 	var def := buildable_def(type)
-	var cost: Dictionary = def.get("cost", {})
+	var opened := open_site(state, type, pos, rot, check, def.get("cost", {}), float(def.get("work", 40)), "build")
+	var site: ConstructionSite = opened["site"]
+	state.house.log_event(state.day(), "Work began on %s." % site.building.name, "build")
+	var text := "Work begins on the %s." % display_name(type)
+	if int(opened["trees"]) > 0:
+		text += " %d trees felled (+%d wood)." % [int(opened["trees"]), roundi(float(opened["wood"]))]
+	if int(opened["rocks"]) > 0:
+		text += " Rocks cleared (+%d stone)." % roundi(float(opened["stone"]))
+	if site.builders.is_empty():
+		text += " No one is free to build it yet."
+	return {"ok": true, "text": text, "site": site}
+
+
+## Pays for and opens a site for a new building at a checked spot: lays its
+## lane, fells trees and clears rocks, gathers a crew. Returns
+## {site, trees, wood, rocks, stone}.
+static func open_site(state: WorldState, type: String, pos: Vector3, rot: float, check: Dictionary, cost: Dictionary, work: float, kind: String) -> Dictionary:
+	var t := state.territory
 	pay(state, cost)
 	var b := BuildingData.new()
 	b.id = t.next_building_id
 	t.next_building_id += 1
 	b.type = type
-	b.name = _new_name(state, type)
+	b.name = _new_name(state, type) if kind == "build" else "New %s" % str(GameData.building_type(type).get("name", type.capitalize()))
 	b.position = Vector3(pos.x, 0, pos.z)
 	b.rotation = rot
 	b.footprint = footprint(type)
 	b.variant = Seeds.rng(state.world_seed, "building_%d" % b.id).randi_range(0, 7)
 	var site := ConstructionSite.new()
 	site.building = b
-	site.work_needed = float(def.get("work", 40))
+	site.kind = kind
+	site.work_needed = work
 	site.started_day = state.day()
 	for r: String in cost:
 		site.paid[r] = int(cost[r])
@@ -481,15 +506,23 @@ static func place(state: WorldState, type: String, pos: Vector3, rot: float) -> 
 	var stone := add(state, "stone", rocks.size() * float(build_cfg.get("clear_rock_stone", 5)))
 	t.sites.append(site)
 	refresh_crew(state, site)
-	state.house.log_event(state.day(), "Work began on %s." % b.name, "build")
-	var text := "Work begins on the %s." % display_name(type)
-	if felled.size() > 0:
-		text += " %d trees felled (+%d wood)." % [felled.size(), roundi(wood)]
-	if rocks.size() > 0:
-		text += " Rocks cleared (+%d stone)." % roundi(stone)
-	if site.builders.is_empty():
-		text += " No one is free to build it yet."
-	return {"ok": true, "text": text, "site": site}
+	return {"site": site, "trees": felled.size(), "wood": wood, "rocks": rocks.size(), "stone": stone}
+
+
+## Pays for and opens an upgrade of a lived-in home to the next level.
+static func open_upgrade(state: WorldState, b: BuildingData, tier: int, cost: Dictionary, work: float) -> ConstructionSite:
+	pay(state, cost)
+	var site := ConstructionSite.new()
+	site.building = b
+	site.kind = "upgrade"
+	site.target_tier = tier
+	site.work_needed = work
+	site.started_day = state.day()
+	for r: String in cost:
+		site.paid[r] = int(cost[r])
+	state.territory.sites.append(site)
+	refresh_crew(state, site)
+	return site
 
 
 ## Cancels an order: refunds part of the cost and lifts the lane.
@@ -507,7 +540,8 @@ static func cancel(state: WorldState, site: ConstructionSite) -> Dictionary:
 	state.territory.sites.erase(site)
 	for s in state.territory.sites:
 		refresh_crew(state, s)
-	return {"ok": true, "text": "The %s was abandoned. Refunded %s." % [display_name(site.building.type), cost_text(refunded)]}
+	var what := "work on %s" % site.building.name if site.is_upgrade() else "the %s" % display_name(site.building.type)
+	return {"ok": true, "text": "You called off %s. Refunded %s." % [what, cost_text(refunded)]}
 
 
 static func _new_name(state: WorldState, type: String) -> String:
@@ -652,9 +686,26 @@ static func complete(state: WorldState, site: ConstructionSite) -> Array[Diction
 	var t := state.territory
 	if not t.sites.has(site):
 		return events
-	var b := site.building
 	t.sites.erase(site)
+	if site.is_upgrade():
+		var home := state.get_building(site.id())
+		if home:
+			home.tier = maxi(home.tier, site.target_tier)
+			GrowthSystem.rename_home(state, home)
+			t.home_since[home.id] = state.day()
+			state.house.log_event(state.day(), "%s became a %s." % [home.name, home.type_name()], "build")
+			events.append({"text": "%s is now a %s." % [home.name, home.type_name()], "kind": "good", "building": home.id})
+		for s in t.sites:
+			refresh_crew(state, s)
+		return events
+	var b := site.building
 	state.layout.add_building(b)
+	if site.kind == "home":
+		b.name = "Empty %s" % b.type_name()
+		events.append({"text": "A new %s stands ready for settlers." % b.type_name().to_lower(), "kind": "good", "building": b.id})
+		for s in t.sites:
+			refresh_crew(state, s)
+		return events
 	t.built.append(b.id)
 	var def := buildable_def(b.type)
 	var fields: Array = def.get("fields", [])

@@ -13,6 +13,8 @@ signal day_passed(day_index: int)
 signal territory_changed
 ## Entered or left building placement (type "" = left).
 signal placing_changed(type: String)
+## A building (or building site) was clicked; -1 = none.
+signal building_selected(building_id: int)
 
 ## In-game minutes per real second at 1x speed (1 hour = 40 s, 1 day = 16 min).
 const GAME_MINUTES_PER_SECOND := 1.5
@@ -40,6 +42,10 @@ var _npc_root: Node3D
 ## Building placement (Build menu): the type being placed, its preview and
 ## quarter-turns away from facing the road.
 var placing_type := ""
+var selected_building := -1
+var _over_building := false
+var _hand_cursor := false
+var _selection_frame: Node3D
 var _ghost: BuildGhost
 var _turn := 0
 var _placement: Dictionary = {}
@@ -197,6 +203,8 @@ func _check_new_day() -> void:
 		_announce(e)
 		if e.has("hired"):
 			_on_hired(int(e["hired"]))
+	for e: Dictionary in GrowthSystem.daily_update(state):
+		_on_growth_event(e)
 	_replan_crew_changes(crews_before)
 	territory_changed.emit()
 	day_passed.emit(day)
@@ -204,6 +212,8 @@ func _check_new_day() -> void:
 
 ## Shows a court event as a notification in the right color.
 func _announce(e: Dictionary) -> void:
+	if str(e.get("text", "")).is_empty():
+		return
 	var color := Game.COLOR_INFO
 	match str(e.get("kind", "")):
 		"rank", "potential":
@@ -251,11 +261,14 @@ func _finish_site(site: ConstructionSite) -> void:
 	var events := TerritorySystem.complete(state, site)
 	var b := site.building
 	builder.remove_site(b.id)
-	builder.add_building_node(b)
-	for f in state.layout.fields_of_building(b.id):
-		builder.add_field(f)
-	_layout_changed()
-	builder.refresh_props()
+	if site.is_upgrade():
+		builder.replace_building_node(b)
+	else:
+		builder.add_building_node(b)
+		for f in state.layout.fields_of_building(b.id):
+			builder.add_field(f)
+		_layout_changed()
+		builder.refresh_props()
 	Audio.play("court_good")
 	for e in events:
 		_announce(e)
@@ -263,6 +276,37 @@ func _finish_site(site: ConstructionSite) -> void:
 			_on_hired(int(e["hired"]))
 	_replan_crew_changes(crews_before)
 	territory_changed.emit()
+
+
+## A growth event: settlers to spawn, or a home or upgrade site to show.
+func _on_growth_event(e: Dictionary) -> void:
+	_announce(e)
+	if e.has("arrived"):
+		for id: int in e["arrived"]:
+			spawn_character(id)
+		_compute_worker_slots()
+	if e.has("hired"):
+		_on_hired(int(e["hired"]))
+	if e.has("site"):
+		var site := state.territory.get_site(int(e["site"]))
+		if site:
+			builder.add_site(site)
+			if not site.is_upgrade():
+				_layout_changed()
+				builder.refresh_props()
+
+
+## Gives a character who joined the village (a settler) a body and a brain.
+func spawn_character(character_id: int) -> NPC:
+	var c := state.get_character(character_id)
+	if c == null or npcs.has(character_id):
+		return npcs.get(character_id, null)
+	var npc := NPC.new()
+	_npc_root.add_child(npc)
+	npc.setup(c)
+	npc.brain = NPCBrain.new(npc, self)
+	npcs[c.id] = npc
+	return npc
 
 
 ## Someone took a new job: new clothes, new workplace, new routine.
@@ -301,6 +345,7 @@ func start_placing(type: String) -> void:
 	if hovered:
 		hovered.set_hovered(false)
 		hovered = null
+	_hand_cursor = false
 	Input.set_default_cursor_shape(Input.CURSOR_CROSS)
 	placing_changed.emit(type)
 
@@ -312,6 +357,7 @@ func cancel_placing() -> void:
 	if _ghost:
 		_ghost.queue_free()
 		_ghost = null
+	_hand_cursor = false
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 	placing_changed.emit("")
 
@@ -389,8 +435,11 @@ func cancel_site(building_id: int) -> void:
 	var crews_before := _crews()
 	var result := TerritorySystem.cancel(state, site)
 	builder.remove_site(building_id)
-	_layout_changed()
-	builder.refresh_props()
+	if site.is_upgrade():
+		builder.set_building_visible(building_id, true)
+	else:
+		_layout_changed()
+		builder.refresh_props()
 	Game.notify.emit(str(result["text"]), Game.COLOR_INFO)
 	_replan_crew_changes(crews_before)
 	territory_changed.emit()
@@ -457,7 +506,13 @@ func _update_hover() -> void:
 		hovered = target
 		if hovered:
 			hovered.set_hovered(true)
-		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if hovered else Input.CURSOR_ARROW)
+	# Buildings can be clicked too: show the hand over them.
+	if hovered == null and not over_ui and Engine.get_process_frames() % 4 == 0:
+		_over_building = pick_building(vp.get_mouse_position()) >= 0
+	var hand := hovered != null or (_over_building and not over_ui)
+	if hand != _hand_cursor:
+		_hand_cursor = hand
+		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if hand else Input.CURSOR_ARROW)
 
 
 func _on_clicked(screen_pos: Vector2) -> void:
@@ -467,14 +522,96 @@ func _on_clicked(screen_pos: Vector2) -> void:
 	var npc := pick_npc(screen_pos)
 	if npc:
 		select_character(npc.character.id)
+		return
+	var building := pick_building(screen_pos)
+	if building >= 0:
+		select_building(building)
 	else:
 		deselect()
+
+
+## The building (or building site) under a screen position, or -1. Rays are
+## tested against each building's box, so clicking a roof picks its house.
+func pick_building(screen_pos: Vector2) -> int:
+	var cam := camera_rig.camera
+	var from := cam.project_ray_origin(screen_pos)
+	var dir := cam.project_ray_normal(screen_pos)
+	var candidates: Array[BuildingData] = []
+	candidates.append_array(state.layout.buildings)
+	for s in state.territory.sites:
+		if not s.is_upgrade():
+			candidates.append(s.building)
+	var best := -1
+	var best_d := INF
+	for b in candidates:
+		var inv := b.basis().inverse()
+		var local_from := inv * (from - TerrainHeight.on_ground(b.position))
+		var local_dir := inv * dir
+		var box := AABB(Vector3(-b.footprint.x * 0.5, 0.0, -b.footprint.y * 0.5), Vector3(b.footprint.x, building_height(b), b.footprint.y))
+		var hit: Variant = box.intersects_ray(local_from, local_dir)
+		if hit != null:
+			var d := (hit as Vector3).distance_to(local_from)
+			if d < best_d:
+				best_d = d
+				best = b.id
+	return best
+
+
+## Roughly how tall a building looks (for picking).
+func building_height(b: BuildingData) -> float:
+	if VillageKit.has_prefab(b.type):
+		return float(VillageKit.prefab(b.type, b.variant, b.tier).get("height", 5.0)) * 0.9
+	return float(b.type_def().get("wall_height", 3.0)) + 2.0
+
+
+func select_building(building_id: int) -> void:
+	if selected:
+		selected.set_selected(false)
+		selected = null
+		camera_rig.follow_target = null
+		selection_changed.emit(null)
+	selected_building = building_id
+	_show_selection_frame()
+	Audio.play("ui_select")
+	building_selected.emit(building_id)
+
+
+func _show_selection_frame() -> void:
+	if _selection_frame:
+		_selection_frame.queue_free()
+		_selection_frame = null
+	var b := state.get_building(selected_building)
+	if b == null:
+		var site := state.territory.get_site(selected_building)
+		b = site.building if site else null
+	if b == null:
+		return
+	_selection_frame = Node3D.new()
+	_selection_frame.name = "SelectionFrame"
+	add_child(_selection_frame)
+	_selection_frame.position = TerrainHeight.on_ground(b.position) + Vector3(0, 0.12, 0)
+	_selection_frame.rotation.y = b.rotation
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color("#e9bf62")
+	var hx := b.footprint.x * 0.5 + 0.9
+	var hz := b.footprint.y * 0.5 + 0.9
+	for side in 4:
+		var along_x := side < 2
+		var size := Vector3(hx * 2.0 + 0.25, 0.08, 0.25) if along_x else Vector3(0.25, 0.08, hz * 2.0 + 0.25)
+		var pos := Vector3(0, 0, hz * (1 if side == 0 else -1)) if along_x else Vector3(hx * (1 if side == 2 else -1), 0, 0)
+		var mi := Mats.box(_selection_frame, size, pos, mat)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func select_character(character_id: int, focus_camera: bool = false) -> void:
 	var c := state.get_character(character_id)
 	if c == null:
 		return
+	if selected_building >= 0:
+		selected_building = -1
+		_show_selection_frame()
+		building_selected.emit(-1)
 	if selected:
 		selected.set_selected(false)
 	selected = npc_of(character_id)
@@ -492,6 +629,10 @@ func deselect() -> void:
 	selected = null
 	camera_rig.follow_target = null
 	selection_changed.emit(null)
+	if selected_building >= 0:
+		selected_building = -1
+		_show_selection_frame()
+		building_selected.emit(-1)
 
 
 ## Moves the camera to a character (following them if they are outdoors).

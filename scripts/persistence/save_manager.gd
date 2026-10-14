@@ -86,6 +86,11 @@ static func migrate(data: Dictionary) -> Dictionary:
 		# created on load by TerritorySystem.initialize() with the starting
 		# stock; nothing else changes.
 		data["save_version"] = 3
+		version = 3
+	if version == 3:
+		# v4 (Phase 3 step 2) adds home levels and the settler bar. Missing
+		# fields default to a first-level home and an empty bar.
+		data["save_version"] = 4
 	return data
 
 

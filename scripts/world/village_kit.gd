@@ -47,6 +47,27 @@ static func has_prefab(type: String) -> bool:
 	return available() and config().get("prefabs", {}).has(type)
 
 
+## A home's recipe at a higher level (data/building_kit.json "home_tiers"):
+## the door block gains stories on top of the same ground floor, so an
+## upgrade only adds floors. Tier 0 returns the recipe unchanged.
+static func tier_recipe(base: Dictionary, tier: int) -> Dictionary:
+	var tiers: Array = config().get("home_tiers", [])
+	if tier <= 0 or tiers.is_empty():
+		return base
+	var t: Dictionary = tiers[mini(tier, tiers.size() - 1)]
+	var r := base.duplicate(true)
+	for block: Dictionary in r.get("blocks", []):
+		if not bool(block.get("door", false)):
+			continue
+		block["ground"] = str(block.get("ground", block.get("walls", "plaster")))
+		block["walls"] = str(t.get("upper_walls", block.get("walls", "plaster")))
+		block["stories"] = mini(int(block.get("stories", 1)) + int(t.get("add_stories", 1)), int(t.get("max_stories", 3)))
+	if t.has("balcony"):
+		r["balcony"] = bool(t["balcony"])
+	r["vines"] = int(r.get("vines", 0)) + int(t.get("add_vines", 0))
+	return r
+
+
 ## Variant recipes for a building type.
 static func variants(type: String) -> Array:
 	return config().get("prefabs", {}).get(type, {}).get("variants", [])
@@ -111,25 +132,43 @@ static func material_named(key: String) -> Material:
 	return _materials.get(key, null)
 
 
-## Assembled prefab for a building type and variant number.
+## Height of the walls (stories of the door block) for a type, variant and tier.
+static func wall_height(type: String, variant: int, tier: int = 0) -> float:
+	var list := variants(type)
+	if list.is_empty():
+		return 0.0
+	var top := 0
+	for block: Dictionary in tier_recipe(list[posmod(variant, list.size())], tier).get("blocks", []):
+		if bool(block.get("door", false)):
+			top = int(block.get("stories", 1))
+	return top * float(config().get("story_height", 3.0))
+
+
+## Assembled prefab for a building type, variant number and home tier.
 ## Returns {} if the type has no recipe.
-static func prefab(type: String, variant: int) -> Dictionary:
+static func prefab(type: String, variant: int, tier: int = 0) -> Dictionary:
 	var list := variants(type)
 	if list.is_empty():
 		return {}
 	var vi := posmod(variant, list.size())
-	var key := "%s_%d" % [type, vi]
+	var base_key := "%s_%d" % [type, vi]
+	var key := base_key if tier <= 0 else "%s_t%d" % [base_key, tier]
 	if _prefabs.has(key):
 		return _prefabs[key]
-	var recipe: Dictionary = list[vi]
+	var recipe := tier_recipe(list[vi], tier)
+	# Every tier rolls from the base key, so walls, windows and doors of the
+	# floors they share come out the same. Vines roll separately because
+	# they only grow on the top floor.
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(key)
+	rng.seed = hash(base_key)
+	var vine_rng := RandomNumberGenerator.new()
+	vine_rng.seed = hash(base_key + "/vines")
 	var shell := _Assembler.new()
 	var details := _Assembler.new()
 	var boxes: Array[AABB] = []
 	var top := 0.0
 	for block: Dictionary in recipe.get("blocks", []):
-		top = maxf(top, _build_block(block, recipe, rng, shell, details, boxes))
+		top = maxf(top, _build_block(block, recipe, rng, vine_rng, shell, details, boxes))
 	_add_props(recipe, rng, details)
 	var out := {
 		"key": key,
@@ -255,7 +294,7 @@ const WINDOW_FIT := {
 
 
 ## Builds one block; returns its top height (meters).
-static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumberGenerator, shell: _Assembler, details: _Assembler, boxes: Array[AABB]) -> float:
+static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumberGenerator, vine_rng: RandomNumberGenerator, shell: _Assembler, details: _Assembler, boxes: Array[AABB]) -> float:
 	var cell := float(config().get("cell", 2.0))
 	var sh := float(config().get("story_height", 3.0))
 	var cells: Array = block["cells"]
@@ -317,9 +356,9 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 				else:
 					var plain: Array = set_def["plain_ground"] if s == 0 else set_def["plain"]
 					shell.add(_pick(plain, rng), xf)
-					if vine_budget > 0 and s == stories - 1 and rng.randf() < 0.5:
+					if vine_budget > 0 and s == stories - 1 and vine_rng.randf() < 0.5:
 						vine_budget -= 1
-						details.add(["Prop_Vine1", "Prop_Vine2", "Prop_Vine4"][rng.randi() % 3], xf * Transform3D(Basis(), Vector3(0, sh - 0.25, 0.14)))
+						details.add(["Prop_Vine1", "Prop_Vine2", "Prop_Vine4"][vine_rng.randi() % 3], xf * Transform3D(Basis(), Vector3(0, sh - 0.25, 0.14)))
 		# Corner posts / quoins.
 		var corner: String = set_def["corner"]
 		for k in 4:

@@ -63,23 +63,29 @@ static func initialize(state: WorldState) -> void:
 	state.house.renown = int(h.get("start_renown", 10))
 	state.player_id = pick_player(state)
 	var rng := Seeds.rng(state.world_seed, "court")
-	var op := section("opinion")
-	var trait_mods: Dictionary = op.get("traits", {})
-	var manor := _building_of_type(state, "manor")
 	for c in state.characters:
-		var v := float(op.get("base", 5)) + rng.randf_range(-1.0, 1.0) * float(op.get("spread", 15))
-		if c.family_id == state.ruling_family_id:
-			v += float(op.get("ruling_family", 55))
-		elif manor >= 0 and c.work_building_id == manor:
-			v += float(op.get("manor_staff", 15))
-		for t in c.traits:
-			v += float(trait_mods.get(t, 0.0))
-		c.player_opinion = clampf(v, -100.0, 100.0)
+		c.player_opinion = roll_opinion(state, c, rng)
 	var p := state.player()
 	if p:
 		p.player_opinion = 100.0
 		p.appraised = true  # you know yourself
 	state.house.log_event(state.day(), "%s takes up the running of %s's household." % [p.full_name() if p else "The heir", house_name(state)], "house")
+
+
+## Someone's starting opinion of the player (-100..100): a roll, kinship,
+## manor service and personality.
+static func roll_opinion(state: WorldState, c: CharacterData, rng: RandomNumberGenerator) -> float:
+	var op := section("opinion")
+	var trait_mods: Dictionary = op.get("traits", {})
+	var manor := _building_of_type(state, "manor")
+	var v := float(op.get("base", 5)) + rng.randf_range(-1.0, 1.0) * float(op.get("spread", 15))
+	if c.family_id == state.ruling_family_id:
+		v += float(op.get("ruling_family", 55))
+	elif manor >= 0 and c.work_building_id == manor:
+		v += float(op.get("manor_staff", 15))
+	for t in c.traits:
+		v += float(trait_mods.get(t, 0.0))
+	return clampf(v, -100.0, 100.0)
 
 
 ## The ruling family's scion closest to the preferred age, else the lord.
@@ -544,7 +550,7 @@ static func daily_wages(state: WorldState) -> int:
 
 
 static func daily_income(state: WorldState) -> int:
-	var base := float(section("house").get("base_income", 18))
+	var base := float(section("house").get("base_income", 18)) + GrowthSystem.rent(state)
 	var steward := state.get_character(state.house.holder_of("steward"))
 	if steward:
 		base *= 1.0 + steward.get_current("administration") / float(office_def("steward").get("effect_divisor", 200.0))
