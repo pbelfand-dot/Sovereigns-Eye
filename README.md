@@ -12,10 +12,11 @@ The [`3D/`](3D/) folder contains a ready-to-use, cartoony medieval starter libra
 - 76 castle, siege, terrain, and decoration models
 - 167 fantasy-town, road, nature, prop, and water-feature models
 - 10 sleek Quaternius character-test models with embedded textures
+- Both Quaternius Universal Animation Library Standard editions: 86 clips total, with in-place and root-motion exports
 - Per-model previews for the original collections and overview galleries for larger packs
 - Source, license, checksum, dependency, and validation records
 
-All 1,037 models use the widely supported GLB / glTF 2.0 format. The source packs are
+All 1,042 cataloged files use the widely supported GLB / glTF 2.0 format. The source packs are
 released under CC0, so they can be used and modified in commercial or non-commercial
 games without an attribution requirement. Start with the
 [`3D/alternatives/`](3D/alternatives/) comparison to choose a visual direction, then

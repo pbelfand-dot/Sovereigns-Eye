@@ -16,6 +16,8 @@ Retrieved on 2026-10-13 from the original publishers, Kenney, KayKit, and Quater
 | KayKit Medieval Hexagon | [github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0](https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0) | 1.0 | CC0 1.0 | 221 GLB models |
 | KayKit Halloween Bits | [github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0](https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0) | 1.0 | CC0 1.0 | 63 GLB models |
 | Universal Base Characters | [quaternius.com/packs/universalbasecharacters.html](https://quaternius.com/packs/universalbasecharacters.html) | Standard (free) | CC0 1.0 | 10 GLB models |
+| Universal Animation Library | [quaternius.com/packs/universalanimationlibrary.html](https://quaternius.com/packs/universalanimationlibrary.html) | Standard (free), 2026-06-16 update | CC0 1.0 | 2 GLB animation containers |
+| Universal Animation Library 2 | [quaternius.com/packs/universalanimationlibrary2.html](https://quaternius.com/packs/universalanimationlibrary2.html) | Standard (free), 2026-06-16 update | CC0 1.0 | 2 GLB animation containers + 1 mannequin |
 
 The repository includes the GLB version of each model, all required PNG textures,
 and matching PNG previews. Duplicate FBX and OBJ versions from the source archives

@@ -26,8 +26,10 @@ Godot, Unity, Unreal, Blender, Three.js, and other modern tools.
 | `alternatives/option-04-kenney-platformer/` | Rejected comparison pack retained for reference | 153 |
 | `alternatives/option-05-kenney-mini-characters/` | Rejected comparison pack retained for reference | 26 |
 | `character-tests/quaternius-universal-base-standard/` | Sleek rigged base bodies plus modular hair test pieces | 10 |
+| `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
+| `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,037 models**.
+Total: **1,042 GLB files**.
 
 The original blocky set and three Kenney alternatives remain available for comparison,
 but the five KayKit collections in [`alternatives/`](alternatives/) are the recommended
@@ -36,6 +38,8 @@ preview gallery, source, license, and decision notes.
 
 The current sleek-character test is the free Quaternius Standard pack in
 [`character-tests/quaternius-universal-base-standard/`](character-tests/quaternius-universal-base-standard/).
+Both matching Universal Animation Library Standard editions are in
+[`animations/`](animations/), including in-place and root-motion exports.
 The matching environment direction is documented in
 [`research/ARCHITECTURE_SHORTLIST.md`](research/ARCHITECTURE_SHORTLIST.md).
 

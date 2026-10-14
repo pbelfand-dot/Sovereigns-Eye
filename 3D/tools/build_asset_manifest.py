@@ -73,6 +73,16 @@ COLLECTIONS = {
         "license": "character-tests/quaternius-universal-base-standard/LICENSE.txt",
         "preview_root": "character-tests/quaternius-universal-base-standard/previews",
     },
+    "quaternius-universal-animation-library-1": {
+        "source": "https://quaternius.com/packs/universalanimationlibrary.html",
+        "license": "animations/quaternius-universal-animation-library-1/LICENSE.txt",
+        "preview_root": "animations/quaternius-universal-animation-library-1/setup-guides",
+    },
+    "quaternius-universal-animation-library-2": {
+        "source": "https://quaternius.com/packs/universalanimationlibrary2.html",
+        "license": "animations/quaternius-universal-animation-library-2/LICENSE.txt",
+        "preview_root": "animations/quaternius-universal-animation-library-2/setup-guides",
+    },
 }
 
 
@@ -110,6 +120,8 @@ def collection_for(path: Path) -> tuple[str, str]:
         "quaternius-universal-base-standard",
     ):
         return "quaternius-universal-base-standard", relative.parts[3]
+    if relative.parts[0] == "animations":
+        return relative.parts[1], "animation-library"
     if relative.parts[:2] == ("characters", "blocky"):
         return "blocky-characters", "characters"
     if relative.parts[:2] == ("environments", "castle-kit"):
