@@ -145,6 +145,7 @@ func _build_ledger() -> void:
 func toggle_ledger() -> void:
 	_ledger.visible = not _ledger.visible
 	if _ledger.visible:
+		_help.visible = false
 		_ledger.refresh()
 
 
@@ -166,10 +167,11 @@ func refresh() -> void:
 
 func _build_toasts() -> void:
 	var toasts := ToastStack.new()
+	# Shifted left of center so toasts never cover the character card.
 	toasts.anchor_left = 0.5
 	toasts.anchor_right = 0.5
-	toasts.offset_left = -360
-	toasts.offset_right = 360
+	toasts.offset_left = -520
+	toasts.offset_right = 140
 	toasts.offset_top = 62
 	toasts.offset_bottom = 300
 	_root.add_child(toasts)
@@ -180,9 +182,9 @@ func _build_help() -> void:
 	_help.anchor_top = 1.0
 	_help.anchor_bottom = 1.0
 	_help.offset_left = 12
-	_help.offset_top = -214
+	_help.offset_top = -12
 	_help.offset_bottom = -12
-	_help.offset_right = 380
+	_help.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_help.add_theme_stylebox_override("panel", UITheme.box(Color("#1c1510d0"), UITheme.GOLD_DIM, 1, 6, 10))
 	var text := UITheme.label(
@@ -194,6 +196,13 @@ func _build_help() -> void:
 		"Esc - close / menu    H - hide this help", 14, UITheme.TEXT_DIM)
 	_help.add_child(text)
 	_root.add_child(_help)
+	# Fade the help away after a while; H brings it back.
+	get_tree().create_timer(45.0).timeout.connect(_auto_hide_help)
+
+
+func _auto_hide_help() -> void:
+	if is_instance_valid(_help):
+		_help.visible = false
 
 
 # --- Pause / save / load -------------------------------------------------------------------

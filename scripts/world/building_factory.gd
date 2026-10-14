@@ -62,7 +62,8 @@ static func _build_primitive(root: Node3D, b: BuildingData, def: Dictionary) -> 
 			_house(root, w, d, h, wall, roof, trim, stone, {"timber": true, "windows": 0, "barn_door": true})
 		"bakery":
 			_house(root, w, d, h, wall, roof, trim, stone, {"timber": true, "windows": 1, "chimney": true})
-			Mats.sphere(root, 1.3, Vector3(w * 0.5 + 0.6, PLINTH, -d * 0.15), stone, Vector3(1, 0.8, 1))
+			Mats.sphere(root, 1.1, Vector3(w * 0.5 + 0.7, PLINTH - 0.2, -d * 0.15), Mats.hex("#a0583a"), Vector3(1, 0.9, 1))
+			Mats.box(root, Vector3(0.4, 1.2, 0.4), Vector3(w * 0.5 + 0.9, PLINTH + 1.0, -d * 0.15 - 0.4), stone)
 		"workshop":
 			_house(root, w, d, h, wall, roof, trim, stone, {"timber": true, "windows": 1, "barn_door": true})
 		_:

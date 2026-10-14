@@ -27,7 +27,7 @@ func _ready() -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_white = 6.0
 	env.ssao_enabled = true
 	env.ssao_radius = 1.2
@@ -36,7 +36,7 @@ func _ready() -> void:
 	env.glow_intensity = 0.35
 	env.glow_bloom = 0.05
 	env.fog_enabled = true
-	env.fog_density = 0.0016
+	env.fog_density = 0.0009
 	env.fog_sky_affect = 0.4
 	env.adjustment_enabled = true
 	env.adjustment_saturation = 1.12
@@ -71,7 +71,7 @@ func set_time(minutes: float) -> void:
 	sun.rotation = Vector3(-elevation, azimuth, 0)
 	var sun_color := Color("#fff4e0").lerp(Color("#ffb070"), twilight)
 	sun.light_color = sun_color.lerp(Color("#9fb4ff"), night)
-	sun.light_energy = lerpf(0.35, 1.25, smoothstep(0.0, 0.4, daylight))
+	sun.light_energy = lerpf(0.4, 1.15, smoothstep(0.0, 0.4, daylight))
 
 	var top := _day_top.lerp(_dusk_top, twilight).lerp(_night_top, night)
 	var horizon := _day_horizon.lerp(_dusk_horizon, twilight).lerp(_night_horizon, night)
@@ -79,6 +79,6 @@ func set_time(minutes: float) -> void:
 	sky_mat.sky_horizon_color = horizon
 	sky_mat.ground_horizon_color = horizon.darkened(0.2)
 	sky_mat.ground_bottom_color = top.darkened(0.5)
-	env.ambient_light_energy = lerpf(0.65, 1.0, 1.0 - night)
+	env.ambient_light_energy = lerpf(0.5, 0.6, 1.0 - night)
 	env.fog_light_color = horizon
 	Mats.set_night_glow(night)

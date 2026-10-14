@@ -41,10 +41,10 @@ func _build_terrain() -> void:
 	var normals := PackedVector3Array()
 	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
-	var grass_a := Color("#6f9b47")
-	var grass_b := Color("#8ab456")
-	var forest := Color("#5a8540")
-	var trodden := Color("#94a35e")
+	var grass_a := Color("#5d8a37")
+	var grass_b := Color("#7aa346")
+	var forest := Color("#4a7533")
+	var trodden := Color("#8a9452")
 	for iz in n + 1:
 		for ix in n + 1:
 			var x := -e + ix * step
@@ -115,7 +115,7 @@ func _build_roads() -> void:
 				var base := (i - 1) * 3
 				for k in 2:
 					var a0 := base + k
-					indices.append_array([a0, a0 + 1, a0 + 3, a0 + 1, a0 + 4, a0 + 3])
+					indices.append_array([a0, a0 + 3, a0 + 1, a0 + 1, a0 + 3, a0 + 4])
 		var arrays := []
 		arrays.resize(Mesh.ARRAY_MAX)
 		arrays[Mesh.ARRAY_VERTEX] = verts
@@ -158,26 +158,17 @@ func _build_square() -> void:
 	add_child(holder)
 	var c := layout.square_center
 	var r := layout.square_radius
-	Mats.cylinder(holder, r + 0.5, r + 0.5, 0.14, c + Vector3(0, 0.04, 0), Mats.hex("#8f8573"), 40)
-	Mats.cylinder(holder, r, r, 0.16, c + Vector3(0, 0.06, 0), Mats.hex("#b8ad97"), 40)
-	# Scattered cobbles for texture
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_colors = true
-	mm.mesh = Mats.box_mesh(Vector3(0.55, 0.06, 0.45))
-	var count := int(r * r * 2.2)
-	mm.instance_count = count
-	for i in count:
+	Mats.cylinder(holder, r + 0.5, r + 0.5, 0.14, c + Vector3(0, 0.04, 0), Mats.hex("#7d7262"), 40)
+	# Concentric rings of paving read as cobbles from above.
+	var bands := ["#a99d86", "#b3a790", "#a59880", "#b6aa93", "#ab9f88"]
+	for i in bands.size():
+		var radius := r * (1.0 - float(i) / bands.size())
+		Mats.cylinder(holder, radius, radius, 0.16 + i * 0.004, c + Vector3(0, 0.06 + i * 0.002, 0), Mats.hex(bands[i]), 40)
+	# A few loose flagstones for texture.
+	for i in 40:
 		var a := _rng.randf() * TAU
-		var d := sqrt(_rng.randf()) * (r - 0.4)
-		var basis := Basis(Vector3.UP, _rng.randf() * TAU)
-		mm.set_instance_transform(i, Transform3D(basis, c + Vector3(cos(a) * d, 0.15, sin(a) * d)))
-		mm.set_instance_color(i, Color("#a69a83").lerp(Color("#c9bfa9"), _rng.randf()))
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
-	mmi.material_override = Mats.vertex_colored(0.9)
-	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	holder.add_child(mmi)
+		var d := sqrt(_rng.randf()) * (r - 0.8)
+		Mats.cylinder(holder, 0.35, 0.35, 0.03, c + Vector3(cos(a) * d, 0.15, sin(a) * d), Mats.hex("#9a8e78"), 6, Vector3(0, _rng.randf() * TAU, 0))
 
 
 # --- Fields ------------------------------------------------------------------------------

@@ -57,6 +57,8 @@ static func vertex_colored(roughness: float = 0.95) -> StandardMaterial3D:
 		return _materials[key]
 	var m := StandardMaterial3D.new()
 	m.vertex_color_use_as_albedo = true
+	# Colors are written as sRGB hex codes, so convert them to linear.
+	m.vertex_color_is_srgb = true
 	m.roughness = roughness
 	_materials[key] = m
 	return m

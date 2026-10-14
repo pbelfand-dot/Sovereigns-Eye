@@ -33,6 +33,7 @@ var _live_refresh := 0.0
 func _init() -> void:
 	custom_minimum_size = Vector2(WIDTH, 0)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	clip_contents = true
 
 
 func _ready() -> void:
@@ -87,13 +88,15 @@ func _ready() -> void:
 	info.add_child(follow)
 
 	_banner = PanelContainer.new()
-	_banner_label = UITheme.label("", 16, UITheme.TEXT, true)
+	_banner_label = UITheme.label("", 15, UITheme.TEXT, true)
 	_banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_banner.add_child(_banner_label)
 	root.add_child(_banner)
 
 	_tabs = TabContainer.new()
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tabs.add_theme_font_size_override("font_size", 15)
 	root.add_child(_tabs)
 	_appraisal_box = _add_tab("Appraisal")
 	_personality_box = _add_tab("Personality")
@@ -261,7 +264,7 @@ func _build_personality() -> void:
 	_meter("Loyalty", c.loyalty, MoodSystem.loyalty_label(c.loyalty), Color("#6fa8e6"))
 	_meter("Stress", c.stress, MoodSystem.stress_label(c.stress), Color("#e07a6a"))
 	var amb := c.get_current("ambition")
-	_meter("Ambition", minf(amb, 100.0), "%s (%d)" % [MoodSystem.ambition_label(amb), amb], Color("#e9bf62"))
+	_meter("Ambition", minf(amb, 100.0), "%s (ceiling %d)" % [MoodSystem.ambition_label(amb), c.get_potential("ambition")], Color("#e9bf62"))
 
 	_section(_personality_box, "Why they feel this way")
 	_factor_list("Happiness", MoodSystem.happiness_factors(c, world.state), MoodSystem.happiness_target(c, world.state))
@@ -345,6 +348,9 @@ func _relation_row(r: Dictionary) -> void:
 	b.theme_type_variation = "RowButton"
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.clip_text = true
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.add_theme_font_size_override("font_size", 15)
 	var rel_name := _relation_name(str(r["type"]), other)
 	b.text = "%s  -  %s, %d, %s" % [other.full_name(), rel_name, other.age, other.occupation_name()]
 	b.tooltip_text = "Open %s's card" % other.first_name
