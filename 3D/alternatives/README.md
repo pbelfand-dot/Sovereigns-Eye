@@ -1,24 +1,27 @@
-# Five non-voxel visual directions
+# Five shortlisted non-Kenney packs
 
-These are deliberately different art directions for Sovereign's Eye, not five minor
-variations of the same blocky look. Every option is CC0, stored as GLB, and includes a
-preview gallery and its original license.
+Kenney was removed from the art-direction shortlist after review. The five recommended
+packs below all come from KayKit, giving Sovereign's Eye a cohesive rounded fantasy
+style without cubic Minecraft-like anatomy.
 
-| Option | Direction | Models | Best quality | Main tradeoff |
-| --- | --- | ---: | --- | --- |
-| [01 — KayKit Adventurers](option-01-kaykit-adventurers/) | Rounded heroic fantasy | 5 | Best overall character fit; readable silhouettes and extensive animation libraries | Small starting cast and a cute/chibi proportion |
-| [02 — KayKit Skeletons](option-02-kaykit-skeletons/) | Stylized undead | 4 | Memorable enemy faction that pairs with option 01 | Not a complete hero or civilian cast |
-| [03 — Kenney Graveyard](option-03-kenney-graveyard/) | Gothic storybook world | 91 | Coherent spooky environment, props, and characters | Leans Halloween unless recolored and mixed with other scenery |
-| [04 — Kenney Platformer](option-04-kenney-platformer/) | Bright mascot adventure | 153 | Broad, rounded level-building kit with strong visual clarity | Cheerful tone may undercut darker sovereign themes |
-| [05 — Kenney Mini Characters](option-05-kenney-mini-characters/) | Miniature storybook people | 26 | Inclusive, approachable cast with mobility aids and accessories | Contemporary civilian styling needs a fantasy costume pass |
+| Option | Pack | Models | Role in the game |
+| --- | --- | ---: | --- |
+| [01 — Adventurers](option-01-kaykit-adventurers/) | Rounded animated fantasy heroes | 5 | Player characters, allies, and class silhouettes |
+| [02 — Skeletons](option-02-kaykit-skeletons/) | Stylized animated undead | 4 | Matching enemy faction |
+| [03 — Dungeon Remastered](option-03-kaykit-dungeon/) | Modular dungeon architecture and props | 203 | Interiors, ruins, treasure rooms, traps, and strongholds |
+| [04 — Medieval Hexagon](option-04-kaykit-medieval-hexagon/) | Medieval settlements and terrain | 221 | Overworld towns, castles, roads, water, nature, and strategy-map scenes |
+| [05 — Halloween Bits](option-05-kaykit-halloween/) | Gothic fantasy scenery and props | 63 | Haunted regions, crypts, graveyards, shrines, and seasonal encounters |
 
-## Recommendation
+## Recommended combination
 
-Use **option 01** as the primary character direction and **option 02** as its enemy
-companion pack. Their proportions and material treatment match naturally. Option 03
-is the best alternate world direction if the game should feel darker and more
-atmospheric. Options 04 and 05 are useful tone tests rather than the default choice.
+These packs work best as one modular art family rather than mutually exclusive styles:
 
-The existing `characters/blocky/` folder is retained for reference, but it is not the
-recommended final character direction because its cubic anatomy reads too close to a
-voxel/Minecraft visual language.
+1. Adventurers establish the character proportions.
+2. Skeletons supply a matching enemy faction.
+3. Medieval Hexagon supplies the overworld.
+4. Dungeon Remastered supplies interiors.
+5. Halloween Bits adds a darker corrupted-region layer.
+
+The original blocky characters and the three Kenney alternatives remain in the
+repository only as rejected comparison references. They are not part of the current
+recommendation and can be removed in a separate cleanup after approval.

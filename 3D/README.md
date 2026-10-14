@@ -19,16 +19,19 @@ Godot, Unity, Unreal, Blender, Three.js, and other modern tools.
 | `environments/fantasy-town-kit/water/` | Modular fountain parts | 10 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
-| `alternatives/option-03-kenney-graveyard/` | Gothic scenery, props, and characters | 91 |
-| `alternatives/option-04-kenney-platformer/` | Bright mascot scenery, props, and characters | 153 |
-| `alternatives/option-05-kenney-mini-characters/` | Miniature people, mobility aids, and accessories | 26 |
+| `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |
+| `alternatives/option-04-kaykit-medieval-hexagon/` | Medieval buildings, terrain, nature, and settlement props | 221 |
+| `alternatives/option-05-kaykit-halloween/` | Gothic fantasy scenery, trees, graves, lanterns, and pumpkins | 63 |
+| `alternatives/option-03-kenney-graveyard/` | Rejected comparison pack retained for reference | 91 |
+| `alternatives/option-04-kenney-platformer/` | Rejected comparison pack retained for reference | 153 |
+| `alternatives/option-05-kenney-mini-characters/` | Rejected comparison pack retained for reference | 26 |
 
-Total: **540 models**.
+Total: **1,027 models**.
 
-The original blocky set remains available for comparison, but the five collections in
-[`alternatives/`](alternatives/) are the recommended non-Minecraft-like directions.
-Each option has its own models, individual preview gallery, overview image, source,
-license, and decision notes.
+The original blocky set and three Kenney alternatives remain available for comparison,
+but the five KayKit collections in [`alternatives/`](alternatives/) are the recommended
+non-Minecraft-like, non-Kenney direction. Each shortlisted option has its own models,
+preview gallery, source, license, and decision notes.
 
 ## Finding the right model
 
@@ -72,8 +75,10 @@ not required.
 ## Validation
 
 [`VALIDATION.json`](VALIDATION.json) records the completed checks. Every model was
-confirmed as a readable glTF 2.0 GLB, every referenced texture is present, every model
-has a matching preview, and every file has a SHA-256 checksum in the manifest.
+confirmed as a readable glTF 2.0 GLB, every referenced texture is present, and every
+file has a SHA-256 checksum in the manifest. The original and Kenney collections have
+one preview per model; the larger KayKit environment packs provide official overview
+and scene galleries instead.
 
 To rebuild both records after changing the library:
 

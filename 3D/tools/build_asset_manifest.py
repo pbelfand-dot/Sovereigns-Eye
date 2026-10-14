@@ -53,6 +53,21 @@ COLLECTIONS = {
         "license": "alternatives/option-05-kenney-mini-characters/LICENSE.txt",
         "preview_root": "alternatives/option-05-kenney-mini-characters/previews",
     },
+    "option-03-kaykit-dungeon": {
+        "source": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "license": "alternatives/option-03-kaykit-dungeon/LICENSE.txt",
+        "preview_root": "alternatives/option-03-kaykit-dungeon/previews",
+    },
+    "option-04-kaykit-medieval-hexagon": {
+        "source": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "license": "alternatives/option-04-kaykit-medieval-hexagon/LICENSE.txt",
+        "preview_root": "alternatives/option-04-kaykit-medieval-hexagon/previews",
+    },
+    "option-05-kaykit-halloween": {
+        "source": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "license": "alternatives/option-05-kaykit-halloween/LICENSE.txt",
+        "preview_root": "alternatives/option-05-kaykit-halloween/previews",
+    },
 }
 
 
