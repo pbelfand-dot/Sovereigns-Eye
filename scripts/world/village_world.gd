@@ -68,6 +68,7 @@ func _ready() -> void:
 
 	Game.before_save.connect(sync_to_state)
 	sky.set_time(state.minutes)
+	print("World ready: %s (seed %s), %d villagers, %d buildings" % [state.village_name, state.seed_text, state.characters.size(), state.layout.buildings.size()])
 
 
 func _exit_tree() -> void:

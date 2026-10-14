@@ -8,6 +8,8 @@ var _slots: SaveSlotDialog
 
 
 func _ready() -> void:
+	if _autostart_from_command_line():
+		return
 	theme = UITheme.get_theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
@@ -89,6 +91,16 @@ func _ready() -> void:
 	toasts.offset_right = 300
 	toasts.offset_top = 20
 	add_child(toasts)
+
+
+## Developer/CI switch: `-- --new-game=<seed>` skips the menu and starts a
+## village immediately (used to smoke-test exported builds).
+func _autostart_from_command_line() -> bool:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--new-game="):
+			Game.start_new_game.call_deferred(arg.trim_prefix("--new-game="))
+			return true
+	return false
 
 
 func _build_new_game_panel(parent: Container) -> void:

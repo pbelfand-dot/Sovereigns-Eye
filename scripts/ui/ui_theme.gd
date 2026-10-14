@@ -32,21 +32,34 @@ static var _heading_font: Font
 static var _body_font: Font
 
 
+## Bundled fonts (SIL Open Font License, see assets/fonts/) so text looks the
+## same on every device; falls back to system serif fonts if missing.
+const BODY_FONT_PATH := "res://assets/fonts/EBGaramond.ttf"
+const HEADING_FONT_PATH := "res://assets/fonts/Cinzel.ttf"
+
+
+static func _font(path: String, weight: int) -> Font:
+	if ResourceLoader.exists(path):
+		var base: FontFile = load(path)
+		var v := FontVariation.new()
+		v.base_font = base
+		v.variation_opentype = {"wght": weight}
+		return v
+	var f := SystemFont.new()
+	f.font_names = PackedStringArray(["Palatino", "Palatino Linotype", "Book Antiqua", "Georgia", "Cambria", "Times New Roman", "serif"])
+	f.font_weight = weight
+	return f
+
+
 static func body_font() -> Font:
 	if _body_font == null:
-		var f := SystemFont.new()
-		f.font_names = PackedStringArray(["Palatino", "Palatino Linotype", "Book Antiqua", "Georgia", "Cambria", "Times New Roman", "serif"])
-		f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
-		_body_font = f
+		_body_font = _font(BODY_FONT_PATH, 500)
 	return _body_font
 
 
 static func heading_font() -> Font:
 	if _heading_font == null:
-		var f := SystemFont.new()
-		f.font_names = PackedStringArray(["Palatino", "Palatino Linotype", "Book Antiqua", "Georgia", "Cambria", "Times New Roman", "serif"])
-		f.font_weight = 700
-		_heading_font = f
+		_heading_font = _font(HEADING_FONT_PATH, 700)
 	return _heading_font
 
 

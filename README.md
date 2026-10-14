@@ -13,7 +13,36 @@ with S+ Leadership. Find them.
 
 ---
 
-## 1. Run it on your Mac (5 minutes)
+## ⬇️ Download & play
+
+Every update is built automatically for every platform. Pick yours:
+
+| Device | Download |
+|---|---|
+| **Windows** (most PCs) | [SovereignsEye-Windows.zip](https://github.com/pbelfand-dot/Sovereigns-Eye/releases/download/latest/SovereignsEye-Windows.zip) |
+| **Windows on ARM** (Snapdragon laptops) | [SovereignsEye-Windows-ARM64.zip](https://github.com/pbelfand-dot/Sovereigns-Eye/releases/download/latest/SovereignsEye-Windows-ARM64.zip) |
+| **Mac** (Apple Silicon and Intel) | [SovereignsEye-Mac.zip](https://github.com/pbelfand-dot/Sovereigns-Eye/releases/download/latest/SovereignsEye-Mac.zip) |
+| **Linux / Chromebook Linux mode** (Intel/AMD) | [SovereignsEye-Linux.zip](https://github.com/pbelfand-dot/Sovereigns-Eye/releases/download/latest/SovereignsEye-Linux.zip) |
+| **Linux / Chromebook Linux mode** (ARM) | [SovereignsEye-Linux-ARM64.zip](https://github.com/pbelfand-dot/Sovereigns-Eye/releases/download/latest/SovereignsEye-Linux-ARM64.zip) |
+| **Android** (phones, tablets, Chromebooks with Play Store) | [SovereignsEye-Android.apk](https://github.com/pbelfand-dot/Sovereigns-Eye/releases/download/latest/SovereignsEye-Android.apk) |
+
+These links always point to the newest build of `main`. Work that hasn't been
+merged yet is on the [preview release](https://github.com/pbelfand-dot/Sovereigns-Eye/releases/tag/preview).
+
+**First launch:** the apps aren't code-signed yet, so your system will warn you once.
+- **Mac:** unzip, double-click *Sovereign's Eye*; when macOS blocks it, open
+  *System Settings → Privacy & Security* and click **Open Anyway**.
+- **Windows:** unzip, run `SovereignsEye.exe`; on the blue SmartScreen box click
+  **More info → Run anyway**.
+- **Linux:** unzip, then run `./SovereignsEye.x86_64` (or double-click it).
+- **Chromebook:** turn on *Settings → Advanced → Developers → Linux development
+  environment*, move the Linux zip into *Linux files*, unzip it, and run it from the
+  Terminal (`./SovereignsEye.x86_64`, or `.arm64` on ARM Chromebooks).
+- **Android:** open the `.apk` and allow installing from your browser/files app.
+
+Your saves stay on your device.
+
+## 1. Run it from source in Godot (for development)
 
 1. **Install Godot 4.7** (free) from <https://godotengine.org/download/macos/>
    and drag `Godot.app` into Applications. Use the standard build (not .NET).
