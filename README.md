@@ -109,6 +109,11 @@ license and checksum for every file. All of them come from Kenney under CC0 (fre
 for commercial use, no attribution required). See [`3D/README.md`](3D/README.md)
 for the catalog and import notes.
 
+The final models are still being chosen, so `3D/.gdignore` tells Godot to skip
+this folder for now; the game uses its built-in placeholder art. To use a model
+in game, delete `3D/.gdignore` (or copy the chosen `.glb` plus its `Textures/`
+folder into `assets/`) and point the building type at it as described below.
+
 ![Blocky character collection](3D/previews/blocky-characters/overview.png)
 
 ![Castle collection](3D/previews/castle-kit/overview.png)
