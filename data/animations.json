@@ -1,0 +1,40 @@
+{
+  "_comment": "Animation clips for villagers on the Quaternius Universal Base Characters. Clips come from the in-place Universal Animation Library files (gameplay code moves villagers, so root-motion files are not used). Godot strips the '_Loop' suffix on import, so 'Walk_Loop' is 'Walk' here. Lists are picked per villager (by id) so a crowd doesn't move in lockstep. 'speed' is the clip's playback rate relative to game speed.",
+  "libraries": [
+    "res://3D/animations/quaternius-universal-animation-library-1/models/UAL1_Standard.glb",
+    "res://3D/animations/quaternius-universal-animation-library-2/models/UAL2_Standard.glb"
+  ],
+  "modes": {
+    "walk": { "default": ["Walk"], "child": ["Jog_Fwd"], "noble": ["Walk_Formal"], "speed": 1.1 },
+    "idle": { "default": ["Idle", "Idle", "Idle_FoldArms"], "child": ["Idle"], "speed": 1.0 },
+    "talk": { "default": ["Idle_Talking", "Idle_Talking", "Yes", "Idle_FoldArms"], "child": ["Dance", "Idle_Talking", "Yes"], "speed": 1.0 },
+    "work": { "default": ["Interact", "PickUp_Table"], "child": ["Idle"], "speed": 0.9 }
+  },
+  "work_by_occupation": {
+    "farmer": ["Farm_Harvest", "Farm_PlantSeed", "Farm_Watering"],
+    "farmhand": ["Farm_Harvest", "Walk_Carry"],
+    "woodcutter": ["TreeChopping"],
+    "herbalist": ["Farm_Harvest", "Fixing_Kneeling"],
+    "blacksmith": ["Fixing_Kneeling", "Interact"],
+    "carpenter": ["TreeChopping", "Fixing_Kneeling"],
+    "miller": ["Push", "PickUp_Table"],
+    "baker": ["PickUp_Table", "Interact"],
+    "innkeeper": ["Interact", "Idle_Talking"],
+    "tavern_hand": ["PickUp_Table", "Interact"],
+    "priest": ["Spell_Simple_Idle"],
+    "knight": ["Sword_Regular_Combo", "Sword_Idle"],
+    "general": ["Sword_Idle", "Idle_FoldArms"],
+    "guard_captain": ["Sword_Idle", "Idle_FoldArms"],
+    "soldier": ["Sword_Idle", "Idle_FoldArms"],
+    "merchant": ["Idle_Talking", "Yes"],
+    "steward": ["Interact", "Idle_Talking"],
+    "housekeeper": ["Interact", "PickUp_Table"],
+    "apprentice": ["Fixing_Kneeling", "PickUp_Table"],
+    "lord": ["Idle_FoldArms", "Idle_Talking"],
+    "lady": ["Idle_Talking", "Idle_FoldArms"],
+    "king": ["Idle_FoldArms", "Idle_Talking"],
+    "queen": ["Idle_Talking", "Idle_FoldArms"],
+    "elder": ["Idle_Talking"]
+  },
+  "noble_occupations": ["lord", "lady", "noble_scion", "dowager", "king", "queen", "steward"]
+}

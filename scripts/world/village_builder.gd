@@ -127,8 +127,11 @@ func _build_roads() -> void:
 		arrays[Mesh.ARRAY_NORMAL] = normals
 		var mesh := ArrayMesh.new()
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		var mat := Mats.vertex_colored(1.0).duplicate() as StandardMaterial3D
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		var mat: Material = VillageKit.ground_material("road")
+		if mat == null:
+			var vc := Mats.vertex_colored(1.0).duplicate() as StandardMaterial3D
+			vc.cull_mode = BaseMaterial3D.CULL_DISABLED
+			mat = vc
 		var mi := MeshInstance3D.new()
 		mi.mesh = mesh
 		mi.material_override = mat
@@ -159,6 +162,12 @@ func _build_square() -> void:
 	var c := layout.square_center
 	var r := layout.square_radius
 	Mats.cylinder(holder, r + 0.5, r + 0.5, 0.14, c + Vector3(0, 0.04, 0), Mats.hex("#7d7262"), 40)
+	var paving := VillageKit.ground_material("square")
+	if paving:
+		# Kit brick paving with a darker cobbled ring.
+		Mats.cylinder(holder, r, r, 0.16, c + Vector3(0, 0.06, 0), VillageKit.ground_material("road"), 48)
+		Mats.cylinder(holder, r - 1.2, r - 1.2, 0.17, c + Vector3(0, 0.065, 0), paving, 48)
+		return
 	# Concentric rings of paving read as cobbles from above.
 	var bands := ["#a99d86", "#b3a790", "#a59880", "#b6aa93", "#ab9f88"]
 	for i in bands.size():

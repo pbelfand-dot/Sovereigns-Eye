@@ -77,6 +77,7 @@ static func window() -> StandardMaterial3D:
 
 static func set_night_glow(amount: float) -> void:
 	window().emission_energy_multiplier = amount * 2.2
+	VillageKit.set_night_glow(amount)
 
 
 # --- Cached meshes --------------------------------------------------------------

@@ -57,12 +57,12 @@ func show_character(c: CharacterData) -> void:
 		_model = null
 	if c == null:
 		return
-	_model = CharacterModel.create(c.appearance, c.occupation(), c.gender, c.age)
+	_model = HumanModel.for_character(c)
 	_holder.add_child(_model)
 	# Slight three-quarter turn reads better than a flat front view.
 	_model.rotation.y = deg_to_rad(-18.0)
 	var h := _model.body_height
-	var head_y := (0.86 + 0.88) * h
+	var head_y := _model.head_height()
 	var look := Vector3(0, head_y - 0.18 * h, 0)
 	_camera.position = look + Vector3(0.0, 0.08 * h, -2.4 * h)
 	_camera.look_at(look, Vector3.UP)

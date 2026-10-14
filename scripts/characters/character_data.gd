@@ -71,6 +71,15 @@ func occupation_name() -> String:
 	return str(occ.get(gendered_key, occ.get("name", occupation_id.capitalize())))
 
 
+## Outfit style from the occupation, adjusted for the wearer (a lord
+## consort wears a fine doublet, not a gown).
+func outfit() -> String:
+	var o := str(occupation().get("outfit", "tunic"))
+	if o == "gown" and gender == "male":
+		return "fine"
+	return o
+
+
 func status_name() -> String:
 	return str(GameData.status_def(social_status).get("name", social_status.capitalize()))
 

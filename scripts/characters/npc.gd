@@ -26,7 +26,7 @@ var selected := false
 func setup(c: CharacterData) -> void:
 	character = c
 	name = "NPC_%d" % c.id
-	model = CharacterModel.create(c.appearance, c.occupation(), c.gender, c.age)
+	model = HumanModel.for_character(c)
 	add_child(model)
 	# Lane offset so people sharing a road don't walk inside each other.
 	_lane = (float(c.id % 7) - 3.0) * 0.22
@@ -62,7 +62,7 @@ func _build_markers() -> void:
 	_label.outline_size = 8
 	_label.modulate = Color("#fff3d6")
 	_label.outline_modulate = Color(0.1, 0.07, 0.05, 0.9)
-	_label.position.y = 2.25 * model.body_height + 0.15
+	_label.position.y = model.head_height() + 0.55 * model.body_height + 0.15
 	_label.visible = false
 	add_child(_label)
 
@@ -166,6 +166,7 @@ func tick(delta: float, time_scale: float) -> void:
 			_turn_toward(to.normalized(), delta)
 	if time_scale > 0.0:
 		_anim_phase += delta * time_scale * (9.0 if moving else 4.0) / maxf(1.0, sqrt(time_scale))
+	model.anim_time_scale = time_scale * (_speed_factor if moving else 1.0)
 	model.animate("walk" if moving else _anim_mode, _anim_phase, delta)
 
 

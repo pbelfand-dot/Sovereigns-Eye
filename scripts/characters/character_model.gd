@@ -14,6 +14,8 @@ var right_arm: Node3D
 var torso: Node3D
 var head: Node3D
 var body_height := 1.0
+## Game speed for animation playback (set by the NPC each frame).
+var anim_time_scale := 1.0
 
 
 static func create(appearance: Dictionary, occupation: Dictionary, gender: String, age: int) -> CharacterModel:
@@ -171,6 +173,11 @@ func _build_tool(kind: String, metal: Material) -> void:
 			Mats.box(hand, Vector3(0.16, 0.2, 0.05), Vector3(0, 0.0, -0.08), Mats.hex("#6a2a2a"))
 		"staff":
 			Mats.cylinder(hand, 0.025, 0.03, 1.6, Vector3(0, 0.35, -0.06), wood, 6)
+
+
+## Height of the face (meters, in the parent's space), for cameras and labels.
+func head_height() -> float:
+	return (0.86 + 0.88) * body_height
 
 
 ## mode: "idle", "walk", "work", "talk". phase advances continuously.

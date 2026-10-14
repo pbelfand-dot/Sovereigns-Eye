@@ -16,6 +16,10 @@ static func build(b: BuildingData) -> Node3D:
 	root.position = TerrainHeight.on_ground(b.position)
 	root.rotation.y = b.rotation
 	var def := b.type_def()
+	if VillageKit.has_prefab(b.type):
+		var kit := _build_kit(root, b)
+		if kit:
+			return root
 	var model_path := str(def.get("model", ""))
 	if not model_path.is_empty() and ResourceLoader.exists(model_path):
 		var packed: PackedScene = load(model_path)
@@ -30,6 +34,66 @@ static func build(b: BuildingData) -> Node3D:
 			return root
 	_build_primitive(root, b, def)
 	return root
+
+
+## Quaternius kit building: shared prefab meshes + box collision proxies.
+static func _build_kit(root: Node3D, b: BuildingData) -> bool:
+	var p := VillageKit.prefab(b.type, b.variant)
+	if p.is_empty() or (p["shell"] as ArrayMesh).get_surface_count() == 0:
+		return false
+	# Sit on the lowest corner so no wall floats above sloping ground.
+	var lowest := INF
+	for k in 5:
+		var corner := Vector3.ZERO if k == 4 else Vector3((-1 if k % 2 == 0 else 1) * b.footprint.x * 0.5, 0, (-1 if k < 2 else 1) * b.footprint.y * 0.5)
+		var wp := b.position + b.basis() * corner
+		lowest = minf(lowest, TerrainHeight.height_at(wp.x, wp.z))
+	root.position.y = lowest - 0.05
+	var shell := MeshInstance3D.new()
+	shell.name = "Shell"
+	shell.mesh = p["shell"]
+	root.add_child(shell)
+	var details_mesh: ArrayMesh = p["details"]
+	if details_mesh.get_surface_count() > 0:
+		var details := MeshInstance3D.new()
+		details.name = "Details"
+		details.mesh = details_mesh
+		details.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		details.visibility_range_end = float(VillageKit.config().get("detail_range", 90.0))
+		details.visibility_range_end_margin = 8.0
+		root.add_child(details)
+	var body := StaticBody3D.new()
+	body.name = "Collision"
+	body.collision_layer = 2
+	body.collision_mask = 0
+	for box: AABB in p["boxes"]:
+		var shape := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = box.size
+		shape.shape = bs
+		shape.position = box.get_center()
+		body.add_child(shape)
+	root.add_child(body)
+	if p["sails"]:
+		_kit_sails(root, p)
+	return true
+
+
+static func _kit_sails(root: Node3D, p: Dictionary) -> void:
+	# The kit has no windmill: simple boards in the kit's own wood material.
+	var wood: Material = VillageKit.material_named("MI_WoodTrim")
+	var trim: Material = wood if wood else Mats.hex("#5a3d2b")
+	var hub := Node3D.new()
+	hub.set_script(load("res://scripts/world/spinner.gd"))
+	hub.position = Vector3(0, float(p["height"]) - 4.6, 2.55)
+	root.add_child(hub)
+	Mats.cylinder(hub, 0.3, 0.3, 0.6, Vector3.ZERO, trim, 8, Vector3(PI * 0.5, 0, 0))
+	var sail := Mats.hex("#e9dfc8")
+	for i in 4:
+		var arm := Node3D.new()
+		arm.rotation.z = i * PI * 0.5
+		hub.add_child(arm)
+		Mats.box(arm, Vector3(0.2, 5.6, 0.14), Vector3(0, 2.9, 0.2), trim)
+		Mats.box(arm, Vector3(1.3, 4.2, 0.05), Vector3(0.7, 3.4, 0.26), sail)
 
 
 static func _pick(list: Array, variant: int, fallback: String) -> Color:
