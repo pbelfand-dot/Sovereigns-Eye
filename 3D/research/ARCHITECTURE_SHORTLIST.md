@@ -17,6 +17,10 @@ toy-block aesthetics.
 uses the same modern textured-stylized language, and has enough architectural
 variation to build a town rather than repeat a few complete houses.
 
+**Status:** The free Standard edition is now included in
+`environments/quaternius-medieval-village-standard/` with 176 modules and all
+shared texture dependencies.
+
 ## 2. Ultimate Modular Ruins — secondary biome
 
 - Official page: https://quaternius.com/packs/ultimatemodularruins.html

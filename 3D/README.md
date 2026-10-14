@@ -1,8 +1,10 @@
 # Sovereign's Eye 3D library
 
 This folder is the game's organized library of stylized, low-poly 3D assets. Models
-are stored as **GLB (glTF 2.0)** for broad support across Roblox import workflows,
-Godot, Unity, Unreal, Blender, Three.js, and other modern tools.
+are stored as **glTF 2.0** for broad support across Roblox import workflows, Godot,
+Unity, Unreal, Blender, Three.js, and other modern tools. Most collections use
+self-contained GLB; the Medieval Village MegaKit keeps JSON glTF, paired BIN, and
+shared PNG files to avoid duplicating large texture maps into every module.
 
 ## Library map
 
@@ -17,6 +19,7 @@ Godot, Unity, Unreal, Blender, Three.js, and other modern tools.
 | `environments/fantasy-town-kit/decor/` | Carts, stalls, fences, banners, lanterns, and props | 15 |
 | `environments/fantasy-town-kit/terrain/` | Roads, rocks, trees, and hedges | 21 |
 | `environments/fantasy-town-kit/water/` | Modular fountain parts | 10 |
+| `environments/quaternius-medieval-village-standard/` | Textured modular village architecture and props | 176 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
 | `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |
@@ -29,7 +32,7 @@ Godot, Unity, Unreal, Blender, Three.js, and other modern tools.
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,042 GLB files**.
+Total: **1,218 glTF 2.0 model files** (1,042 GLB + 176 JSON glTF).
 
 The original blocky set and three Kenney alternatives remain available for comparison,
 but the five KayKit collections in [`alternatives/`](alternatives/) are the recommended
@@ -58,6 +61,10 @@ Some GLBs use a nearby PNG color texture and some embed their textures. When a
 `Textures/` folder exists, keep it with the model when moving files. The exact external
 texture path for every model is recorded in `ASSET_MANIFEST.csv`.
 
+The Medieval Village Standard pack uses shared PNG maps and one BIN per JSON glTF.
+Keep its entire `models/` directory together; moving only an individual `.gltf`
+file will leave behind its geometry and textures.
+
 Example:
 
 ```text
@@ -85,7 +92,7 @@ not required.
 ## Validation
 
 [`VALIDATION.json`](VALIDATION.json) records the completed checks. Every model was
-confirmed as a readable glTF 2.0 GLB, every referenced texture is present, and every
+confirmed as readable glTF 2.0, every referenced buffer and texture is present, and every
 file has a SHA-256 checksum in the manifest. The original and Kenney collections have
 one preview per model; the larger KayKit environment packs provide official overview
 and scene galleries instead.
