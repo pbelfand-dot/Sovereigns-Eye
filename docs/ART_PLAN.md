@@ -49,7 +49,24 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 - Hair, beard and eyebrows are recolored per villager from their data (auburn, blond, grey and so on).
 - Skin tone is recolored the same way.
 
-**Clothing (stopgap).** The free bodies ship in underwear, so clothing is painted on in each villager's outfit colors: tunic, robe, gown, mail with tabard, apron, or fine doublet. A shader reads smooth body coordinates baked once per body. **This is a stopgap**; see §3. It reads as tight-fitting clothes on athletic bodies.
+**Clothing: Quaternius Modular Character Outfits (free sampler).**
+- Villagers wear the head of the base body plus real outfit pieces: torso, sleeves with hands, trousers, shoes or boots, and optional hoods and shoulder armor.
+- `scripts/characters/outfit_kit.gd` picks a look from `data/outfits.json`, using the occupation's outfit style and headwear:
+
+  | Outfit style | What they wear |
+  |---|---|
+  | Tunic (farmers, children, apprentices) | Peasant set, sometimes with Ranger trousers or boots |
+  | Apron (crafts and trades) | Peasant set |
+  | Robe (priests, herbalists, elders) | Peasant set |
+  | Armor (soldiers, guards, knights) | Ranger set with shoulder armor |
+  | Fine / gown (nobles, steward, merchant) | Ranger set in the brown leather colorway |
+
+  - Hooded jobs (woodcutter, priest, herbalist) get the Ranger hood, which hides the hair.
+  - Each set has two colorways. A villager gets the one closest to their primary clothing color, so the AI portrait prompt (which now describes the real clothes) matches the 3D model.
+- The pieces share the base rig's bone order. Each look is merged into **one skinned mesh**, with one surface per material and generated LODs, and that mesh is shared by everyone wearing the look. The skeleton switches to the outfits' slightly narrower "Regular" shoulders and hips.
+- Hands and head use `shaders/human_skin.gdshader`, which re-tints each texture to the villager's skin tone relative to its own average brightness. Hands and face therefore match.
+- Without the pack, the old painted-on clothing (`shaders/human_body.gdshader`) is used automatically.
+- Before/after: `docs/screenshots/outfits_before_after.jpg`.
 
 **Animation.**
 - Walk, idle, talk and job-specific work clips: farmers harvest, plant and water; woodcutters chop; priests use the spell idle; knights drill with sword combos.
@@ -103,7 +120,7 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 
 | Gap (what you see in game today) | Fix | Edition / price | Priority |
 |---|---|---|---|
-| **Clothing.** Painted-on clothes over athletic underwear bodies | **Modular Character Outfits – Fantasy**: free sampler now acquired (4 Peasant/Ranger outfits + 20 modular pieces); full Source has 12 outfits and 62 parts | **Standard: acquired**; Source $20 | **1 — integrate sampler; Source only if its extra variety is needed** |
+| **Clothing variety.** The free sampler is integrated, but it only has Peasant and Ranger sets. Nobles wear fine leather, priests wear peasant clothes with a hood, and soldiers wear leather with shoulder armor. There are no gowns, robes, plate armor or crowns. | **Modular Character Outfits – Fantasy Source**: 12 outfits from 62 parts. The publisher preview shows a crowned queen in a gown, a noble's coat, plate armor and a mage's robes. | **Standard: integrated**; Source $20 | **1 — buy Source for nobles, knights and clergy** |
 | **Body variety.** Only "Superhero" proportions, so children look like small adults | **Universal Base Characters Source**: 6 bodies (Superhero, Regular, Teen × male/female), 20 hairstyles, eye and skin color shaders | $19.99 (we have the free Standard) | 2 |
 | **Trees, bushes, rocks, grass.** Still primitive placeholders | **Stylized Nature MegaKit**: free Standard now acquired (68/116 models) | **Standard: acquired**; Pro $9.99; Source $14.99 | **3 — integrate acquired sampler** |
 | **Market stalls, well, benches, barrels, forge, anvil, bread oven, tavern sign, hand tools.** Primitives or missing | **Fantasy Props MegaKit**: 211 props | **Standard: free** (94 models); Pro $9.99; Source $14.99 | 4 — free Standard first |
@@ -125,8 +142,8 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 1. Props.
 2. Optionally, the Source bodies.
 
-Next, wire in the acquired outfit and nature samplers to replace painted clothes and
-primitive trees. Props will fill the square and workshops after that pack is acquired.
+The outfit sampler is wired in. Next, the nature sampler replaces the primitive trees.
+Props will fill the square and workshops once that pack is acquired.
 
 ---
 
@@ -162,15 +179,19 @@ A ship is a moving parent node, so crew stay parented to the deck while it sails
 ```
 3D/                                   asset library (unchanged layout)
   environments/quaternius-medieval-village-standard/   used: village kit
-  character-tests/quaternius-universal-base-standard/  used: bodies + hair
+  character-tests/quaternius-universal-base-standard/  used: heads, eyes, hair (bodies = painted fallback)
+  characters/quaternius-modular-outfits-fantasy-standard/  used: outfit parts (models/parts; models/outfits are import-skipped duplicates)
   animations/quaternius-universal-animation-library-*  used: in-place clips
-  alternatives/, characters/, castle-kit/, fantasy-town-kit/, previews/, tools/, research/, licenses/
+  alternatives/, characters/blocky/, castle-kit/, fantasy-town-kit/, previews/, tools/, research/, licenses/
                                        .gdignore'd (reference only, never shipped)
 data/building_kit.json                building recipes + list of missing pieces
 data/animations.json                  activity -> clip mapping
 scripts/world/village_kit.gd          prefab assembly, shared materials, paving, night glow
-scripts/characters/human_model.gd     Quaternius villagers
-shaders/human_body.gdshader           skin tone + painted clothing (stopgap)
+data/outfits.json                     occupation outfit style -> outfit pieces, colorways
+scripts/characters/human_model.gd     Quaternius villagers (head, hair, animation)
+scripts/characters/outfit_kit.gd      outfit looks, merged per-look meshes, skeleton proportions
+shaders/human_skin.gdshader           skin tone for heads and the outfits' hands
+shaders/human_body.gdshader           skin tone + painted clothing (fallback without the outfit pack)
 shaders/human_hair.gdshader           hair/beard/eyebrow color
 tools/prefab_gallery.tscn             renders every prefab and a villager lineup to PNG
 tests/test_art_pipeline.gd            footprints, prefab merging, shared materials, bodies, in-place clips

@@ -5,9 +5,11 @@ extends CharacterModel
 ## in-place Universal Animation Libraries (3D/animations).
 ##
 ## Everything comes from the character's data: body by gender, height/build,
-## skin tone, hair style and color, beard, and painted clothing in their
-## outfit colors (see shaders/human_body.gdshader). Bodies, hair meshes,
-## materials and the animation library are loaded once and shared by everyone.
+## skin tone, hair style and color, beard, and clothing. Villagers wear real
+## clothes from the Quaternius outfit pack (OutfitKit) over the head of the
+## base body; without the pack, clothing is painted on in their outfit colors
+## (shaders/human_body.gdshader). Bodies, hair meshes, materials, outfit
+## meshes and the animation library are loaded once and shared by everyone.
 ## Per-villager colors are instance shader parameters, so a crowd costs no
 ## extra materials.
 ##
@@ -28,11 +30,18 @@ const HAIR := {
 ## Which of the two hair texture sheets a hair mesh is UV-mapped to.
 const HAIR_SHEET := {"Hair_SimpleParted": 1, "Hair_Buzzed": 1, "Hair_BuzzedFemale": 1, "Hair_Beard": 1, "Hair_Long": 2, "Hair_Buns": 2}
 const OUTFITS := ["tunic", "robe", "gown", "armor", "apron", "fine"]
+## Bones whose weight keeps a vertex in the head cut from the base body, and
+## how much of it a vertex needs (low, so the neck reaches into the collar).
+const HEAD_BONES := ["neck_01", "Head"]
+const HEAD_CUT_WEIGHT := 0.15
+## Skin luminance the base body's texture is tuned to (see human_skin.gdshader).
+const BASE_SKIN_LUMINANCE := 0.36
 
 static var _available := -1
 static var _bodies: Dictionary = {}          # gender -> shared body data
 static var _hair_meshes: Dictionary = {}     # hair name -> {"mesh", "skin"}
 static var _hair_materials: Dictionary = {}  # sheet (1/2) -> ShaderMaterial
+static var _texture_luminance: Dictionary = {}  # texture path -> average linear luminance
 
 var _player: AnimationPlayer
 var _skeleton: Skeleton3D
@@ -88,6 +97,8 @@ func _build_human(c: CharacterData) -> bool:
 	add_child(inst)
 	_skeleton = inst.find_child("Skeleton3D", true, false) as Skeleton3D
 	var hair_color := Color.from_string(str(ap.get("hair", "#4a2f1d")), Color("#4a2f1d"))
+	var skin := Color.from_string(str(ap.get("skin", "#e0b48c")), Color("#e0b48c"))
+	var look := OutfitKit.look_for(c) if body.has("head_mesh") else {}
 	var outfit := OUTFITS.find(c.outfit())
 	for child in _skeleton.get_children():
 		var mi := child as MeshInstance3D
@@ -100,16 +111,24 @@ func _build_human(c: CharacterData) -> bool:
 				mi.material_override = _hair_material(1 if g == "male" else 2)
 				mi.set_instance_shader_parameter("hair_color", hair_color)
 			_:
-				mi.mesh = body["mesh"]
+				mi.set_instance_shader_parameter("skin_tint", skin)
+				if not look.is_empty():
+					mi.name = "Head"
+					mi.mesh = body["head_mesh"]
+					continue
+				mi.mesh = _painted_mesh(g)
 				mi.material_override = body["material"]
-				mi.set_instance_shader_parameter("skin_tint", Color.from_string(str(ap.get("skin", "#e0b48c")), Color("#e0b48c")))
 				mi.set_instance_shader_parameter("cloth_primary", Color.from_string(str(ap.get("primary", "#7a6248")), Color("#7a6248")))
 				mi.set_instance_shader_parameter("cloth_secondary", Color.from_string(str(ap.get("secondary", "#4a3a2a")), Color("#4a3a2a")))
 				mi.set_instance_shader_parameter("outfit", float(maxi(outfit, 0)))
+	if not look.is_empty():
+		var clothes := OutfitKit.dress(_skeleton, look)
+		if clothes:
+			clothes.set_instance_shader_parameter("skin_tint", skin)
 
 	var style := str(ap.get("hair_style", "short"))
 	var hair_name := str(HAIR[g].get(style, ""))
-	if not hair_name.is_empty():
+	if not hair_name.is_empty() and not bool(look.get("hood", false)):
 		_attach_hair(hair_name, hair_color)
 	if g == "male" and bool(ap.get("beard", false)):
 		_attach_hair("Hair_Beard", hair_color)
@@ -225,14 +244,118 @@ static func _body(gender: String) -> Dictionary:
 	var pelvis := skel.get_bone_global_rest(skel.find_bone("pelvis")).origin.y
 	var data := {
 		"scene": scene,
-		"mesh": _bake_regions(body_mi, skel, float(SOURCE_HEIGHT[gender])),
 		"material": mat,
 		"library": _library(pelvis / MANNEQUIN_PELVIS),
 		"head_y": skel.get_bone_global_rest(skel.find_bone("Head")).origin.y + 0.08,
 	}
+	if OutfitKit.available():
+		var head_mat := OutfitKit.skin_material(src, skin_luminance_of(src))
+		data["head_mesh"] = _cut_head(body_mi, skel, head_mat)
+	else:
+		data["mesh"] = _bake_regions(body_mi, skel, float(SOURCE_HEIGHT[gender]))
 	inst.free()
 	_bodies[gender] = data
 	return data
+
+
+## The painted full body (only built when a villager has no outfit).
+static func _painted_mesh(gender: String) -> Mesh:
+	var data := _body(gender)
+	if not data.has("mesh"):
+		var inst := (data["scene"] as PackedScene).instantiate()
+		var skel := inst.find_child("Skeleton3D", true, false) as Skeleton3D
+		for child in skel.get_children():
+			if child is MeshInstance3D and child.name != "Eyes" and child.name != "Eyebrows":
+				data["mesh"] = _bake_regions(child, skel, float(SOURCE_HEIGHT[gender]))
+		inst.free()
+	return data["mesh"]
+
+
+## Skin shader luminance for a skin texture: scaled so every texture's average
+## skin maps to the same brightness the base body is tuned to.
+static func skin_luminance_of(src: StandardMaterial3D) -> float:
+	var reference := _average_luminance(load(ROOT + "bodies/Superhero_Male_FullBody_T_Superhero_Male_Dark.png") as Texture2D)
+	var own := _average_luminance(src.albedo_texture if src else null)
+	if reference <= 0.0 or own <= 0.0:
+		return BASE_SKIN_LUMINANCE
+	return BASE_SKIN_LUMINANCE * own / reference
+
+
+static func _average_luminance(tex: Texture2D) -> float:
+	if tex == null:
+		return 0.0
+	var key := tex.resource_path
+	if _texture_luminance.has(key):
+		return _texture_luminance[key]
+	var lum := 0.0
+	var img := tex.get_image()
+	if img and not img.is_empty():
+		if img.is_compressed():
+			img.decompress()
+		img.resize(8, 8, Image.INTERPOLATE_BILINEAR)
+		for y in 8:
+			for x in 8:
+				var px := img.get_pixel(x, y).srgb_to_linear()
+				lum += (px.r * 0.2126 + px.g * 0.7152 + px.b * 0.0722) / 64.0
+	_texture_luminance[key] = lum
+	return lum
+
+
+## The head and neck of the base body, for villagers wearing outfits (the
+## outfit pieces bring their own torso, arms, hands, legs and feet).
+static func _cut_head(mi: MeshInstance3D, skel: Skeleton3D, material: Material) -> Mesh:
+	var arrays := mi.mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var per := bones.size() / maxi(verts.size(), 1)
+	var head_bind := PackedByteArray()
+	var bind_count := mi.skin.get_bind_count() if mi.skin else skel.get_bone_count()
+	head_bind.resize(bind_count)
+	for i in bind_count:
+		var bone_name := str(mi.skin.get_bind_name(i)) if mi.skin else skel.get_bone_name(i)
+		head_bind[i] = 1 if HEAD_BONES.has(bone_name) else 0
+	var remap := PackedInt32Array()
+	remap.resize(verts.size())
+	remap.fill(-1)
+	var kept := PackedInt32Array()
+	for v in verts.size():
+		var w := 0.0
+		for k in per:
+			var b := bones[v * per + k]
+			if b < head_bind.size() and head_bind[b] == 1:
+				w += weights[v * per + k]
+		if w >= HEAD_CUT_WEIGHT:
+			remap[v] = kept.size()
+			kept.append(v)
+	var src_idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var idx := PackedInt32Array()
+	for t in range(0, src_idx.size(), 3):
+		var a := remap[src_idx[t]]
+		var b := remap[src_idx[t + 1]]
+		var c := remap[src_idx[t + 2]]
+		if a >= 0 and b >= 0 and c >= 0:
+			idx.append_array([a, b, c])
+	var out := []
+	out.resize(Mesh.ARRAY_MAX)
+	out[Mesh.ARRAY_INDEX] = idx
+	var per_vertex := {Mesh.ARRAY_VERTEX: 1, Mesh.ARRAY_NORMAL: 1, Mesh.ARRAY_TANGENT: 4, Mesh.ARRAY_TEX_UV: 1, Mesh.ARRAY_BONES: per, Mesh.ARRAY_WEIGHTS: per}
+	for ch: int in per_vertex:
+		var src: Variant = arrays[ch]
+		if src == null:
+			continue
+		var n: int = per_vertex[ch]
+		var dst: Variant = src.duplicate()
+		dst.resize(kept.size() * n)
+		for i in kept.size():
+			for k in n:
+				dst[i * n + k] = src[kept[i] * n + k]
+		out[ch] = dst
+	var flags := Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if per == 8 else 0
+	var importer := ImporterMesh.new()
+	importer.add_surface(Mesh.PRIMITIVE_TRIANGLES, out, [], {}, material, "Head", flags)
+	importer.generate_lods(25.0, 60.0, [])
+	return importer.get_mesh()
 
 
 ## One shared clip library per body: both in-place Universal Animation

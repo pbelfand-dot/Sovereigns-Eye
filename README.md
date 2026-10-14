@@ -181,11 +181,14 @@ See [`3D/README.md`](3D/README.md) for the full catalog and
   ([`data/building_kit.json`](data/building_kit.json)), merged into one mesh per
   shared material, with distance-culled details and box collisions.
   `godot --path . res://tools/prefab_gallery.tscn -- out_dir` renders every prefab.
-* **Villagers** are Quaternius base characters: body, hair, beard, skin and
-  outfit colors come from each character's data, and in-place animation clips
-  follow their activity and job ([`data/animations.json`](data/animations.json)).
-  Clothing remains painted on at runtime while the newly added Quaternius outfit
-  sampler is integrated and tested against the shared skeleton.
+* **Villagers** are Quaternius base characters. Body, hair, beard and skin come
+  from each character's data, and in-place animation clips follow their activity
+  and job ([`data/animations.json`](data/animations.json)).
+  * They wear real clothes from the Quaternius outfit sampler, picked by job and
+    rank in [`data/outfits.json`](data/outfits.json). The Peasant and Ranger sets
+    each come in two colorways, plus hoods and shoulder armor.
+  * Each villager's pieces are merged into one shared mesh per look.
+  * Portrait prompts describe the same clothes.
 * **Card portraits** show an AI painting when one exists for that villager, and
   a live 3D portrait otherwise. Paint them locally with ComfyUI +
   FLUX.2 [klein]: see [`ai-art/README.md`](ai-art/README.md).
@@ -193,6 +196,8 @@ See [`3D/README.md`](3D/README.md) for the full catalog and
   listed with sources and prices in [`docs/ART_PLAN.md`](docs/ART_PLAN.md).
 
 ![Villagers](docs/screenshots/villagers.jpg)
+
+Before/after: [`docs/screenshots/outfits_before_after.jpg`](docs/screenshots/outfits_before_after.jpg).
 ![Night](docs/screenshots/night.jpg)
 
 ### One consistent look from any source (experimental)
@@ -222,7 +227,8 @@ as readable JSON.
 
 ## 8. Known limitations (Phase 2 first playable)
 
-* Art gaps: clothing and nature samplers are acquired but not integrated; crops, market
+* Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
+  fine leather and there are no gowns, robes or plate armor yet. Crops, market
   stalls, the well and benches are still simple shapes; hats and hand tools
   aren't shown in 3D yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
 * NPCs walk along roads and can clip through each other or props; there is

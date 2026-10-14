@@ -87,3 +87,40 @@ func test_meadow_ground_wear() -> void:
 	var mat := VillageBuilder.meadow_material(l, cfg, origin, e * 2.0)
 	check(mat.shader != null and mat.get_shader_parameter("use_wear") == true, "meadow material uses the wear mask")
 	check(mat.get_shader_parameter("wear_mask") is Texture2D, "wear mask is bound to the shader")
+
+
+func test_outfits_dress_every_villager() -> void:
+	if not OutfitKit.available():
+		check(true, "outfit pack not in project; painted clothing is used")
+		return
+	var w := WorldGenerator.generate("outfit-seed")
+	var styles := {}
+	for c in w.characters:
+		var look := OutfitKit.look_for(c)
+		check(not (look["parts"] as Array).is_empty(), "%s wears outfit parts" % c.full_name())
+		for part: String in look["parts"]:
+			check(ResourceLoader.exists(OutfitKit.part_path(part)), "%s: part %s exists" % [c.full_name(), part])
+			check(part.begins_with("Female_" if c.gender == "female" else "Male_"), "%s wears %s-cut %s" % [c.full_name(), c.gender, part])
+		check_eq(look, OutfitKit.look_for(c), "%s's look is stable" % c.full_name())
+		check(not OutfitKit.describe(look).is_empty(), "%s's clothes can be described" % c.full_name())
+		var headwear := str(c.occupation().get("headwear", ""))
+		check(bool(look["hood"]) == (headwear == "hood"), "%s wears a hood only with hooded jobs" % c.full_name())
+		if c.outfit() == "armor":
+			check(str(look["key"]).contains("Pauldron"), "%s (armor) has shoulder armor" % c.full_name())
+		styles[c.outfit()] = true
+		if c.outfit() in ["fine", "gown"]:
+			check_eq(int(look["colorways"].get("ranger", -1)), 1, "%s (noble) wears the leather colorway" % c.full_name())
+	check(styles.size() >= 4, "several outfit styles appear (%s)" % [styles.keys()])
+	# Built model: one merged outfit mesh, the base body cut down to the head.
+	var c0 := w.characters[0]
+	var m := HumanModel.for_character(c0)
+	var outfit := m.find_child("Outfit", true, false) as MeshInstance3D
+	check(outfit != null and outfit.skin != null, "outfit mesh is skinned to the villager")
+	check(outfit.mesh.get_surface_count() <= 4, "outfit parts are merged by material (%d surfaces)" % outfit.mesh.get_surface_count())
+	var head := m.find_child("Head", true, false) as MeshInstance3D
+	check(head != null and head.mesh.get_aabb().position.y > 1.3, "only the head of the base body remains")
+	check(m.find_child("AnimationPlayer", true, false) != null, "dressed villager still animates")
+	var again := HumanModel.for_character(c0)
+	check((again.find_child("Outfit", true, false) as MeshInstance3D).mesh == outfit.mesh, "same look shares one mesh")
+	m.free()
+	again.free()
