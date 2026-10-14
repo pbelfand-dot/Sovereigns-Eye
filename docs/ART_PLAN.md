@@ -4,8 +4,8 @@
 Kenney, the blocky set and the KayKit alternatives stay in `3D/` as **reference only**. They are hidden from Godot with `.gdignore` and are never shipped.
 
 This plan was written after inspecting:
-- `3D/ASSET_MANIFEST.csv`: 1,310 models; 283 of them Quaternius.
-- `3D/VALIDATION.json`: 1,310 / 1,310 valid, no missing dependencies.
+- `3D/ASSET_MANIFEST.csv`: 1,404 models; 377 of them Quaternius.
+- `3D/VALIDATION.json`: 1,404 / 1,404 valid, no missing dependencies.
 - The Quaternius folder READMEs.
 - `3D/research/SCALABILITY_ROADMAP.md`.
 
@@ -104,13 +104,15 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 
 | Stage | Readiness | What carries it | What it still needs |
 |---|---|---|---|
-| **Tiny town** (Phase 1, now) | **Playable** | Village kit prefabs, 2 bodies + hair, 84 clips; outfit and nature samplers acquired | Integrate real clothing and nature; acquire props |
-| **Large village** | Mostly | Larger recipes (2–3 stories, overhangs, balconies); more variants per type | Markets, workshops, furniture, crops, vegetation, population variety |
+| **Tiny town** (Phase 1, now) | **Playable** | Village kit prefabs, 2 bodies + hair, 84 clips; outfit, nature, and prop samplers acquired | Finish integrating nature and props |
+| **Large village** | Mostly | Larger recipes plus acquired markets, workshop equipment, furniture, and dressing props | Integrate the props; crops, population variety |
 | **Town / city districts** | Partial | Dense multi-story blocks from the same modules. Prefabs + MultiMesh instancing for repeated houses | Civic landmarks, wealth tiers, signage, plazas; district streaming (§4) |
 | **Kingdom / capital** | Missing | Residential/commercial districts only | Palace/keep, monumental walls and gates, towers, barracks, temples, throne room, bridges |
 | **Harbor and ships** | Missing | Crates and wagon for early dock dressing only | Docks, piers, cranes, ropes, sails, cargo, ship interiors, several ship classes |
 
-The order to acquire is: clothing → nature → props → bodies and hair variety → town landmarks → kingdom → harbor/ships. Each step has a matching Quaternius pack, so the art never drifts out of one family.
+The first acquisition steps are complete: clothing → nature → props. Next are
+bodies and hair variety → town landmarks → kingdom → harbor/ships. Each step has
+a matching Quaternius pack, so the art never drifts out of one family.
 
 ---
 
@@ -123,7 +125,7 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 | **Clothing variety.** The free sampler is integrated, but it only has Peasant and Ranger sets. Nobles wear fine leather, priests wear peasant clothes with a hood, and soldiers wear leather with shoulder armor. There are no gowns, robes, plate armor or crowns. | **Modular Character Outfits – Fantasy Source**: 12 outfits from 62 parts. The publisher preview shows a crowned queen in a gown, a noble's coat, plate armor and a mage's robes. | **Standard: integrated**; Source $20 | **1 — buy Source for nobles, knights and clergy** |
 | **Body variety.** Only "Superhero" proportions, so children look like small adults | **Universal Base Characters Source**: 6 bodies (Superhero, Regular, Teen × male/female), 20 hairstyles, eye and skin color shaders | $19.99 (we have the free Standard) | 2 |
 | **Trees, bushes, rocks, grass.** Still primitive placeholders | **Stylized Nature MegaKit**: free Standard now acquired (68/116 models) | **Standard: acquired**; Pro $9.99; Source $14.99 | **3 — integrate acquired sampler** |
-| **Market stalls, well, benches, barrels, forge, anvil, bread oven, tavern sign, hand tools.** Primitives or missing | **Fantasy Props MegaKit**: 211 props | **Standard: free** (94 models); Pro $9.99; Source $14.99 | 4 — free Standard first |
+| **Market stalls, well, benches, barrels, forge, anvil, bread oven, tavern sign, hand tools.** Primitives or missing | **Fantasy Props MegaKit**: 200+ props | **Standard: acquired** (94 models); Pro $9.99; Source $14.99 | 4 — integrate acquired sampler |
 | More village modules (304 vs 176) and ready-made collisions | Medieval Village MegaKit Source | Pro $9.99 / Source $14.99 | 5 |
 | **Windmill.** Kit tower plus simple boards in the kit's wood material | Ultimate Fantasy RTS (selected landmarks) or a custom model | free / custom | 6 |
 | **Chapel / temple.** Built from village walls and a tower roof | Church/temple pieces: custom, or a future Quaternius kit | — | 6 |
@@ -137,13 +139,10 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 - Every Source edition above: about **$85** one-time.
 - Alternatively, Quaternius's Patreon is $10/month for one Source key per month.
 
-**Remaining free downloads.** The outfit and nature samplers are now in `3D/`. The remaining pack to acquire is:
-
-1. Props.
-2. Optionally, the Source bodies.
-
-The outfit sampler is wired in. Next, the nature sampler replaces the primitive trees.
-Props will fill the square and workshops once that pack is acquired.
+**Acquisition status.** The free outfit, nature, and prop samplers are now in
+`3D/`. The outfit sampler is wired in. Nature integration is in progress; props
+can now replace the square and workshop placeholders. The next optional purchase
+is the Source body pack for more body and hair variation.
 
 ---
 
@@ -179,6 +178,7 @@ A ship is a moving parent node, so crew stay parented to the deck while it sails
 ```
 3D/                                   asset library (unchanged layout)
   environments/quaternius-medieval-village-standard/   used: village kit
+  props/quaternius-fantasy-props-standard/              acquired: 94 matching props
   character-tests/quaternius-universal-base-standard/  used: heads, eyes, hair (bodies = painted fallback)
   characters/quaternius-modular-outfits-fantasy-standard/  used: outfit parts (models/parts; models/outfits are import-skipped duplicates)
   animations/quaternius-universal-animation-library-*  used: in-place clips

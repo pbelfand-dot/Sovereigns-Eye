@@ -12,19 +12,21 @@ of village houses.
 
 | Stage | Readiness | What works now | Important gap |
 | --- | --- | --- | --- |
-| Tiny town | Ready for prototype | 176 modular village pieces, basic props, two base characters, 86 Standard animation clips | More NPC outfits and nature dressing before final art |
-| Large village | Mostly ready | Modular roofs, walls, floors, doors, stairs, balconies, overhangs, fences, wagon, crate, vines | Markets, workshops, furniture, crops, vegetation, roads, and stronger population variation |
+| Tiny town | Ready for prototype | 176 modular village pieces, 94 matching props, two base characters, 86 Standard animation clips | Finish integrating the acquired outfits, nature, and props |
+| Large village | Mostly ready | Modular architecture plus acquired market, workshop, furniture, and utility props | Crops, roads, stronger population variation, and prop integration |
 | Town/city districts | Partial | Modules can form dense multi-story blocks and varied streets | Civic landmarks, wealth tiers, signage, plazas, districts, and performance-ready prefabs |
 | Kingdom/capital | Not complete | Existing kit can build residential and commercial districts | Palace/keep, monumental walls and gates, towers, barracks, temples, throne room, bridges, siege-scale landmarks |
 | Harbor and ships | Not complete | Wagon/crate and generic props can support early dock dressing | Docks, piers, cranes, ropes, sails, cargo sets, ship interiors, and multiple ship classes |
 
-## Matching additions to acquire
+## Matching additions and status
 
-1. **Stylized Nature MegaKit** — 116 models for forests, roadsides, village edges,
+1. **Stylized Nature MegaKit** — Standard acquired (68 models); the full pack has
+   116 models for forests, roadsides, village edges,
    gardens, and seven leaf looks. It is the highest-priority world-scale addition.
    https://quaternius.com/packs/stylizednaturemegakit.html
-2. **Fantasy Props MegaKit** — 211 props for markets, homes, taverns, workshops,
-   weapons, books, potions, tools, furniture, and breakables.
+2. **Fantasy Props MegaKit** — Standard acquired (94 models); the full pack has
+   200+ props for markets, homes, taverns, workshops, weapons, books, potions,
+   tools, furniture, and breakables.
    https://quaternius.com/packs/fantasypropsmegakit.html
 3. **Pirate Kit** — 71 characters and environment models and the strongest newer
    Quaternius starting point for the harbor/ship phase. Its ship silhouettes and

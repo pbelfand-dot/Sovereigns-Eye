@@ -21,6 +21,7 @@ Retrieved on 2026-10-13 from the original publishers, Kenney, KayKit, and Quater
 | Universal Animation Library 2 | [quaternius.com/packs/universalanimationlibrary2.html](https://quaternius.com/packs/universalanimationlibrary2.html) | Standard (free), 2026-06-16 update | CC0 1.0 | 2 GLB animation containers + 1 mannequin |
 | Medieval Village MegaKit | [quaternius.com/packs/medievalvillagemegakit.html](https://quaternius.com/packs/medievalvillagemegakit.html) | Standard (free) | CC0 1.0 | 176 JSON glTF models + shared textures |
 | Stylized Nature MegaKit | [quaternius.com/packs/stylizednaturemegakit.html](https://quaternius.com/packs/stylizednaturemegakit.html) | Standard (free) | CC0 1.0 | 68 JSON glTF models + shared textures |
+| Fantasy Props MegaKit | [quaternius.com/packs/fantasypropsmegakit.html](https://quaternius.com/packs/fantasypropsmegakit.html) | Standard (free) | CC0 1.0 | 94 JSON glTF models + shared textures |
 
 The repository includes a single glTF 2.0 version of each model, all required PNG
 textures, and available previews. Duplicate FBX and OBJ versions from the source
@@ -51,6 +52,13 @@ The Quaternius Stylized Nature MegaKit Standard archive was retrieved on
 2026-10-14. It contains 68 of the full pack's 116 models. The archive's JSON glTF
 and BIN files are retained, duplicate FBX/OBJ geometry was omitted, and the shared
 textures were moved into one directory with the image URIs updated accordingly.
+
+The Quaternius Fantasy Props MegaKit Standard archive was retrieved on
+2026-10-14. It contains 94 model files from the full 200+ model collection. The
+archive's JSON glTF and BIN files are retained, duplicate FBX/OBJ geometry was
+omitted, and the shared textures were moved into one directory with the image
+URIs updated accordingly. The alternate Unreal normal maps are retained but are
+not referenced by the glTF files.
 
 The original license text distributed inside each pack is preserved verbatim in
 [`licenses/`](licenses/) or the corresponding `alternatives/` option folder. The

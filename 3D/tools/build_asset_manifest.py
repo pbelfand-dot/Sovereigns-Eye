@@ -38,6 +38,11 @@ COLLECTIONS = {
         "license": "environments/quaternius-stylized-nature-standard/LICENSE.txt",
         "preview_root": "environments/quaternius-stylized-nature-standard/previews",
     },
+    "quaternius-fantasy-props-standard": {
+        "source": "https://quaternius.com/packs/fantasypropsmegakit.html",
+        "license": "props/quaternius-fantasy-props-standard/LICENSE.txt",
+        "preview_root": "props/quaternius-fantasy-props-standard/previews",
+    },
     "option-01-kaykit-adventurers": {
         "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
         "license": "alternatives/option-01-kaykit-adventurers/LICENSE.txt",
@@ -171,6 +176,24 @@ def stylized_nature_category(stem: str) -> str:
     return "plants-ground-cover"
 
 
+def fantasy_props_category(stem: str) -> str:
+    if stem.startswith(("Book", "Bottle", "Potion", "Scroll", "SmallBottle", "Cauldron")):
+        return "books-alchemy"
+    if stem.startswith(("Bed", "Bench", "Bookcase", "Cabinet", "Chair", "Nightstand", "Peg_Rack", "Shelf", "Stool", "Table_Large")):
+        return "furniture"
+    if stem.startswith(("Anvil", "Axe", "Dummy", "Pickaxe", "Shield", "Sword", "WeaponStand", "Whetstone", "Workbench")):
+        return "workshop-weapons"
+    if stem.startswith(("Banner", "Candle", "Chalice", "Chandelier", "Lantern", "Torch", "Vase")):
+        return "lighting-decor"
+    if stem.startswith(("Carrot", "FarmCrate", "Stall", "Coin")) or stem == "Barrel_Apples":
+        return "market-goods"
+    if stem.startswith(("Mug", "Pot_", "Table_Fork", "Table_Knife", "Table_Plate", "Table_Spoon")):
+        return "tableware"
+    if stem.startswith(("Bag", "Barrel", "Bucket", "Cage", "Chain", "Chest", "Crate", "Pouch", "Rope")):
+        return "storage-utility"
+    return "small-utility"
+
+
 def collection_for(path: Path) -> tuple[str, str]:
     relative = path.relative_to(ASSET_ROOT)
     if relative.parts[0] == "alternatives" and relative.parts[2] == "models":
@@ -205,6 +228,10 @@ def collection_for(path: Path) -> tuple[str, str]:
         "quaternius-stylized-nature-standard",
     ):
         return "quaternius-stylized-nature-standard", stylized_nature_category(
+            path.stem
+        )
+    if relative.parts[:2] == ("props", "quaternius-fantasy-props-standard"):
+        return "quaternius-fantasy-props-standard", fantasy_props_category(
             path.stem
         )
     raise ValueError(f"unrecognized asset location: {relative}")

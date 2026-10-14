@@ -21,6 +21,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `environments/fantasy-town-kit/water/` | Modular fountain parts | 10 |
 | `environments/quaternius-medieval-village-standard/` | Textured modular village architecture and props | 176 |
 | `environments/quaternius-stylized-nature-standard/` | Trees, plants, grass, flowers, rocks, and stone path pieces | 68 |
+| `props/quaternius-fantasy-props-standard/` | Furniture, market goods, workshop equipment, weapons, books, potions, lighting, and small props | 94 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
 | `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |
@@ -34,7 +35,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,310 glTF 2.0 model files** (1,042 GLB + 268 JSON glTF).
+Total: **1,404 glTF 2.0 model files** (1,042 GLB + 362 JSON glTF).
 
 The original blocky set and three Kenney alternatives remain available for comparison,
 but the five KayKit collections in [`alternatives/`](alternatives/) are the recommended
@@ -53,6 +54,9 @@ The matching environment direction is documented in
 The free Stylized Nature Standard collection in
 [`environments/quaternius-stylized-nature-standard/`](environments/quaternius-stylized-nature-standard/)
 adds 68 matching trees, plants, rocks, and path pieces.
+The free Fantasy Props Standard collection in
+[`props/quaternius-fantasy-props-standard/`](props/quaternius-fantasy-props-standard/)
+adds 94 matching market, workshop, home, tavern, scholar, and utility props.
 
 ## Finding the right model
 
@@ -69,9 +73,10 @@ Some GLBs use a nearby PNG color texture and some embed their textures. When a
 `Textures/` folder exists, keep it with the model when moving files. The exact external
 texture path for every model is recorded in `ASSET_MANIFEST.csv`.
 
-The Medieval Village Standard pack uses shared PNG maps and one BIN per JSON glTF.
-Keep its entire `models/` directory together; moving only an individual `.gltf`
-file will leave behind its geometry and textures.
+The Quaternius Medieval Village, Stylized Nature, and Fantasy Props Standard
+packs use shared PNG maps and one BIN per JSON glTF. Keep each collection
+together; moving only an individual `.gltf` file will leave behind its geometry
+or shared textures.
 
 Example:
 

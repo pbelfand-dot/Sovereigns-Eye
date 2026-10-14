@@ -150,7 +150,7 @@ docs/ART_PLAN.md       Art direction, assets used, missing models, scaling plan
 
 ## 5. The 3D asset library (`3D/`)
 
-The [`3D/`](3D/) folder holds the game's model library: 1,310 cataloged glTF 2.0
+The [`3D/`](3D/) folder holds the game's model library: 1,404 cataloged glTF 2.0
 files with previews, licenses, checksums and validation records (all CC0).
 
 **Chosen direction: Quaternius.** A sleek, textured, stylized fantasy look:
@@ -165,6 +165,8 @@ files with previews, licenses, checksums and validation records (all CC0).
   and alternate color maps
 - [`3D/environments/quaternius-stylized-nature-standard/`](3D/environments/quaternius-stylized-nature-standard/):
   68 matching trees, plants, rocks, and path pieces from the free Standard pack
+- [`3D/props/quaternius-fantasy-props-standard/`](3D/props/quaternius-fantasy-props-standard/):
+  94 matching market, workshop, tavern, home, alchemy, furniture, and utility props
 - [`3D/research/SCALABILITY_ROADMAP.md`](3D/research/SCALABILITY_ROADMAP.md): what is
   ready from hamlet to kingdom scale, and what is still missing
 
@@ -205,7 +207,7 @@ track-to-scene map.
 * **Card portraits** show an AI painting when one exists for that villager, and
   a live 3D portrait otherwise. Paint them locally with ComfyUI +
   FLUX.2 [klein]: see [`ai-art/README.md`](ai-art/README.md).
-* Missing art (props, additional outfits, windmill, kingdom and harbor pieces) is
+* Missing art (additional outfits, windmill, kingdom and harbor pieces) is
   listed with sources and prices in [`docs/ART_PLAN.md`](docs/ART_PLAN.md).
 
 ![Villagers](docs/screenshots/villagers.jpg)
@@ -241,9 +243,10 @@ as readable JSON.
 ## 9. Known limitations (Phase 2 first playable)
 
 * Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
-  fine leather and there are no gowns, robes or plate armor yet. Crops, market
-  stalls, the well and benches are still simple shapes; hats and hand tools
-  aren't shown in 3D yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
+  fine leather and there are no gowns, robes or plate armor yet. The prop sampler
+  is acquired but not integrated, so crops, market stalls, the well and benches
+  are still simple shapes; hats and hand tools aren't shown in 3D yet. See
+  [docs/ART_PLAN.md](docs/ART_PLAN.md).
 * NPCs walk along roads and can clip through each other or props; there is
   no navmesh yet.
 * Retainers train every day, but people do not age, marry or have children yet.
