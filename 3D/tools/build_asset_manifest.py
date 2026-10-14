@@ -28,6 +28,31 @@ COLLECTIONS = {
         "license": "licenses/kenney-fantasy-town-kit-CC0.txt",
         "preview_root": "previews/fantasy-town-kit",
     },
+    "option-01-kaykit-adventurers": {
+        "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "license": "alternatives/option-01-kaykit-adventurers/LICENSE.txt",
+        "preview_root": "alternatives/option-01-kaykit-adventurers/previews",
+    },
+    "option-02-kaykit-skeletons": {
+        "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0",
+        "license": "alternatives/option-02-kaykit-skeletons/LICENSE.txt",
+        "preview_root": "alternatives/option-02-kaykit-skeletons/previews",
+    },
+    "option-03-kenney-graveyard": {
+        "source": "https://kenney.nl/assets/graveyard-kit",
+        "license": "alternatives/option-03-kenney-graveyard/LICENSE.txt",
+        "preview_root": "alternatives/option-03-kenney-graveyard/previews",
+    },
+    "option-04-kenney-platformer": {
+        "source": "https://kenney.nl/assets/platformer-kit",
+        "license": "alternatives/option-04-kenney-platformer/LICENSE.txt",
+        "preview_root": "alternatives/option-04-kenney-platformer/previews",
+    },
+    "option-05-kenney-mini-characters": {
+        "source": "https://kenney.nl/assets/mini-characters",
+        "license": "alternatives/option-05-kenney-mini-characters/LICENSE.txt",
+        "preview_root": "alternatives/option-05-kenney-mini-characters/previews",
+    },
 }
 
 
@@ -58,6 +83,8 @@ def read_glb_json(path: Path) -> dict:
 
 def collection_for(path: Path) -> tuple[str, str]:
     relative = path.relative_to(ASSET_ROOT)
+    if relative.parts[0] == "alternatives" and relative.parts[2] == "models":
+        return relative.parts[1], "alternative"
     if relative.parts[:2] == ("characters", "blocky"):
         return "blocky-characters", "characters"
     if relative.parts[:2] == ("environments", "castle-kit"):

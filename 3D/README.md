@@ -17,8 +17,18 @@ Godot, Unity, Unreal, Blender, Three.js, and other modern tools.
 | `environments/fantasy-town-kit/decor/` | Carts, stalls, fences, banners, lanterns, and props | 15 |
 | `environments/fantasy-town-kit/terrain/` | Roads, rocks, trees, and hedges | 21 |
 | `environments/fantasy-town-kit/water/` | Modular fountain parts | 10 |
+| `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
+| `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
+| `alternatives/option-03-kenney-graveyard/` | Gothic scenery, props, and characters | 91 |
+| `alternatives/option-04-kenney-platformer/` | Bright mascot scenery, props, and characters | 153 |
+| `alternatives/option-05-kenney-mini-characters/` | Miniature people, mobility aids, and accessories | 26 |
 
-Total: **261 models**.
+Total: **540 models**.
+
+The original blocky set remains available for comparison, but the five collections in
+[`alternatives/`](alternatives/) are the recommended non-Minecraft-like directions.
+Each option has its own models, individual preview gallery, overview image, source,
+license, and decision notes.
 
 ## Finding the right model
 
@@ -31,9 +41,9 @@ Total: **261 models**.
 
 ## Importing correctly
 
-Each GLB uses one nearby PNG color texture. Keep its sibling `Textures/` folder with
-the model when moving files. The exact texture path for every model is recorded in
-`ASSET_MANIFEST.csv`.
+Some GLBs use a nearby PNG color texture and some embed their textures. When a
+`Textures/` folder exists, keep it with the model when moving files. The exact external
+texture path for every model is recorded in `ASSET_MANIFEST.csv`.
 
 Example:
 
@@ -49,12 +59,12 @@ new folder, copy the corresponding `Textures/` folder too.
 
 ## Licensing and provenance
 
-All models and previews in this folder come from Kenney and are released under
-**Creative Commons Zero (CC0 1.0)**. They may be used, changed, and distributed for
-personal, educational, or commercial purposes. Attribution is appreciated by the
-creator but is not required.
+All models and previews in this folder come from Kenney or KayKit and are released
+under **Creative Commons Zero (CC0 1.0)**. They may be used, changed, and distributed
+for personal, educational, or commercial purposes. Attribution is appreciated but is
+not required.
 
-- Pack-specific license files are in `licenses/`.
+- Pack-specific license files are in `licenses/` and each alternative option folder.
 - Original pack pages and retrieval details are in [`SOURCES.md`](SOURCES.md).
 - Do not remove those records when shipping or reorganizing the library; they make
   the asset provenance easy to audit.

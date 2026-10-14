@@ -102,17 +102,21 @@ docs/ARCHITECTURE.md   How the systems fit together
 
 ## 5. The 3D asset library (`3D/`)
 
-The [`3D/`](3D/) folder holds a ready-to-use, cartoony medieval starter library
-of 261 GLB models: 18 rigged and animated blocky characters, the Castle Kit
-(76 models) and the Fantasy Town Kit (167 models), with a preview image,
-license and checksum for every file. All of them come from Kenney under CC0 (free
-for commercial use, no attribution required). See [`3D/README.md`](3D/README.md)
-for the catalog and import notes.
+The [`3D/`](3D/) folder holds a cartoony medieval starter library of 540 GLB
+models: five non-voxel style alternatives (279 models), the original 18
+animated blocky characters (kept as a legacy option), the Castle Kit (76) and
+the Fantasy Town Kit (167), with a preview image, license and checksum for
+every file. The packs are released under CC0, so they can be used and modified
+in commercial games without an attribution requirement. Start with the
+[`3D/alternatives/`](3D/alternatives/) comparison to choose a visual direction,
+then see [`3D/README.md`](3D/README.md) for the complete catalog.
 
 The final models are still being chosen, so `3D/.gdignore` tells Godot to skip
 this folder for now; the game uses its built-in placeholder art. To use a model
 in game, delete `3D/.gdignore` (or copy the chosen `.glb` plus its `Textures/`
 folder into `assets/`) and point the building type at it as described below.
+
+![Five non-voxel art directions](3D/alternatives/option-01-kaykit-adventurers/previews/overview.png)
 
 ![Blocky character collection](3D/previews/blocky-characters/overview.png)
 
