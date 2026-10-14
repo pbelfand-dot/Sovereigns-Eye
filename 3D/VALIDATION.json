@@ -1,0 +1,20 @@
+{
+  "format": "GLB (glTF 2.0)",
+  "models_checked": 261,
+  "models_valid": 261,
+  "models_with_previews": 261,
+  "models_with_animation": 18,
+  "external_dependencies_checked": 261,
+  "missing_dependencies": [],
+  "errors": [],
+  "checks": [
+    "GLB magic header",
+    "GLB version 2",
+    "declared byte length",
+    "JSON chunk readability",
+    "glTF asset version 2.0",
+    "external buffer and image references",
+    "matching preview file",
+    "SHA-256 checksum"
+  ]
+}

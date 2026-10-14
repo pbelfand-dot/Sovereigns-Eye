@@ -9,3 +9,7 @@
 *.wav binary
 *.ttf binary
 *.otf binary
+
+# Generated asset records
+3D/ASSET_MANIFEST.csv linguist-generated=true
+3D/VALIDATION.json linguist-generated=true

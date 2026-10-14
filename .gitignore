@@ -14,3 +14,7 @@
 Thumbs.db
 .vscode/
 *.tmp
+
+# Python (asset tooling)
+__pycache__/
+*.py[cod]

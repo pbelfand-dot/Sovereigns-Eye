@@ -100,7 +100,22 @@ tools/                 run_tests.sh, village census, screenshot capture
 docs/ARCHITECTURE.md   How the systems fit together
 ```
 
-## 5. Swapping in real art
+## 5. The 3D asset library (`3D/`)
+
+The [`3D/`](3D/) folder holds a ready-to-use, cartoony medieval starter library
+of 261 GLB models: 18 rigged and animated blocky characters, the Castle Kit
+(76 models) and the Fantasy Town Kit (167 models), with a preview image,
+license and checksum for every file. All of them come from Kenney under CC0 (free
+for commercial use, no attribution required). See [`3D/README.md`](3D/README.md)
+for the catalog and import notes.
+
+![Blocky character collection](3D/previews/blocky-characters/overview.png)
+
+![Castle collection](3D/previews/castle-kit/overview.png)
+
+![Fantasy town collection](3D/previews/fantasy-town-kit/overview.png)
+
+## 6. Swapping in real art
 
 Every building type in `data/buildings.json` has a `"model"` field. Put a
 `.glb` file in `assets/buildings/` and set the field, for example
@@ -110,7 +125,7 @@ primitive version when no model is set. Characters store appearance as data
 values. Portraits on the cards are rendered live from the 3D model, so they
 upgrade automatically.
 
-## 6. Tests & tools
+## 7. Tests & tools
 
 ```bash
 tools/run_tests.sh                       # 16 headless tests (generation, determinism,
@@ -121,7 +136,7 @@ godot --headless --path . --script res://tools/print_village.gd -- 12345   # cen
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 7. Known limitations (Phase 1)
+## 8. Known limitations (Phase 1)
 
 * Placeholder art: buildings and people are built from simple shapes.
 * NPCs walk along roads and can clip through each other or props; there is
