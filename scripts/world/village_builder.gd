@@ -41,10 +41,12 @@ func _build_terrain() -> void:
 	var normals := PackedVector3Array()
 	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
-	var grass_a := Color("#5d8a37")
-	var grass_b := Color("#7aa346")
-	var forest := Color("#4a7533")
-	var trodden := Color("#8a9452")
+	var cfg: Dictionary = GameData.load_file("art_style").get("terrain", {})
+	var grass: Array = cfg.get("grass", ["#5d8a37", "#7aa346"])
+	var grass_a := Color(str(grass[0]))
+	var grass_b := Color(str(grass[1]))
+	var forest := Color(str(cfg.get("forest", "#4a7533")))
+	var trodden := Color(str(cfg.get("trodden", "#8a9452")))
 	for iz in n + 1:
 		for ix in n + 1:
 			var x := -e + ix * step
@@ -75,13 +77,41 @@ func _build_terrain() -> void:
 	arrays[Mesh.ARRAY_INDEX] = indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var mat := Mats.vertex_colored(1.0).duplicate() as StandardMaterial3D
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var mi := MeshInstance3D.new()
 	mi.name = "Terrain"
 	mi.mesh = mesh
-	mi.material_override = mat
+	mi.material_override = meadow_material(layout, cfg, Vector2(-e, -e), e * 2.0)
 	add_child(mi)
+
+
+## The meadow ground shader with its baked wear mask, tuned from art_style.json.
+static func meadow_material(source: VillageLayout, cfg: Dictionary, origin: Vector2, size: float) -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/terrain_meadow.gdshader")
+	for key: String in ["lush_tint", "dry_tint"]:
+		var v: Array = cfg.get(key, [1.0, 1.0, 1.0])
+		mat.set_shader_parameter(key, Vector3(float(v[0]), float(v[1]), float(v[2])))
+	for key: String in ["patch_scale", "patch_strength", "clump_scale", "clump_strength", "grain_scale",
+			"grain_strength", "dirt_threshold", "flower_cell", "flower_density", "flower_radius",
+			"flower_patch_scale", "bump_strength"]:
+		if cfg.has(key):
+			mat.set_shader_parameter(key, float(cfg[key]))
+	for key: String in ["dirt_color", "wear_color"]:
+		if cfg.has(key):
+			mat.set_shader_parameter(key, Color(str(cfg[key])))
+	var flowers: Array = cfg.get("flower_colors", [])
+	for i in mini(flowers.size(), 3):
+		mat.set_shader_parameter("flower_" + "abc"[i], Color(str(flowers[i])))
+	var fade: Array = cfg.get("detail_fade", [40.0, 140.0])
+	mat.set_shader_parameter("detail_fade", Vector2(float(fade[0]), float(fade[1])))
+	var wear_cfg: Dictionary = cfg.get("wear", {})
+	var res := int(wear_cfg.get("mask_size", 512))
+	var mask := GroundWear.bake(source, origin, size, res, wear_cfg)
+	mat.set_shader_parameter("wear_mask", ImageTexture.create_from_image(mask))
+	mat.set_shader_parameter("wear_origin", origin)
+	mat.set_shader_parameter("wear_size", size)
+	mat.set_shader_parameter("use_wear", true)
+	return mat
 
 
 # --- Roads ----------------------------------------------------------------------------

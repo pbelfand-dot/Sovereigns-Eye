@@ -65,3 +65,25 @@ func test_villager_bodies() -> void:
 			m.animate(mode, 0.0, 0.1)
 		check(m.find_children("*", "MeshInstance3D", true, false).size() >= 2, "%s has body meshes" % c.full_name())
 		m.free()
+
+
+func test_meadow_ground_wear() -> void:
+	var w := WorldGenerator.generate("meadow-seed")
+	var l := w.layout
+	var e := l.extent + 60.0
+	var origin := Vector2(-e, -e)
+	var cfg: Dictionary = GameData.load_file("art_style").get("terrain", {})
+	var wear_cfg: Dictionary = cfg.get("wear", {})
+	var mask := GroundWear.bake(l, origin, e * 2.0, 256, wear_cfg)
+	check(mask.get_width() == 256 and mask.get_format() == Image.FORMAT_R8, "wear mask is a 256px R8 image")
+	var sq := Vector2(l.square_center.x, l.square_center.z)
+	check(GroundWear.sample(mask, origin, e * 2.0, sq) > 0.95, "the square is fully trodden")
+	var road: PackedVector3Array = l.roads[0]["points"]
+	var mid := road[road.size() / 2]
+	check(GroundWear.sample(mask, origin, e * 2.0, Vector2(mid.x, mid.z)) > 0.9, "roads are trodden")
+	check(GroundWear.sample(mask, origin, e * 2.0, Vector2(e - 2.0, e - 2.0)) < 0.05, "the far meadow is untouched")
+	var again := GroundWear.bake(l, origin, e * 2.0, 256, wear_cfg)
+	check(again.get_data() == mask.get_data(), "same layout bakes the same mask")
+	var mat := VillageBuilder.meadow_material(l, cfg, origin, e * 2.0)
+	check(mat.shader != null and mat.get_shader_parameter("use_wear") == true, "meadow material uses the wear mask")
+	check(mat.get_shader_parameter("wear_mask") is Texture2D, "wear mask is bound to the shader")

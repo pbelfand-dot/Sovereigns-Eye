@@ -33,6 +33,57 @@
     "#5b2a86",
     "#c9a14a"
   ],
+  "terrain": {
+    "_comment": "Meadow ground (shaders/terrain_meadow.gdshader). Vertex colors set the broad tint; the shader adds patches, clumps, grain, bare earth, flowers and worn paths. Scales are in meters.",
+    "grass": [
+      "#5a8238",
+      "#76994a"
+    ],
+    "forest": "#4a7533",
+    "trodden": "#8a9452",
+    "lush_tint": [
+      0.84,
+      0.96,
+      0.8
+    ],
+    "dry_tint": [
+      1.14,
+      1.05,
+      0.74
+    ],
+    "patch_scale": 26.0,
+    "patch_strength": 0.55,
+    "clump_scale": 3.2,
+    "clump_strength": 0.2,
+    "grain_scale": 0.35,
+    "grain_strength": 0.16,
+    "dirt_color": "#7b6243",
+    "dirt_threshold": 0.74,
+    "wear_color": "#8f8a5a",
+    "flower_colors": [
+      "#f2e6a0",
+      "#e9eef2",
+      "#c98ad0"
+    ],
+    "flower_cell": 0.7,
+    "flower_density": 0.3,
+    "flower_radius": 0.12,
+    "flower_patch_scale": 9.0,
+    "bump_strength": 0.6,
+    "detail_fade": [
+      40.0,
+      140.0
+    ],
+    "wear": {
+      "_comment": "Baked trodden-ground mask: how far worn grass reaches past each road edge, the square, building walls and field fences.",
+      "mask_size": 512,
+      "road_margin": 1.8,
+      "square_margin": 3.5,
+      "building_margin": 1.6,
+      "door_path": 4.0,
+      "field_margin": 0.9
+    }
+  },
   "portrait": {
     "_comment": "Shared look for AI-generated villager portraits (see scripts/characters/portrait_prompt.gd). Change 'style' once and every new portrait follows.",
     "style": "Painted medieval fantasy character portrait, head and shoulders, three-quarter view, soft warm window light, dark plain background, oil painting style of Crusader Kings III character portraits, consistent art style, highly detailed face, no text, no frame.",

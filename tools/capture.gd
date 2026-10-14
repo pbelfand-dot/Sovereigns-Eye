@@ -3,15 +3,17 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
-## which is much faster on software renderers.
+## which is much faster on software renderers. "art" only renders the
+## village overview, the square and a meadow close-up (for art changes).
 
 var out_dir := "user://captures"
 var seed_text := "12345"
 var court_only := false
+var art_only := false
 
 
 func _ready() -> void:
@@ -21,6 +23,7 @@ func _ready() -> void:
 	if args.size() > 1:
 		out_dir = args[1]
 	court_only = args.has("court")
+	art_only = args.has("art")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -48,11 +51,12 @@ func _run() -> void:
 		await _court_shots(court_world)
 		get_tree().quit()
 		return
-	var menu: Control = load("res://scenes/main/main.tscn").instantiate()
-	add_child(menu)
-	await _wait(10)
-	await _shot("01_main_menu.png")
-	menu.queue_free()
+	if not art_only:
+		var menu: Control = load("res://scenes/main/main.tscn").instantiate()
+		add_child(menu)
+		await _wait(10)
+		await _shot("01_main_menu.png")
+		menu.queue_free()
 
 	Game.state = WorldGenerator.generate(seed_text)
 	Game.state.minutes += 2.5 * 60.0  # mid-morning
@@ -72,6 +76,13 @@ func _run() -> void:
 	world.camera_rig.look_at_point(Vector3(2, 0, 4), 34.0, true)
 	await _wait(20)
 	await _shot("03_town_square.png")
+	if art_only:
+		world.camera_rig.set_yaw(1.1, true)
+		world.camera_rig.look_at_point(Vector3(30, 0, 22), 22.0, true)
+		await _wait(20)
+		await _shot("03b_meadow.png")
+		get_tree().quit()
+		return
 
 	# Pick the most talented villager who is outdoors, and appraise them.
 	var best: NPC = null

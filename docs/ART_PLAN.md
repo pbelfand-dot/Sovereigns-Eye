@@ -63,6 +63,19 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 
 **Fallback.** If the files are missing, the old primitive bodies are used.
 
+### Ground: meadow shader (no assets needed)
+- `shaders/terrain_meadow.gdshader` turns the flat green terrain into a meadow. It adds:
+  - sunlit and lush patches
+  - grass clumps that catch the light
+  - fine grain
+  - occasional bare earth
+  - drifts of wild flowers
+- `scripts/world/ground_wear.gd` bakes a 512 px mask from the layout. The grass wears down along roads, around the square, at doorsteps and along field fences.
+- All numbers are in `data/art_style.json` → `terrain`.
+- Before/after: `docs/screenshots/ground_before_after.jpg`.
+- Works on the Forward+, Mobile and Compatibility renderers.
+- Real 3D grass tufts, flowers and rocks still come from the Nature MegaKit (section 3).
+
 ### Import settings (committed `.import` files)
 - Village and body textures: VRAM compressed with mipmaps, capped at **1024 px**; eyes 256, vines 512. That's plenty for a strategy camera and keeps downloads around 50 MB.
 - Hair GLBs discard their duplicated embedded textures. All hair shares the two hair texture sheets extracted from the bodies.
