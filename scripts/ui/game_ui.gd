@@ -122,7 +122,7 @@ func _process(_delta: float) -> void:
 	if world == null:
 		return
 	var minutes := world.state.whole_minutes()
-	var compact := get_viewport_rect().size.x < 1450.0
+	var compact: bool = get_viewport().get_visible_rect().size.x < 1450.0
 	_clock_label.text = "%s %d, Y%d  %s" % [Calendar.season_name(minutes), Calendar.day_of_season(minutes), Calendar.year(minutes), Calendar.format_time(minutes)] if compact else Calendar.format_full(minutes)
 	_appraised_label.visible = not compact
 	_appraised_label.text = "Seen %d/%d" % [world.appraised_count(), world.state.characters.size()]
