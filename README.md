@@ -134,10 +134,24 @@ primitive version when no model is set. Characters store appearance as data
 values. Portraits on the cards are rendered live from the 3D model, so they
 upgrade automatically.
 
+### One consistent look from any source (experimental)
+
+`StyleUnifier` (`scripts/world/style_unifier.gd` + `shaders/unified_toon.gdshader`)
+repaints any model, whether from asset packs, AI generators like Higgsfield,
+or the built-in placeholders, toward one master palette in
+`data/art_style.json`, with shared toon lighting. Call `StyleUnifier.apply(node)`
+on an imported model. Edit the palette to restyle everything at once. It is not
+switched on in the game yet.
+
+![Style unifier: as imported vs. unified](docs/screenshots/style_unifier_demo.jpg)
+
+To re-render that comparison: remove `3D/.gdignore`, then run
+`godot --path . res://tools/style_demo.tscn -- out.png`.
+
 ## 7. Tests & tools
 
 ```bash
-tools/run_tests.sh                       # 16 headless tests (generation, determinism,
+tools/run_tests.sh                       # 17 headless tests (generation, determinism,
                                          # rank odds, relationships, save/load, live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
 ```

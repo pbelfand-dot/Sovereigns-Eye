@@ -79,3 +79,16 @@ func test_affinity_raises_odds_without_guarantee() -> void:
 			boosted_low += 1
 	check(boosted_high > neutral_high, "affinity 1.3 increases A+ odds (%d vs %d)" % [boosted_high, neutral_high])
 	check(boosted_low > 5000, "favored families still produce many ordinary people")
+
+
+func test_style_unifier_converts_materials() -> void:
+	var root := Node3D.new()
+	var mi := MeshInstance3D.new()
+	mi.mesh = BoxMesh.new()
+	mi.material_override = Mats.hex("#3aa0b0")
+	root.add_child(mi)
+	StyleUnifier.apply(root)
+	check(mi.material_override is ShaderMaterial, "materials become the unified toon shader")
+	var palette: Array = GameData.load_file("art_style").get("palette", [])
+	check_eq(int((mi.material_override as ShaderMaterial).get_shader_parameter("palette_size")), palette.size(), "shader gets the whole palette")
+	root.free()

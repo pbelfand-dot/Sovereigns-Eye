@@ -1,0 +1,13 @@
+{
+  "_comment": "Master art style. Every model (asset packs, AI-generated, procedural) is recolored toward this palette by shaders/unified_toon.gdshader so everything looks like one game. Edit colors here to restyle the whole world.",
+  "palette_strength": 0.85,
+  "palette": [
+    "#1a1410", "#2b2118", "#4a3424", "#6b4a32", "#8a6440", "#b0855a",
+    "#5e5a54", "#8e8a80", "#b5ad9f", "#e8dcc0", "#f4efe4", "#d8c49c",
+    "#7a3a26", "#a5623b", "#c9a45c", "#e3c055",
+    "#2f4a2a", "#4f7a3a", "#8ab456",
+    "#24384f", "#3f6a9a", "#9ec3e0",
+    "#f2d2b0", "#d9a882", "#a8744d", "#6b4429",
+    "#7a1f2f", "#b23a3a", "#5b2a86", "#c9a14a"
+  ]
+}
