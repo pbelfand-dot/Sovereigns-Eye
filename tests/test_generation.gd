@@ -90,3 +90,27 @@ func test_village_layout() -> void:
 		check(ruling != null, "ruling family exists")
 		if ruling:
 			check_eq(w.get_building(ruling.home_building_id).type, "manor", "ruling family lives in the manor")
+
+
+func test_portrait_prompts_match_character_data() -> void:
+	var w := WorldGenerator.generate("prompt-seed")
+	var seen_seeds := {}
+	for c in w.characters:
+		var p := PortraitPrompt.build(c, w.world_seed)
+		check(p["prompt"].contains(c.occupation_name().to_lower()), "%s prompt names the job" % c.full_name())
+		if str(c.appearance.get("hair_style", "")) != "bald":
+			check(p["prompt"].contains("hair"), "%s prompt describes hair" % c.full_name())
+		check(not seen_seeds.has(p["seed"]), "portrait seeds are unique")
+		seen_seeds[p["seed"]] = true
+		check_eq(p["seed"], PortraitPrompt.build(c, w.world_seed)["seed"], "portrait seed is stable")
+		check(c.appearance.get("face") is Dictionary, "%s has stored facial features" % c.full_name())
+	# A finished image placed at the output path is picked up by the card.
+	var c0 := w.characters[0]
+	var path := PortraitPrompt.file_path(c0, w.world_seed)
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var img := Image.create(8, 10, false, Image.FORMAT_RGB8)
+	img.fill(Color.DARK_RED)
+	img.save_png(path)
+	check(PortraitPrompt.image_for(c0, w.world_seed) != null, "AI portrait file is loaded")
+	DirAccess.remove_absolute(path)
+	check(PortraitPrompt.image_for(c0, w.world_seed) == null, "no file -> no AI portrait")

@@ -349,6 +349,7 @@ func _roll_personalities_and_looks() -> void:
 					skin = str(p.appearance.get("skin", skin))
 					hair = str(p.appearance.get("hair_base", hair))
 			c.appearance = _roll_appearance(c, skin, hair)
+			c.appearance["face"] = FaceFeatures.roll_child(rng_looks, c, parents) if is_child else FaceFeatures.roll(rng_looks, c)
 
 
 func _roll_traits(c: CharacterData, parents: Array) -> void:

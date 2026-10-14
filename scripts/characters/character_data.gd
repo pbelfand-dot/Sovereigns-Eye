@@ -266,4 +266,9 @@ static func _clean_appearance(src: Dictionary) -> Dictionary:
 	for key: String in ["height", "build"]:
 		if out.has(key):
 			out[key] = float(out[key])
+	if out.get("face") is Dictionary:
+		var face: Dictionary = out["face"]
+		for key: String in face:
+			if typeof(face[key]) == TYPE_FLOAT or typeof(face[key]) == TYPE_INT:
+				face[key] = float(face[key])
 	return out

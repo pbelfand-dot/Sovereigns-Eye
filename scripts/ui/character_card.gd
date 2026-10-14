@@ -124,10 +124,19 @@ func _add_tab(title: String) -> VBoxContainer:
 func show_character(c: CharacterData) -> void:
 	character = c
 	visible = c != null
-	_portrait.render_target_update_mode = SubViewport.UPDATE_ALWAYS if visible else SubViewport.UPDATE_DISABLED
 	if c == null:
+		_portrait.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		return
-	_portrait.show_character(c)
+	# An AI portrait (user://portraits/<seed>/<id>.png) wins; otherwise the
+	# character's 3D model is rendered live as a placeholder.
+	var ai_portrait := PortraitPrompt.image_for(c, world.state.world_seed)
+	if ai_portrait:
+		_portrait_rect.texture = ai_portrait
+		_portrait.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	else:
+		_portrait_rect.texture = _portrait.get_texture()
+		_portrait.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		_portrait.show_character(c)
 	refresh()
 
 
