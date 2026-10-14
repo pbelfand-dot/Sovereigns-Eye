@@ -28,6 +28,11 @@ COLLECTIONS = {
         "license": "licenses/kenney-fantasy-town-kit-CC0.txt",
         "preview_root": "previews/fantasy-town-kit",
     },
+    "quaternius-medieval-village-standard": {
+        "source": "https://quaternius.com/packs/medievalvillagemegakit.html",
+        "license": "environments/quaternius-medieval-village-standard/LICENSE.txt",
+        "preview_root": "environments/quaternius-medieval-village-standard/previews",
+    },
     "option-01-kaykit-adventurers": {
         "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
         "license": "alternatives/option-01-kaykit-adventurers/LICENSE.txt",
@@ -52,6 +57,36 @@ COLLECTIONS = {
         "source": "https://kenney.nl/assets/mini-characters",
         "license": "alternatives/option-05-kenney-mini-characters/LICENSE.txt",
         "preview_root": "alternatives/option-05-kenney-mini-characters/previews",
+    },
+    "option-03-kaykit-dungeon": {
+        "source": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "license": "alternatives/option-03-kaykit-dungeon/LICENSE.txt",
+        "preview_root": "alternatives/option-03-kaykit-dungeon/previews",
+    },
+    "option-04-kaykit-medieval-hexagon": {
+        "source": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "license": "alternatives/option-04-kaykit-medieval-hexagon/LICENSE.txt",
+        "preview_root": "alternatives/option-04-kaykit-medieval-hexagon/previews",
+    },
+    "option-05-kaykit-halloween": {
+        "source": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "license": "alternatives/option-05-kaykit-halloween/LICENSE.txt",
+        "preview_root": "alternatives/option-05-kaykit-halloween/previews",
+    },
+    "quaternius-universal-base-standard": {
+        "source": "https://quaternius.com/packs/universalbasecharacters.html",
+        "license": "character-tests/quaternius-universal-base-standard/LICENSE.txt",
+        "preview_root": "character-tests/quaternius-universal-base-standard/previews",
+    },
+    "quaternius-universal-animation-library-1": {
+        "source": "https://quaternius.com/packs/universalanimationlibrary.html",
+        "license": "animations/quaternius-universal-animation-library-1/LICENSE.txt",
+        "preview_root": "animations/quaternius-universal-animation-library-1/setup-guides",
+    },
+    "quaternius-universal-animation-library-2": {
+        "source": "https://quaternius.com/packs/universalanimationlibrary2.html",
+        "license": "animations/quaternius-universal-animation-library-2/LICENSE.txt",
+        "preview_root": "animations/quaternius-universal-animation-library-2/setup-guides",
     },
 }
 
@@ -81,16 +116,67 @@ def read_glb_json(path: Path) -> dict:
     return document
 
 
+def read_gltf_json(path: Path) -> dict:
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if document.get("asset", {}).get("version") != "2.0":
+        raise ValueError("document is not glTF 2.0")
+    return document
+
+
+def read_model_json(path: Path) -> dict:
+    if path.suffix == ".glb":
+        return read_glb_json(path)
+    if path.suffix == ".gltf":
+        return read_gltf_json(path)
+    raise ValueError(f"unsupported model format: {path.suffix}")
+
+
+def medieval_village_category(stem: str) -> str:
+    category_prefixes = (
+        ("Balcony_", "balconies"),
+        ("Corner_", "corners"),
+        ("DoorFrame_", "doors"),
+        ("Door_", "doors"),
+        ("Floor_", "floors"),
+        ("HoleCover_", "floors"),
+        ("Overhang_", "overhangs"),
+        ("Prop_", "props"),
+        ("Roof_", "roofs"),
+        ("Stair", "stairs"),
+        ("Wall_", "walls"),
+        ("WindowShutters_", "windows"),
+        ("Window_", "windows"),
+    )
+    for prefix, category in category_prefixes:
+        if stem.startswith(prefix):
+            return category
+    return "architecture"
+
+
 def collection_for(path: Path) -> tuple[str, str]:
     relative = path.relative_to(ASSET_ROOT)
     if relative.parts[0] == "alternatives" and relative.parts[2] == "models":
         return relative.parts[1], "alternative"
+    if relative.parts[:2] == (
+        "character-tests",
+        "quaternius-universal-base-standard",
+    ):
+        return "quaternius-universal-base-standard", relative.parts[3]
+    if relative.parts[0] == "animations":
+        return relative.parts[1], "animation-library"
     if relative.parts[:2] == ("characters", "blocky"):
         return "blocky-characters", "characters"
     if relative.parts[:2] == ("environments", "castle-kit"):
         return "castle-kit", relative.parts[2]
     if relative.parts[:2] == ("environments", "fantasy-town-kit"):
         return "fantasy-town-kit", relative.parts[2]
+    if relative.parts[:2] == (
+        "environments",
+        "quaternius-medieval-village-standard",
+    ):
+        return "quaternius-medieval-village-standard", medieval_village_category(
+            path.stem
+        )
     raise ValueError(f"unrecognized asset location: {relative}")
 
 
@@ -100,13 +186,16 @@ def main() -> None:
     external_dependency_count = 0
     missing_dependencies = []
 
-    for path in sorted(ASSET_ROOT.glob("**/*.glb")):
+    model_paths = list(ASSET_ROOT.glob("**/*.glb")) + list(
+        ASSET_ROOT.glob("**/*.gltf")
+    )
+    for path in sorted(model_paths):
         relative = path.relative_to(ASSET_ROOT).as_posix()
         collection, category = collection_for(path)
         metadata = COLLECTIONS[collection]
 
         try:
-            document = read_glb_json(path)
+            document = read_model_json(path)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             errors.append({"path": relative, "error": str(exc)})
             continue
@@ -165,7 +254,7 @@ def main() -> None:
         writer.writerows(rows)
 
     report = {
-        "format": "GLB (glTF 2.0)",
+        "format": "glTF 2.0 (GLB and JSON glTF)",
         "models_checked": len(rows) + len(errors),
         "models_valid": len(rows),
         "models_with_previews": sum(bool(row["preview"]) for row in rows),
@@ -174,10 +263,8 @@ def main() -> None:
         "missing_dependencies": missing_dependencies,
         "errors": errors,
         "checks": [
-            "GLB magic header",
-            "GLB version 2",
-            "declared byte length",
-            "JSON chunk readability",
+            "GLB magic header, version, and declared length when applicable",
+            "JSON document readability",
             "glTF asset version 2.0",
             "external buffer and image references",
             "matching preview file",
@@ -195,7 +282,7 @@ def main() -> None:
         )
 
     print(
-        f"Validated {len(rows)} GLB files; "
+        f"Validated {len(rows)} glTF 2.0 model files; "
         f"{report['models_with_previews']} previews; "
         f"{report['models_with_animation']} animated models."
     )

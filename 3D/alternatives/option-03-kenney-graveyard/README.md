@@ -1,5 +1,7 @@
 # Option 03 — Kenney Graveyard
 
+> Status: rejected from the current art-direction shortlist; retained for reference.
+
 **Direction:** gothic, spooky storybook world. **Models:** 91 GLBs.
 
 Choose this if Sovereign's Eye should feel mysterious and slightly dark without

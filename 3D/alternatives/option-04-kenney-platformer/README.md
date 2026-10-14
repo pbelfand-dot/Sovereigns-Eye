@@ -1,5 +1,7 @@
 # Option 04 — Kenney Platformer
 
+> Status: rejected from the current art-direction shortlist; retained for reference.
+
 **Direction:** bright, rounded mascot adventure. **Models:** 153 GLBs.
 
 This is the broadest single option for quickly building readable levels. It includes

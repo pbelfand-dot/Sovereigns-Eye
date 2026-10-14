@@ -1,5 +1,7 @@
 # Option 05 — Kenney Mini Characters
 
+> Status: rejected from the current art-direction shortlist; retained for reference.
+
 **Direction:** miniature, inclusive storybook people. **Models:** 26 GLBs.
 
 This direction is friendly and clearly non-voxel, with twelve character variants plus
