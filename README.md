@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 1 prototype** (internal codename "Project Appraisal").
+> **Status: Phase 2 first playable** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The village](docs/screenshots/village.jpg)
@@ -58,7 +58,7 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 
 ## 2. What to try
 
-| # | Phase 1 goal | How |
+| # | Goal | How |
 |---|---|---|
 | 1-2 | Launch & start a new game | Main menu → **New Game** → leave the seed blank (random) or type one → **Begin** |
 | 3 | Explore the village | Drag with the mouse, WASD, pinch/scroll to zoom, Q/E to rotate |
@@ -66,7 +66,10 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 5-7 | Click an NPC → character card | Left-click anyone. That **appraises** them and opens their card |
 | 8 | Find exceptional talent | Press **L** for the Village Ledger, sort by *Greatest talent*. Read *History* tabs for "Rumor has it…" clues |
 | 9 | Happiness, loyalty, personality | Card → **Personality** tab, including *why* they feel that way |
-| 10 | Save / load | **F5** quicksave, **F9** quickload, or **Esc → Save Game / Load Game**. Quit, relaunch, **Continue** |
+| 10 | Build your household | Card → **Court**: talk, give gifts, and recruit willing villagers. Children aged 10–15 can join as pages with a parent's approval |
+| 11 | Develop retainers | Choose a training focus, appoint a Steward, Marshal, Chancellor, or Court Scholar, and knight proven servants |
+| 12 | Run your court | Press **K** to see gold, daily income and wages, renown, offices, retainers, loyalty, and the house chronicle |
+| 13 | Save / load | **F5** quicksave, **F9** quickload, or **Esc → Save Game / Load Game**. Quit, relaunch, **Continue** |
 
 The same seed always creates the same village and the same people.
 
@@ -81,6 +84,7 @@ The same seed always creates the same village and the same people.
 | Follow selected | — | C |
 | Pause / speed | Top bar buttons | Space · 1 2 3 4 |
 | Village ledger | Top bar | L |
+| Your court | Top bar | K |
 | Quicksave / quickload | — | F5 / F9 |
 | Close / menu | — | Esc |
 | Help overlay | — | H |
@@ -122,6 +126,8 @@ scripts/core/          Game autoload, world state, seeds, calendar, data loader
 scripts/characters/    CharacterData, generator, Quaternius HumanModel (+ primitive
                        fallback), NPC body, AI portrait prompts
 scripts/appraisal/     Appraisal skill + talent roller (potential/current)
+scripts/court/         Noble-house rules: recruitment, offices, training, wages,
+                       loyalty, knighthood, treasury and renown
 scripts/ai/            NPC daily-routine brain + mood (happiness/loyalty/stress)
 scripts/world/         Layout generator, village builder, VillageKit prefabs, roads,
                        camera, sky
@@ -196,24 +202,23 @@ To re-render that comparison: `godot --path . res://tools/style_demo.tscn -- out
 ## 7. Tests & tools
 
 ```bash
-tools/run_tests.sh                       # 21 headless tests (generation, determinism, rank odds,
-                                         # relationships, save/load, art pipeline, live world)
+tools/run_tests.sh                       # Headless tests (generation, determinism, rank odds,
+                                         # court, save/load, art pipeline, live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 8. Known limitations (Phase 1)
+## 8. Known limitations (Phase 2 first playable)
 
 * Art gaps: clothing is painted on (outfit pack pending); trees, crops, market
   stalls, the well and benches are still simple shapes; hats and hand tools
   aren't shown in 3D yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
 * NPCs walk along roads and can clip through each other or props; there is
   no navmesh yet.
-* People don't age, train or have children yet. The APIs exist
-  (`CharacterData.train()`, `raise_potential()`, talent inheritance), but no
-  system calls them during play yet.
+* Retainers train every day, but people do not age, marry or have children yet.
 * You can appraise everyone. Appraisal levels and hidden information are
   supported in code (`Appraisal.appraise(c, level)`) but not used yet.
-* There is no player avatar yet; the manor's family is the ruling house.
+* You play the ruling house's heir, marked by a gold crest, but there is no
+  character creator or succession system yet.

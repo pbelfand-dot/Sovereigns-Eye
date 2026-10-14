@@ -1,4 +1,4 @@
-# Architecture (Phase 1)
+# Architecture (Phase 2)
 
 The core rule: **data is separate from presentation.** Every person,
 building and road exists as plain data first (`RefCounted` classes that know
@@ -13,14 +13,16 @@ data off-screen with no body spawned.
                  ▼
  seed ──► WorldGenerator ──► WorldState ◄──────── SaveManager (JSON in user://saves)
           ├ VillageLayoutGenerator   │  layout, families, characters, clock
-          └ CharacterGenerator       │
-             └ TalentRoller          ▼
+          ├ CharacterGenerator       │
+          │  └ TalentRoller          │
+          └ CourtSystem.initialize   ▼
                               VillageWorld (scenes/world/world.tscn)
                  ┌───────────────┼────────────────┬───────────────┐
            VillageBuilder     RoadGraph        NPC × N          GameUI
            (terrain, roads,   (A* over roads,  ├ CharacterModel  ├ CharacterCard (+ PortraitStudio)
             buildings, trees) doors, square)   └ NPCBrain        ├ LedgerPanel, menus, toasts
-                                                  └ MoodSystem   └ uses Appraisal.appraise()
+                                                  └ MoodSystem   ├ uses Appraisal.appraise()
+                                                                └ CourtPanel / Court tab
 ```
 
 ## Systems
@@ -35,12 +37,13 @@ data off-screen with no body spawned.
 | Characters | `scripts/characters/character_data.gd`, `family_data.gd` | Identity, attributes `{current, potential}` (current is always clamped ≤ potential), traits, mood, relationships, history, appearance, live state. |
 | Generation | `character_generator.gd` | Households from `data/backgrounds.json` → fill to 50 → jobs → homes/workplaces → traits & looks (children resemble parents) → talents (children after parents) → relationships → histories with "rumor" hints → starting mood. |
 | Appraisal | `scripts/appraisal/appraisal.gd`, `talent_roller.gd` | `Appraisal.appraise(character, level)` returns a report; the UI only reads reports, so weaker appraisal, fog of war or concealment magic only touch this one function. |
+| Noble society | `scripts/court/court_system.gd`, `house_data.gd`, `data/court.json` | Selects the playable heir, tracks the house treasury and renown, and owns recruitment, offices, training, wages, loyalty, departures and knighthood. Court fields serialize on `WorldState` and `CharacterData`. |
 | NPC behaviour | `scripts/ai/npc_brain.gd`, `scripts/characters/npc.gd` | Schedule block (sleep/home/work/leisure/play) → queue of steps (go / enter / stay). Work styles: stationary, fields, patrol, drill, market, forest, estate, assist. Traits bias leisure (gregarious → tavern, devout → chapel). |
 | Mood | `scripts/ai/mood_system.gd` | Daily drift toward a target built from labelled factors (shown on the card). Stress changes hourly with activity. |
 | Navigation | `scripts/world/road_graph.gd` | A* over road centerlines + square ring + door nodes. `find_path(from, to)` is the only API the brain uses, so a navmesh can replace it later. |
 | Camera | `scripts/world/strategy_camera.gd` | Smooth pan/zoom/rotate; mouse, keyboard and macOS trackpad gestures; follow mode. |
 | UI | `scripts/ui/*` | Built in code from one theme (`ui_theme.gd`). The card's portrait is a live render of the character's own 3D model. |
-| Saving | `scripts/persistence/save_manager.gd` | Versioned JSON, written to a temp file then renamed (crash-safe). `migrate()` is where future save upgrades go. |
+| Saving | `scripts/persistence/save_manager.gd` | Versioned JSON, written to a temp file then renamed (crash-safe). Version 1 saves migrate to Phase 2 by deterministically creating their player house and opinions. |
 
 ## Time
 
@@ -49,10 +52,6 @@ data off-screen with no body spawned.
 
 ## Extension points for later phases
 
-* **Phase 2 (nobles & recruitment):** add a `recruit()` action that changes
-  `occupation_id` / `work_building_id` and status; `MoodSystem.wasted_talent_penalty`
-  already rewards giving talent a fitting job. Loyalty factors are a list:
-  append new ones.
 * **Phase 3 (economy):** buildings are data with ids, workers and residents;
   add production per building type in `data/buildings.json`.
 * **Phase 5 (military):** combat/leadership already exist; `train()` grows
