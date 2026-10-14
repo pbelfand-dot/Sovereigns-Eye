@@ -6,16 +6,20 @@ Game project repository for **Sovereign's Eye**.
 
 The [`3D/`](3D/) folder contains a ready-to-use, cartoony medieval starter library:
 
-- 18 animated character models
+- Five non-voxel style alternatives with 279 additional models
+- 18 original animated blocky character models, retained as a legacy option
 - 76 castle, siege, terrain, and decoration models
 - 167 fantasy-town, road, nature, prop, and water-feature models
 - A matching preview image for every model
 - Source, license, checksum, dependency, and validation records
 
-All 261 models use the widely supported GLB / glTF 2.0 format. The source packs are
+All 540 models use the widely supported GLB / glTF 2.0 format. The source packs are
 released under CC0, so they can be used and modified in commercial or non-commercial
-games without an attribution requirement. See [`3D/README.md`](3D/README.md) for the
-catalog and import notes.
+games without an attribution requirement. Start with the
+[`3D/alternatives/`](3D/alternatives/) comparison to choose a visual direction, then
+see [`3D/README.md`](3D/README.md) for the complete catalog and import notes.
+
+![Five non-voxel art directions](3D/alternatives/option-01-kaykit-adventurers/previews/overview.png)
 
 ![Blocky character collection](3D/previews/blocky-characters/overview.png)
 
