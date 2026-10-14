@@ -2,7 +2,7 @@ extends Node3D
 ## Renders every kit building prefab (and, if present, a lineup of villagers)
 ## to PNGs for review. Needs a display/GPU (use xvfb-run on servers).
 ##
-##   godot --path . res://tools/prefab_gallery.tscn -- <output_dir> [people]
+##   godot --path . res://tools/prefab_gallery.tscn -- <output_dir> [people|nature]
 
 var out_dir := "user://gallery"
 var _camera: Camera3D
@@ -65,6 +65,10 @@ func _run() -> void:
 		await _people()
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("nature"):
+		await _nature()
+		get_tree().quit()
+		return
 	_look(Vector3(mid, 55, 70), Vector3(mid, 0, 0), 55.0)
 	await _shot("prefabs_all.png")
 	for t: String in centers:
@@ -114,3 +118,39 @@ func _people() -> void:
 	await _shot("people_face.png")
 	for i in picks.size():
 		print("%d %s %s age %d %s %s hair=%s %s" % [i, picks[i].full_name(), picks[i].gender, picks[i].age, picks[i].occupation_id, picks[i].occupation().get("outfit", ""), picks[i].appearance.get("hair_style", ""), modes[i % modes.size()]])
+
+
+## Every Stylized Nature MegaKit model, one row per group, labelled.
+func _nature() -> void:
+	var dir := "res://3D/environments/quaternius-stylized-nature-standard/models/"
+	var rows := {"trees": [], "plants": [], "rocks": []}
+	for f in DirAccess.get_files_at(dir):
+		if not f.ends_with(".gltf"):
+			continue
+		var n := f.get_basename()
+		var group := "plants"
+		if n.contains("Tree") or n.begins_with("Pine"):
+			group = "trees"
+		elif n.begins_with("Rock") or n.begins_with("Pebble"):
+			group = "rocks"
+		rows[group].append(n)
+	var z := 60.0
+	for group: String in ["trees", "plants", "rocks"]:
+		var names: Array = rows[group]
+		var step := 4.5 if group == "trees" else 2.2
+		for i in names.size():
+			var inst := (load(dir + names[i] + ".gltf") as PackedScene).instantiate() as Node3D
+			add_child(inst)
+			inst.position = Vector3((i - names.size() * 0.5) * step, 0, z)
+			var label := Label3D.new()
+			label.text = str(names[i]).replace("_", "\n")
+			label.font_size = 48 if group == "trees" else 28
+			label.pixel_size = 0.004
+			label.position = inst.position + Vector3(0, -0.4, 1.6)
+			label.rotation.x = -0.6
+			add_child(label)
+		var width := names.size() * step
+		_look(Vector3(0, 6.0 if group == "trees" else 2.6, z + width * 0.55), Vector3(0, 2.6 if group == "trees" else 0.5, z), 60.0)
+		await _shot("nature_%s.png" % group)
+		z += 40.0
+

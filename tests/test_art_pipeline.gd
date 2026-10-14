@@ -124,3 +124,43 @@ func test_outfits_dress_every_villager() -> void:
 	check((again.find_child("Outfit", true, false) as MeshInstance3D).mesh == outfit.mesh, "same look shares one mesh")
 	m.free()
 	again.free()
+
+
+func test_nature_kit_trees_and_scatter() -> void:
+	if not NatureKit.available():
+		check(true, "nature kit not in project; primitive trees are used")
+		return
+	var w := WorldGenerator.generate("nature-seed")
+	var b := VillageBuilder.new()
+	b.build(w.layout)
+	var nature := b.get_node_or_null("Nature")
+	check(nature != null, "nature is built from the kit")
+	var mmis := nature.find_children("*", "MultiMeshInstance3D", false, false)
+	check(not mmis.is_empty(), "nature is drawn as MultiMeshes")
+	for mmi: MultiMeshInstance3D in mmis:
+		check(mmi.multimesh.use_custom_data, "%s carries tint and wind data" % mmi.name)
+		check(mmi.multimesh.mesh != null, "%s has a kit mesh" % mmi.name)
+	var trees := 0
+	for list: Array in b.tree_items().values():
+		trees += list.size()
+	check_eq(trees, w.layout.trees.size(), "every layout tree spot gets a kit tree")
+	for group: Dictionary in NatureKit.config().get("scatter", []):
+		var items := b.scatter_items(group)
+		var limit := 0.75 if group.has("wear") else 0.3
+		var total := 0
+		var on_paths := 0
+		for list: Array in items.values():
+			for it: Array in list:
+				var o: Vector3 = (it[0] as Transform3D).origin
+				total += 1
+				if b.wear_at(Vector2(o.x, o.z)) > limit:
+					on_paths += 1
+		check(total > 0, "%s is scattered (%d)" % [group["name"], total])
+		check_eq(on_paths, 0, "%s stays off roads, the square and buildings" % group["name"])
+	var again := VillageBuilder.new()
+	again.build(w.layout)
+	check_eq(str(again.tree_items()), str(b.tree_items()), "tree placement is deterministic")
+	var grass: Dictionary = NatureKit.config()["scatter"][0]
+	check_eq(str(again.scatter_items(grass)), str(b.scatter_items(grass)), "scatter is deterministic")
+	b.free()
+	again.free()

@@ -204,6 +204,14 @@ track-to-scene map.
     each come in two colorways, plus hoods and shoulder armor.
   * Each villager's pieces are merged into one shared mesh per look.
   * Portrait prompts describe the same clothes.
+* **Nature** comes from the Quaternius Stylized Nature MegaKit
+  ([`data/nature.json`](data/nature.json)).
+  * Broadleaf, pine and birch trees stand on the layout's tree spots, each with its
+    own leaf tint. A few great oaks and dead trees grow out in the woods.
+  * Grass, flowers, bushes, pebbles and mushrooms are scattered off the paths, and
+    kit rocks replace the old blobs.
+  * Everything sways in the wind and is drawn as batched MultiMeshes.
+  * Before/after: [`docs/screenshots/nature_before_after.jpg`](docs/screenshots/nature_before_after.jpg).
 * **Card portraits** show an AI painting when one exists for that villager, and
   a live 3D portrait otherwise. Paint them locally with ComfyUI +
   FLUX.2 [klein]: see [`ai-art/README.md`](ai-art/README.md).
@@ -243,10 +251,12 @@ as readable JSON.
 ## 9. Known limitations (Phase 2 first playable)
 
 * Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
-  fine leather and there are no gowns, robes or plate armor yet. The prop sampler
-  is acquired but not integrated, so crops, market stalls, the well and benches
-  are still simple shapes; hats and hand tools aren't shown in 3D yet. See
-  [docs/ART_PLAN.md](docs/ART_PLAN.md).
+  fine leather and there are no gowns, robes or plate armor yet.
+* The prop sampler is acquired but not integrated yet, so crops, market stalls,
+  the well and benches are still simple shapes; hats and hand tools aren't shown
+  in 3D yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
+* From the farthest zoom, kit trees read smaller and darker than the old round
+  blobs. Their size and tints are tunable in `data/nature.json`.
 * NPCs walk along roads and can clip through each other or props; there is
   no navmesh yet.
 * Retainers train every day, but people do not age, marry or have children yet.

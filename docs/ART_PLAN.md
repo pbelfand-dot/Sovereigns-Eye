@@ -91,7 +91,34 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 - All numbers are in `data/art_style.json` → `terrain`.
 - Before/after: `docs/screenshots/ground_before_after.jpg`.
 - Works on the Forward+, Mobile and Compatibility renderers.
-- Real 3D grass tufts, flowers and rocks still come from the Nature MegaKit (section 3).
+- Real 3D grass tufts, flowers and rocks come from the Nature MegaKit (next section).
+
+### Nature: Stylized Nature MegaKit (free Standard, 68 models)
+- `scripts/world/nature_kit.gd` loads the kit and `VillageBuilder` places it. All numbers are in `data/nature.json`.
+- **Trees** stand on the layout's tree spots:
+  - broadleaf → CommonTree
+  - conifer → Pine
+  - birch → the lighter CommonTree shapes
+  - Past 75 m, a few broadleaves become a great twisted oak or a dead tree.
+- **Leaf tints.** The kit's white leaf maps are tinted per tree, so no two canopies match. Leaf normals are bent away from each canopy's center, so crowns light as soft volumes from the strategy camera.
+- **Ground cover** is scattered deterministically from the terrain seed. It stays off trodden ground using the meadow wear mask:
+  - meadow grass in patches
+  - taller grass along path and wall edges and around tree trunks
+  - flower drifts and bushes
+  - pebbles along road edges
+  - mushrooms under trees
+- **Rocks.** Kit rocks replace the old grey blobs.
+- **Shader.** `shaders/foliage.gdshader` handles:
+  - per-instance tint and wind phase (MultiMesh custom data)
+  - vertex ambient occlusion
+  - height-weighted wind sway
+  - alpha coverage that holds up at distance (leaves don't thin out on small mip levels)
+- **Batching.** One MultiMesh per model per 64 m chunk, so the engine can cull and pick LODs per area. Small layers fade out at a set camera distance and don't cast shadows.
+  - Phones draw half the ground cover and skip pebbles, mushrooms and the grass around trunks.
+  - Measured with the overview camera: about 1,650 draw calls, against about 1,130 with the old primitive trees.
+- **Unused kit maps.** Rocks_Desert and Leaves_GiantPine are import-skipped (unused).
+- **Before/after:** `docs/screenshots/nature_before_after.jpg`.
+- `tools/prefab_gallery.tscn -- <dir> nature` renders every kit model.
 
 ### Import settings (committed `.import` files)
 - Village and body textures: VRAM compressed with mipmaps, capped at **1024 px**; eyes 256, vines 512. That's plenty for a strategy camera and keeps downloads around 50 MB.
@@ -104,7 +131,7 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 
 | Stage | Readiness | What carries it | What it still needs |
 |---|---|---|---|
-| **Tiny town** (Phase 1, now) | **Playable** | Village kit prefabs, 2 bodies + hair, 84 clips; outfit, nature, and prop samplers acquired | Finish integrating nature and props |
+| **Tiny town** (Phase 1, now) | **Playable** | Village kit prefabs, outfit sampler (Peasant/Ranger), Nature MegaKit trees and ground cover, 84 clips; prop sampler acquired | Integrate the props; outfit Source for nobles, knights and clergy |
 | **Large village** | Mostly | Larger recipes plus acquired markets, workshop equipment, furniture, and dressing props | Integrate the props; crops, population variety |
 | **Town / city districts** | Partial | Dense multi-story blocks from the same modules. Prefabs + MultiMesh instancing for repeated houses | Civic landmarks, wealth tiers, signage, plazas; district streaming (§4) |
 | **Kingdom / capital** | Missing | Residential/commercial districts only | Palace/keep, monumental walls and gates, towers, barracks, temples, throne room, bridges |
@@ -124,7 +151,7 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 |---|---|---|---|
 | **Clothing variety.** The free sampler is integrated, but it only has Peasant and Ranger sets. Nobles wear fine leather, priests wear peasant clothes with a hood, and soldiers wear leather with shoulder armor. There are no gowns, robes, plate armor or crowns. | **Modular Character Outfits – Fantasy Source**: 12 outfits from 62 parts. The publisher preview shows a crowned queen in a gown, a noble's coat, plate armor and a mage's robes. | **Standard: integrated**; Source $20 | **1 — buy Source for nobles, knights and clergy** |
 | **Body variety.** Only "Superhero" proportions, so children look like small adults | **Universal Base Characters Source**: 6 bodies (Superhero, Regular, Teen × male/female), 20 hairstyles, eye and skin color shaders | $19.99 (we have the free Standard) | 2 |
-| **Trees, bushes, rocks, grass.** Still primitive placeholders | **Stylized Nature MegaKit**: free Standard now acquired (68/116 models) | **Standard: acquired**; Pro $9.99; Source $14.99 | **3 — integrate acquired sampler** |
+| **More nature variety.** The free Standard (68 of 116 models) is integrated. It lacks the kit's extra plants, rocks and stylized foliage shaders. | **Stylized Nature MegaKit** Pro/Source | **Standard: integrated**; Pro $9.99; Source $14.99 | 6 — nice to have |
 | **Market stalls, well, benches, barrels, forge, anvil, bread oven, tavern sign, hand tools.** Primitives or missing | **Fantasy Props MegaKit**: 200+ props | **Standard: acquired** (94 models); Pro $9.99; Source $14.99 | 4 — integrate acquired sampler |
 | More village modules (304 vs 176) and ready-made collisions | Medieval Village MegaKit Source | Pro $9.99 / Source $14.99 | 5 |
 | **Windmill.** Kit tower plus simple boards in the kit's wood material | Ultimate Fantasy RTS (selected landmarks) or a custom model | free / custom | 6 |
@@ -140,9 +167,9 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 - Alternatively, Quaternius's Patreon is $10/month for one Source key per month.
 
 **Acquisition status.** The free outfit, nature, and prop samplers are now in
-`3D/`. The outfit sampler is wired in. Nature integration is in progress; props
-can now replace the square and workshop placeholders. The next optional purchase
-is the Source body pack for more body and hair variation.
+`3D/`. The outfit and nature samplers are wired in; props can now replace the
+square and workshop placeholders. The next optional purchase is the Source body
+pack for more body and hair variation.
 
 ---
 
@@ -178,6 +205,7 @@ A ship is a moving parent node, so crew stay parented to the deck while it sails
 ```
 3D/                                   asset library (unchanged layout)
   environments/quaternius-medieval-village-standard/   used: village kit
+  environments/quaternius-stylized-nature-standard/    used: trees, ground cover, rocks
   props/quaternius-fantasy-props-standard/              acquired: 94 matching props
   character-tests/quaternius-universal-base-standard/  used: heads, eyes, hair (bodies = painted fallback)
   characters/quaternius-modular-outfits-fantasy-standard/  used: outfit parts (models/parts; models/outfits are import-skipped duplicates)
@@ -193,6 +221,10 @@ scripts/characters/outfit_kit.gd      outfit looks, merged per-look meshes, skel
 shaders/human_skin.gdshader           skin tone for heads and the outfits' hands
 shaders/human_body.gdshader           skin tone + painted clothing (fallback without the outfit pack)
 shaders/human_hair.gdshader           hair/beard/eyebrow color
-tools/prefab_gallery.tscn             renders every prefab and a villager lineup to PNG
-tests/test_art_pipeline.gd            footprints, prefab merging, shared materials, bodies, in-place clips
+data/nature.json                      tree models per layout kind, tints, wind, scatter layers
+scripts/world/nature_kit.gd           nature models, foliage materials, chunked MultiMeshes
+shaders/foliage.gdshader              tint, vertex AO, wind sway, distance-safe leaf alpha
+shaders/terrain_meadow.gdshader       meadow ground (scripts/world/ground_wear.gd bakes its path mask)
+tools/prefab_gallery.tscn             renders every prefab, a villager lineup, or every nature model to PNG
+tests/test_art_pipeline.gd            footprints, prefab merging, bodies, outfits, ground wear, nature placement
 ```

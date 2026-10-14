@@ -16,6 +16,10 @@ const STALL_COLORS := ["#b23a3a", "#3a6ab2", "#d8a03a", "#3a8a5a", "#8a3ab2"]
 var layout: VillageLayout
 var building_nodes: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
+## Trodden-ground mask (GroundWear) shared by the meadow shader and scatter.
+var _wear: Image
+var _wear_origin := Vector2.ZERO
+var _wear_size := 1.0
 
 
 func build(source: VillageLayout) -> void:
@@ -26,7 +30,10 @@ func build(source: VillageLayout) -> void:
 	_build_roads()
 	_build_square()
 	_build_fields()
-	_build_trees()
+	if NatureKit.available():
+		_build_nature()
+	else:
+		_build_trees()
 	_build_props()
 	_build_buildings()
 
@@ -80,12 +87,15 @@ func _build_terrain() -> void:
 	var mi := MeshInstance3D.new()
 	mi.name = "Terrain"
 	mi.mesh = mesh
-	mi.material_override = meadow_material(layout, cfg, Vector2(-e, -e), e * 2.0)
+	_wear_origin = Vector2(-e, -e)
+	_wear_size = e * 2.0
+	_wear = GroundWear.bake(layout, _wear_origin, _wear_size, int(cfg.get("wear", {}).get("mask_size", 512)), cfg.get("wear", {}))
+	mi.material_override = meadow_material(layout, cfg, _wear_origin, _wear_size, _wear)
 	add_child(mi)
 
 
 ## The meadow ground shader with its baked wear mask, tuned from art_style.json.
-static func meadow_material(source: VillageLayout, cfg: Dictionary, origin: Vector2, size: float) -> ShaderMaterial:
+static func meadow_material(source: VillageLayout, cfg: Dictionary, origin: Vector2, size: float, mask: Image = null) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://shaders/terrain_meadow.gdshader")
 	for key: String in ["lush_tint", "dry_tint"]:
@@ -104,9 +114,9 @@ static func meadow_material(source: VillageLayout, cfg: Dictionary, origin: Vect
 		mat.set_shader_parameter("flower_" + "abc"[i], Color(str(flowers[i])))
 	var fade: Array = cfg.get("detail_fade", [40.0, 140.0])
 	mat.set_shader_parameter("detail_fade", Vector2(float(fade[0]), float(fade[1])))
-	var wear_cfg: Dictionary = cfg.get("wear", {})
-	var res := int(wear_cfg.get("mask_size", 512))
-	var mask := GroundWear.bake(source, origin, size, res, wear_cfg)
+	if mask == null:
+		var wear_cfg: Dictionary = cfg.get("wear", {})
+		mask = GroundWear.bake(source, origin, size, int(wear_cfg.get("mask_size", 512)), wear_cfg)
 	mat.set_shader_parameter("wear_mask", ImageTexture.create_from_image(mask))
 	mat.set_shader_parameter("wear_origin", origin)
 	mat.set_shader_parameter("wear_size", size)
@@ -284,7 +294,116 @@ func _build_fence(field: Node3D, size: Vector2, mat: Material) -> void:
 				Mats.box(field, Vector3(0.06, 0.08, length), (a + b) * 0.5 + Vector3(0, h, 0), mat, Vector3(0, yaw, 0))
 
 
-# --- Trees ------------------------------------------------------------------------------------
+# --- Nature (Quaternius Stylized Nature MegaKit) ----------------------------------------
+
+## Kit trees on the layout's tree spots, then grass, flowers, bushes, pebbles
+## and mushrooms scattered off trodden ground. See data/nature.json.
+func _build_nature() -> void:
+	var holder := Node3D.new()
+	holder.name = "Nature"
+	add_child(holder)
+	var cfg := NatureKit.config()
+	NatureKit.add_instances(holder, "tree", tree_items(), 0.0, true, "trees")
+	var skip: Array = cfg.get("mobile_skip", []) if OS.has_feature("mobile") else []
+	for group: Dictionary in cfg.get("scatter", []):
+		var group_name := str(group.get("name", ""))
+		if not skip.has(group_name):
+			NatureKit.add_instances(holder, str(group.get("wind", "none")), scatter_items(group),
+				float(group.get("visible_to", 0.0)), bool(group.get("shadows", false)), group_name)
+
+
+## Kit tree for every layout tree spot: model -> [[Transform3D, custom], ...].
+## Out past accent_min_dist, a few broadleaves become accent trees.
+func tree_items() -> Dictionary:
+	var cfg := NatureKit.config()
+	var rng := Seeds.rng(layout.terrain_seed, "nature_trees")
+	var kinds: Dictionary = cfg.get("trees", {})
+	var accents: Array = cfg.get("accents", [])
+	var accent_dist := float(cfg.get("accent_min_dist", 75.0))
+	var items := {}
+	for t in layout.trees:
+		var kind := int(t.w)
+		var spec: Dictionary = kinds.get(str(kind), kinds.get("0", {}))
+		var roll := rng.randf()
+		if kind == 0 and Vector2(t.x, t.y).length() > accent_dist:
+			var acc := 0.0
+			for a: Dictionary in accents:
+				acc += float(a.get("chance", 0.0))
+				if roll < acc:
+					spec = a
+					break
+		var model := str(Seeds.pick(rng, spec["models"]))
+		var s := t.z * float(spec.get("scale", 0.8))
+		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * s)
+		var pos := TerrainHeight.on_ground(Vector3(t.x, 0, t.y)) - Vector3(0, 0.05, 0)
+		_add_item(items, model, Transform3D(basis, pos), NatureKit.custom(str(Seeds.pick(rng, spec.get("tints", ["#ffffff"]))), rng.randf()))
+	return items
+
+
+## Places one scatter group (grass, flowers...): model -> [[Transform3D, custom], ...].
+## Needs the terrain (wear mask) to be built first.
+func scatter_items(group: Dictionary) -> Dictionary:
+	var rng := Seeds.rng(layout.terrain_seed, "nature_" + str(group.get("name", "")))
+	var count := int(float(group.get("count", 0)) * NatureKit.density())
+	var models: Array = group.get("models", [])
+	var tints: Array = group.get("tints", ["#ffffff"])
+	var dist: Array = group.get("dist", [10.0, 120.0])
+	var wear_range: Array = group.get("wear", [])
+	var max_wear := float(group.get("max_wear", 0.05))
+	var patchiness := float(group.get("patchiness", 0.0))
+	var scale: Array = group.get("scale", [1.0, 1.0])
+	var near_trees := float(group.get("near_trees", 0.0))
+	var limit := _wear_size * 0.5 - 2.0
+	var items := {}
+	var placed := 0
+	var attempts := 0
+	while placed < count and attempts < count * 15 and not models.is_empty():
+		attempts += 1
+		var p: Vector2
+		if near_trees > 0.0:
+			if layout.trees.is_empty():
+				break
+			var t: Vector4 = layout.trees[rng.randi() % layout.trees.size()]
+			var a := rng.randf() * TAU
+			p = Vector2(t.x, t.y) + Vector2(cos(a), sin(a)) * rng.randf_range(0.7, near_trees)
+		else:
+			var a := rng.randf() * TAU
+			var r := sqrt(rng.randf_range(float(dist[0]) * float(dist[0]), float(dist[1]) * float(dist[1])))
+			p = Vector2(layout.square_center.x, layout.square_center.z) + Vector2(cos(a), sin(a)) * r
+		if absf(p.x) > limit or absf(p.y) > limit:
+			continue
+		var wear := wear_at(p)
+		if wear_range.size() == 2:
+			if wear < float(wear_range[0]) or wear > float(wear_range[1]):
+				continue
+		elif wear > max_wear:
+			continue
+		if patchiness > 0.0:
+			var n := TerrainHeight.grass_variation(p.x * 0.8, p.y * 0.8)
+			if rng.randf() > lerpf(1.0, smoothstep(0.35, 0.65, n), patchiness):
+				continue
+		var s := rng.randf_range(float(scale[0]), float(scale[1]))
+		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * s)
+		var pos := TerrainHeight.on_ground(Vector3(p.x, 0, p.y)) - Vector3(0, 0.02, 0)
+		_add_item(items, str(Seeds.pick(rng, models)), Transform3D(basis, pos), NatureKit.custom(str(Seeds.pick(rng, tints)), rng.randf()))
+		placed += 1
+	return items
+
+
+## How trodden the ground is at a point (0 grass .. 1 road/square/building).
+func wear_at(p: Vector2) -> float:
+	if _wear == null:
+		return 0.0
+	return GroundWear.sample(_wear, _wear_origin, _wear_size, p)
+
+
+static func _add_item(items: Dictionary, model: String, xf: Transform3D, custom: Color) -> void:
+	if not items.has(model):
+		items[model] = []
+	items[model].append([xf, custom])
+
+
+# --- Trees (primitive fallback when the nature kit is missing) -------------------------
 
 func _build_trees() -> void:
 	var holder := Node3D.new()
@@ -407,7 +526,17 @@ func _build_props() -> void:
 				Mats.box(node, Vector3(1.0, 0.26, 0.06), Vector3(-0.35, 1.45, 0), wood, Vector3(0, 0.6, -0.06))
 			"rock":
 				var s := _rng.randf_range(0.5, 1.4)
-				Mats.sphere(node, 0.8, Vector3(0, 0.2 * s, 0), Mats.hex("#8d8a82"), Vector3(s * 1.3, s * 0.6, s))
+				var rocks: Dictionary = NatureKit.config().get("rocks", {}) if NatureKit.available() else {}
+				var models: Array = rocks.get("models", [])
+				var kit_mesh: Mesh = null
+				if not models.is_empty():
+					var pos: Vector3 = p["pos"]
+					kit_mesh = NatureKit.mesh(str(models[absi(hash(Vector2i(roundi(pos.x), roundi(pos.z)))) % models.size()]), "none")
+				if kit_mesh:
+					var k := s * float(rocks.get("scale", 0.55))
+					Mats.add_mesh(node, kit_mesh, null, Vector3(0, -0.15 * k, 0), Vector3.ZERO, Vector3(k, k, k))
+				else:
+					Mats.sphere(node, 0.8, Vector3(0, 0.2 * s, 0), Mats.hex("#8d8a82"), Vector3(s * 1.3, s * 0.6, s))
 
 
 # --- Buildings -----------------------------------------------------------------------------------

@@ -8,7 +8,8 @@ extends Node
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
 ## which is much faster on software renderers. "art" only renders the
-## village overview, the square and a meadow close-up (for art changes).
+## village overview, the square, a meadow close-up and a forest edge (for
+## art changes).
 
 var out_dir := "user://captures"
 var seed_text := "12345"
@@ -32,7 +33,10 @@ func _shot(file_name: String) -> void:
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(out_dir.path_join(file_name))
-	print("saved ", out_dir.path_join(file_name))
+	print("saved %s  (primitives %d, draw calls %d, objects %d)" % [out_dir.path_join(file_name),
+		Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+		Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+		Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)])
 
 
 func _wait(n: int) -> void:
@@ -81,6 +85,10 @@ func _run() -> void:
 		world.camera_rig.look_at_point(Vector3(30, 0, 22), 22.0, true)
 		await _wait(20)
 		await _shot("03b_meadow.png")
+		world.camera_rig.set_yaw(-2.2, true)
+		world.camera_rig.look_at_point(Vector3(-62, 0, -48), 30.0, true)
+		await _wait(20)
+		await _shot("03c_forest_edge.png")
 		get_tree().quit()
 		return
 
