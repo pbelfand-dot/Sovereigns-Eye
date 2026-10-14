@@ -1,0 +1,4 @@
+*.glb binary
+*.png binary
+3D/ASSET_MANIFEST.csv linguist-generated=true
+3D/VALIDATION.json linguist-generated=true
