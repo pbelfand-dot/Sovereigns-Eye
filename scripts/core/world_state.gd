@@ -3,12 +3,16 @@ extends RefCounted
 ## Everything that defines one playthrough: the seed, the clock, the village
 ## layout, families and characters. Saving the game = saving this object.
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 
 var seed_text: String = ""
 var world_seed: int = 0
 var village_name: String = ""
 var ruling_family_id: int = -1
+## The character the player plays: the heir of the ruling house (Phase 2).
+var player_id: int = -1
+## The player's house: gold, renown, offices. Set up by CourtSystem.
+var house: HouseData
 ## Minutes since 00:00 on day 1 of the calendar.
 var minutes: float = 0.0
 ## Last whole day for which daily updates (mood drift) ran.
@@ -50,6 +54,27 @@ func get_building(building_id: int) -> BuildingData:
 
 func ruling_family() -> FamilyData:
 	return get_family(ruling_family_id)
+
+
+func player() -> CharacterData:
+	return get_character(player_id)
+
+
+func is_player(c: CharacterData) -> bool:
+	return c != null and c.id == player_id
+
+
+## Whole days since the calendar began.
+func day() -> int:
+	return Calendar.day_index(whole_minutes())
+
+
+func retainers() -> Array[CharacterData]:
+	var out: Array[CharacterData] = []
+	for c in characters:
+		if c.retainer:
+			out.append(c)
+	return out
 
 
 func residents_of(building_id: int) -> Array[CharacterData]:
@@ -97,6 +122,8 @@ func to_dict() -> Dictionary:
 		"seed": world_seed,
 		"village_name": village_name,
 		"ruling_family": ruling_family_id,
+		"player": player_id,
+		"house": house.to_dict() if house else {},
 		"minutes": snappedf(minutes, 0.01),
 		"last_daily_update": last_daily_update,
 		"layout": layout.to_dict() if layout else {},
@@ -111,6 +138,9 @@ static func from_dict(d: Dictionary) -> WorldState:
 	w.world_seed = int(d.get("seed", 0))
 	w.village_name = str(d.get("village_name", ""))
 	w.ruling_family_id = int(d.get("ruling_family", -1))
+	w.player_id = int(d.get("player", -1))
+	var house_d: Dictionary = d.get("house", {})
+	w.house = HouseData.from_dict(house_d) if not house_d.is_empty() else null
 	w.minutes = float(d.get("minutes", 0.0))
 	w.last_daily_update = int(d.get("last_daily_update", 0))
 	w.layout = VillageLayout.from_dict(d.get("layout", {}))

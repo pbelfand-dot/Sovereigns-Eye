@@ -27,7 +27,9 @@ var _appraisal_box: VBoxContainer
 var _personality_box: VBoxContainer
 var _relations_box: VBoxContainer
 var _history_box: VBoxContainer
+var _court_box: VBoxContainer
 var _live_refresh := 0.0
+var _dismiss_armed := false
 
 
 func _init() -> void:
@@ -99,6 +101,7 @@ func _ready() -> void:
 	_tabs.add_theme_font_size_override("font_size", 15)
 	root.add_child(_tabs)
 	_appraisal_box = _add_tab("Appraisal")
+	_court_box = _add_tab("Court")
 	_personality_box = _add_tab("Personality")
 	_relations_box = _add_tab("Relationships")
 	_history_box = _add_tab("History")
@@ -122,6 +125,8 @@ func _add_tab(title: String) -> VBoxContainer:
 
 
 func show_character(c: CharacterData) -> void:
+	if c != character:
+		_dismiss_armed = false
 	character = c
 	visible = c != null
 	if c == null:
@@ -154,8 +159,9 @@ func refresh() -> void:
 	if character == null:
 		return
 	var c := character
-	_name_label.text = c.full_name()
-	_sub_label.text = "%s  -  %s" % [c.occupation_name(), c.status_name()]
+	var st := world.state
+	_name_label.text = c.display_name() + ("  (You)" if st.is_player(c) else "")
+	_sub_label.text = "%s  -  %s" % [CourtSystem.role_name(st, c) if st.house else c.occupation_name(), c.status_name()]
 	_age_label.text = "Age %d  -  %s" % [c.age, c.gender.capitalize()]
 	var fam := world.state.get_family(c.family_id)
 	_family_label.text = "%s (%s)" % [fam.display_name(), fam.background_name()] if fam else ""
@@ -163,6 +169,7 @@ func refresh() -> void:
 	_home_label.text = "Lives at %s" % (home.name if home else "no fixed home")
 	_refresh_banner()
 	_build_appraisal()
+	_build_court()
 	_build_personality()
 	_build_relationships()
 	_build_history()
@@ -245,6 +252,277 @@ func _build_appraisal() -> void:
 		badge.tooltip_text = "%s: %d+ (%s)" % [r["id"], int(r["min"]), r["title"]]
 		legend.add_child(badge)
 	_appraisal_box.add_child(legend)
+
+
+# --- Court tab (Phase 2) ----------------------------------------------------------------------
+
+func _build_court() -> void:
+	_clear(_court_box)
+	var c := character
+	var st := world.state
+	if st.house == null:
+		return
+	if st.is_player(c):
+		_build_court_player()
+		return
+	_section(_court_box, "Their opinion of you")
+	_court_bar(c.player_opinion, -100.0, 100.0, "%+d  %s" % [roundi(c.player_opinion), CourtSystem.opinion_label(c.player_opinion)], UITheme.opinion_color(roundi(c.player_opinion)))
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 8)
+	row.add_theme_constant_override("v_separation", 6)
+	var talk := CourtSystem.can_talk(st, c)
+	var tb := UITheme.button("Talk", _on_talk)
+	tb.disabled = not talk["ok"]
+	tb.tooltip_text = str(talk["reason"]) if not talk["ok"] else "Spend some time with them: raises their opinion of you.\nOnce a day. Your Politics makes you better company."
+	row.add_child(tb)
+	var gift := CourtSystem.can_gift(st, c)
+	var gb := UITheme.button("Gift (%d gold)" % CourtSystem.gift_cost(c), _on_gift)
+	gb.disabled = not gift["ok"]
+	gb.tooltip_text = str(gift["reason"]) if not gift["ok"] else "A gift raises their opinion of you (more for the greedy)."
+	row.add_child(gb)
+	_court_box.add_child(row)
+	if c.retainer:
+		_build_court_retainer()
+	else:
+		_build_court_recruit()
+
+
+func _build_court_recruit() -> void:
+	var c := character
+	var st := world.state
+	_section(_court_box, "Recruit")
+	var r := CourtSystem.recruit_check(st, c)
+	var factors: Array = r["factors"]
+	if factors.is_empty():
+		_court_box.add_child(_wrap_label(str(r["reason"]), 15, UITheme.TEXT_DIM))
+		return
+	var chance := float(r["chance"])
+	var color := UITheme.GOOD if chance >= 0.6 else (UITheme.ACCENT if chance >= 0.3 else UITheme.BAD)
+	_court_box.add_child(UITheme.label("Chance they accept: %d%%" % roundi(chance * 100.0), 18, color, true))
+	if r["ward"]:
+		var decider := st.get_character(int(r["decider"]))
+		var who := decider.full_name() if decider and decider != c else "they"
+		_court_box.add_child(_wrap_label("At %d they would join as a page. %s decides." % [c.age, who.capitalize() if who == "they" else who], 14, UITheme.TEXT_DIM))
+	for f: Dictionary in factors:
+		var line := HBoxContainer.new()
+		var name_l := UITheme.label("   " + str(f["label"]), 14, UITheme.TEXT_DIM)
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_child(name_l)
+		var v := float(f["value"]) * 100.0
+		line.add_child(UITheme.label("%+d%%" % roundi(v), 14, UITheme.value_color(v)))
+		_court_box.add_child(line)
+	var b := UITheme.button("Offer a place in your household (%d gold)" % int(r["cost"]), _on_recruit)
+	b.disabled = not r["ok"]
+	b.tooltip_text = str(r["reason"]) if not r["ok"] else "They may refuse. A refusal lowers their opinion a little and you must wait before asking again."
+	_court_box.add_child(b)
+	if not r["ok"]:
+		_court_box.add_child(_wrap_label(str(r["reason"]), 14, UITheme.BAD))
+	_court_box.add_child(_wrap_label("Household: %d / %d retainers  -  Gold: %d" % [CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st), st.house.gold], 13, UITheme.TEXT_DIM))
+
+
+func _build_court_retainer() -> void:
+	var c := character
+	var st := world.state
+	_section(_court_box, "Service")
+	var since := ""
+	if c.joined_day >= 0:
+		since = "  -  sworn %s" % Calendar.format_date(c.joined_day * Calendar.MINUTES_PER_DAY)
+	_court_box.add_child(_wrap_label("%s of %s  -  wage %d gold/day%s" % [CourtSystem.role_name(st, c), CourtSystem.house_name(st), CourtSystem.wage(c), since], 15))
+	_court_bar(c.loyalty, 0.0, 100.0, "Loyalty %d  %s" % [roundi(c.loyalty), MoodSystem.loyalty_label(c.loyalty)], Color("#6fa8e6"))
+
+	# Office
+	var office_row := HBoxContainer.new()
+	office_row.add_theme_constant_override("separation", 8)
+	var ol := UITheme.label("Office", 15)
+	ol.custom_minimum_size.x = 80
+	office_row.add_child(ol)
+	var opt := OptionButton.new()
+	opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	opt.add_item("No office")
+	var ids: Array[String] = [""]
+	for o: Dictionary in CourtSystem.offices():
+		var oid := str(o["id"])
+		var holder := st.get_character(st.house.holder_of(oid))
+		var text := str(o["name"])
+		if holder and holder != c:
+			text += " (held by %s)" % holder.first_name
+		elif holder == null:
+			text += " (vacant)"
+		opt.add_item(text)
+		opt.set_item_tooltip(opt.item_count - 1, str(o.get("description", "")))
+		ids.append(oid)
+	opt.selected = maxi(0, ids.find(c.office))
+	opt.disabled = c.age < 16
+	opt.tooltip_text = "Pages are too young for an office (16+)." if c.age < 16 else "Offices give the house a bonus and train the holder in their duties."
+	opt.item_selected.connect(func(i: int) -> void: _on_office_chosen(ids[i]))
+	office_row.add_child(opt)
+	_court_box.add_child(office_row)
+
+	# Training focus
+	var focus_row := HBoxContainer.new()
+	focus_row.add_theme_constant_override("separation", 8)
+	var fl := UITheme.label("Train", 15)
+	fl.custom_minimum_size.x = 80
+	focus_row.add_child(fl)
+	focus_row.add_child(_focus_picker(c))
+	_court_box.add_child(focus_row)
+	_training_lines(c)
+
+	# Knighthood & dismissal
+	var actions := HFlowContainer.new()
+	actions.add_theme_constant_override("h_separation", 8)
+	if not c.is_knight():
+		var k := CourtSystem.can_knight(st, c)
+		var kb := UITheme.button("Knight them (%d gold)" % int(CourtSystem.section("knighthood").get("cost", 60)), _on_knight)
+		kb.disabled = not k["ok"]
+		kb.tooltip_text = str(k["reason"]) if not k["ok"] else "Raise them to knighthood: a big boost to loyalty, and renown for your house."
+		actions.add_child(kb)
+	var db := UITheme.button("Click again to dismiss" if _dismiss_armed else "Dismiss", _on_dismiss)
+	db.tooltip_text = "Release them from your service. They won't be pleased."
+	actions.add_child(db)
+	_court_box.add_child(actions)
+
+
+func _build_court_player() -> void:
+	var c := character
+	var st := world.state
+	var h := st.house
+	_section(_court_box, "You")
+	_court_box.add_child(_wrap_label("You are %s, heir of %s. Your Appraisal shows you what no one else can see: everyone's hidden potential. Find the gifted, bring them into your household, and raise them into the great servants of your house." % [c.full_name(), CourtSystem.house_name(st)], 15))
+	_section(_court_box, "Your house")
+	var net := CourtSystem.daily_income(st) - CourtSystem.daily_wages(st)
+	_court_box.add_child(UITheme.label("Gold: %d  (%+d per day)" % [h.gold, net], 15, UITheme.ACCENT))
+	_court_box.add_child(UITheme.label("Renown: %d  -  Household: %d / %d retainers" % [h.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)], 15))
+	_section(_court_box, "Your studies")
+	var focus_row := HBoxContainer.new()
+	focus_row.add_theme_constant_override("separation", 8)
+	var fl := UITheme.label("Study", 15)
+	fl.custom_minimum_size.x = 80
+	focus_row.add_child(fl)
+	focus_row.add_child(_focus_picker(c))
+	_court_box.add_child(focus_row)
+	_training_lines(c)
+	_court_box.add_child(_wrap_label("Your Politics makes conversations warmer and recruits more willing; your Leadership draws people to your banner.", 13, UITheme.TEXT_DIM))
+
+
+func _focus_picker(c: CharacterData) -> OptionButton:
+	var opt := OptionButton.new()
+	opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var current := CourtSystem.focus_of(c)
+	for a: String in CourtSystem.TRAINABLE:
+		opt.add_item("%s  %d / %d  (%s)" % [CourtSystem.attr_name(a), c.get_current(a), c.get_potential(a), Appraisal.rank_id(c.get_potential(a))])
+		if a == current:
+			opt.selected = opt.item_count - 1
+	opt.tooltip_text = "Which talent to develop each day. Growth slows as they near their potential."
+	opt.item_selected.connect(func(i: int) -> void: _on_focus_chosen(CourtSystem.TRAINABLE[i]))
+	return opt
+
+
+func _training_lines(c: CharacterData) -> void:
+	var st := world.state
+	var rates := CourtSystem.training_rates(st, c)
+	if rates.is_empty():
+		return
+	for a: String in rates:
+		var line := HBoxContainer.new()
+		var text := "   %s  %d / %d" % [CourtSystem.attr_name(a), c.get_current(a), c.get_potential(a)]
+		var m := CourtSystem.mentor_for(st, c, a)
+		if m["mentor"]:
+			text += "  (mentored by %s)" % (m["mentor"] as CharacterData).first_name
+		var name_l := UITheme.label(text, 14, UITheme.TEXT_DIM)
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_child(name_l)
+		var rate := float(rates[a])
+		var rate_text := "+%.2f / day" % rate if c.get_current(a) < c.get_potential(a) else "at potential"
+		line.add_child(UITheme.label(rate_text, 14, UITheme.GOOD if rate > 0.0 else UITheme.TEXT_DIM))
+		_court_box.add_child(line)
+
+
+func _court_bar(value: float, lo: float, hi: float, text: String, color: Color) -> void:
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 8)
+	var bar := ProgressBar.new()
+	bar.min_value = lo
+	bar.max_value = hi
+	bar.value = value
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(150, 14)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var fill := UITheme.box(color, Color(0, 0, 0, 0), 0, 3, 0)
+	fill.shadow_size = 0
+	bar.add_theme_stylebox_override("fill", fill)
+	line.add_child(bar)
+	var l := UITheme.label(text, 14, UITheme.TEXT_DIM)
+	l.custom_minimum_size.x = 170
+	line.add_child(l)
+	_court_box.add_child(line)
+
+
+func _wrap_label(text: String, size: int, color: Color = UITheme.TEXT) -> Label:
+	var l := UITheme.label(text, size, color)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = 380
+	return l
+
+
+func _day_rng(stream: String) -> RandomNumberGenerator:
+	var st := world.state
+	return Seeds.rng(st.world_seed, "%s_%d_%d" % [stream, character.id, st.day()])
+
+
+func _after_action(result: Dictionary, good: bool = true) -> void:
+	Game.notify.emit(str(result.get("text", "")), Game.COLOR_GOOD if good else Game.COLOR_BAD)
+	world.court_changed(character.id)
+
+
+func _on_talk() -> void:
+	_after_action(CourtSystem.talk(world.state, character, _day_rng("talk")))
+
+
+func _on_gift() -> void:
+	_after_action(CourtSystem.gift(world.state, character))
+
+
+func _on_recruit() -> void:
+	var result := CourtSystem.try_recruit(world.state, character, _day_rng("recruit").randf())
+	_after_action(result, bool(result.get("success", false)))
+
+
+func _on_office_chosen(office_id: String) -> void:
+	var st := world.state
+	if office_id.is_empty():
+		if not character.office.is_empty():
+			var old := CourtSystem.office_name(character.office)
+			CourtSystem.vacate(st, character.office)
+			_after_action({"text": "%s no longer serves as %s." % [character.first_name, old]})
+		return
+	var previous := st.house.holder_of(office_id)
+	var result := CourtSystem.appoint(st, office_id, character)
+	_after_action(result, bool(result.get("ok", false)))
+	if previous >= 0 and previous != character.id:
+		world.court_changed(previous)
+
+
+func _on_focus_chosen(attr_id: String) -> void:
+	CourtSystem.set_focus(world.state, character, attr_id)
+	_after_action({"text": "%s will now train %s." % ["You" if world.state.is_player(character) else character.first_name, CourtSystem.attr_name(attr_id)]})
+
+
+func _on_knight() -> void:
+	var result := CourtSystem.knight(world.state, character)
+	_after_action(result, bool(result.get("ok", false)))
+
+
+func _on_dismiss() -> void:
+	if not _dismiss_armed:
+		_dismiss_armed = true
+		_build_court()
+		return
+	_dismiss_armed = false
+	var name_text := character.full_name()
+	CourtSystem.dismiss(world.state, character)
+	_after_action({"text": "You dismissed %s from your service." % name_text}, false)
 
 
 # --- Personality tab -----------------------------------------------------------------------

@@ -89,6 +89,8 @@ func _spawn_npcs() -> void:
 		npc.setup(c)
 		npc.brain = NPCBrain.new(npc, self)
 		npcs[c.id] = npc
+		if state.is_player(c):
+			npc.set_player_marker(true)
 
 
 func _compute_worker_slots() -> void:
@@ -161,7 +163,35 @@ func _check_new_day() -> void:
 	var rng := Seeds.rng(state.world_seed, "day_%d" % day)
 	for c in state.characters:
 		MoodSystem.daily_update(c, state, rng)
+	var court_rng := Seeds.rng(state.world_seed, "court_day_%d" % day)
+	for e: Dictionary in CourtSystem.daily_update(state, court_rng):
+		_announce(e)
+		if str(e.get("kind", "")) == "bad" and e.has("character"):
+			court_changed(int(e["character"]))
 	day_passed.emit(day)
+
+
+## Shows a court event as a notification in the right color.
+func _announce(e: Dictionary) -> void:
+	var color := Game.COLOR_INFO
+	match str(e.get("kind", "")):
+		"rank", "potential":
+			color = Game.COLOR_TALENT
+		"good", "join", "knight":
+			color = Game.COLOR_GOOD
+		"bad", "leave":
+			color = Game.COLOR_BAD
+	Game.notify.emit(str(e["text"]), color)
+
+
+## Call after someone's court role changes so their body re-plans its day
+## (new workplace, schedule) and the UI refreshes.
+func court_changed(character_id: int) -> void:
+	var npc := npc_of(character_id)
+	if npc and npc.brain:
+		npc.brain.replan()
+	if ui:
+		ui.refresh()
 
 
 # --- Picking & appraisal ------------------------------------------------------------------

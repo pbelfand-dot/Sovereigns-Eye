@@ -17,6 +17,7 @@ const BINDINGS := {
 	"cam_fast": [KEY_SHIFT],
 	"focus_selected": [KEY_C],
 	"toggle_ledger": [KEY_L],
+	"toggle_court": [KEY_K],
 	"toggle_help": [KEY_H],
 	"toggle_pause": [KEY_SPACE],
 	"speed_1": [KEY_1],

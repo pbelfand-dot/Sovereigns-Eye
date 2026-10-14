@@ -37,7 +37,18 @@ func _init(body: NPC, owner_world: VillageWorld) -> void:
 
 
 func schedule_id() -> String:
+	var court := CourtSystem.schedule_for(c)
+	if not court.is_empty():
+		return court
 	return str(c.occupation().get("schedule", "worker"))
+
+
+## Drops the current plan (e.g. after joining the household or changing
+## office) so the next step follows the new duties.
+func replan() -> void:
+	block_activity = ""
+	_steps.clear()
+	_current = {}
 
 
 func activity_at(hour: float) -> String:
@@ -154,7 +165,8 @@ func _plan(activity: String) -> void:
 		"home":
 			_plan_home()
 		"work":
-			_plan_work(str(c.occupation().get("work_style", "stationary")))
+			var court_style := CourtSystem.work_style(c)
+			_plan_work(court_style if not court_style.is_empty() else str(c.occupation().get("work_style", "stationary")))
 		"leisure":
 			_plan_leisure()
 		"play":
@@ -190,6 +202,8 @@ func _plan_work(style: String) -> void:
 	var wp := world.state.get_building(c.work_building_id)
 	var occ := c.occupation()
 	var text := str(occ.get("activity", "Working"))
+	if c.retainer:
+		text = CourtSystem.work_text(world.state, c)
 	match style:
 		"stationary":
 			if wp == null:

@@ -9,9 +9,11 @@ var _root: Control
 var _village_label: Label
 var _clock_label: Label
 var _appraised_label: Label
+var _house_label: Label
 var _speed_buttons: Array[Button] = []
 var _card: CharacterCard
 var _ledger: LedgerPanel
+var _court: CourtPanel
 var _help: PanelContainer
 var _pause_overlay: Control
 var _pause_menu: PanelContainer
@@ -29,6 +31,7 @@ func setup(owner_world: VillageWorld) -> void:
 	_build_top_bar()
 	_build_card()
 	_build_ledger()
+	_build_court()
 	_build_toasts()
 	_build_help()
 	_build_pause_menu()
@@ -36,7 +39,11 @@ func setup(owner_world: VillageWorld) -> void:
 	world.speed_changed.connect(_on_speed_changed)
 	world.day_passed.connect(func(_d: int) -> void: refresh())
 	_on_speed_changed(world.time_scale())
-	Game.notify.emit("Welcome to %s. Click any villager to appraise them." % world.state.village_name, UITheme.TEXT)
+	var p := world.state.player()
+	if p:
+		Game.notify.emit("You are %s, heir of %s. Appraise villagers to find hidden talent (gold crest = you)." % [p.full_name(), CourtSystem.house_name(world.state)], UITheme.TEXT)
+	else:
+		Game.notify.emit("Welcome to %s. Click any villager to appraise them." % world.state.village_name, UITheme.TEXT)
 
 
 # --- Top bar -------------------------------------------------------------------------
@@ -78,8 +85,13 @@ func _build_top_bar() -> void:
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer2)
 
+	_house_label = UITheme.label("", 15, UITheme.ACCENT)
+	_house_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	_house_label.tooltip_text = "Gold (net per day)  -  Renown  -  Household size"
+	row.add_child(_house_label)
 	_appraised_label = UITheme.label("", 15, UITheme.TEXT_DIM)
 	row.add_child(_appraised_label)
+	row.add_child(UITheme.button("Court (K)", toggle_court))
 	row.add_child(UITheme.button("Ledger (L)", toggle_ledger))
 	row.add_child(UITheme.button("Save (F5)", func() -> void: Game.save_game("quicksave")))
 	row.add_child(UITheme.button("Menu (Esc)", open_pause_menu))
@@ -103,6 +115,11 @@ func _process(_delta: float) -> void:
 		return
 	_clock_label.text = Calendar.format_full(world.state.whole_minutes())
 	_appraised_label.text = "Appraised %d/%d" % [world.appraised_count(), world.state.characters.size()]
+	var st := world.state
+	if st.house:
+		var net := CourtSystem.daily_income(st) - CourtSystem.daily_wages(st)
+		_house_label.text = "%d gold (%+d)   Renown %d   Household %d/%d" % [st.house.gold, net, st.house.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)]
+		_house_label.add_theme_color_override("font_color", UITheme.BAD if st.house.in_debt else UITheme.ACCENT)
 
 
 # --- Card & ledger ------------------------------------------------------------------------
@@ -142,17 +159,45 @@ func _build_ledger() -> void:
 	_ledger.close_requested.connect(toggle_ledger)
 
 
+func _build_court() -> void:
+	_court = CourtPanel.new()
+	_court.world = world
+	_court.anchor_left = 0.0
+	_court.anchor_right = 0.0
+	_court.anchor_top = 0.0
+	_court.anchor_bottom = 1.0
+	_court.offset_left = 12
+	_court.offset_right = 12 + 540
+	_court.offset_top = 60
+	_court.offset_bottom = -12
+	_court.visible = false
+	_root.add_child(_court)
+	_court.character_chosen.connect(func(id: int) -> void: world.select_character(id, true))
+	_court.close_requested.connect(toggle_court)
+
+
 func toggle_ledger() -> void:
 	_ledger.visible = not _ledger.visible
 	if _ledger.visible:
 		_help.visible = false
+		_court.visible = false
 		_ledger.refresh()
+
+
+func toggle_court() -> void:
+	_court.visible = not _court.visible
+	if _court.visible:
+		_help.visible = false
+		_ledger.visible = false
+		_court.refresh()
 
 
 func _on_selection_changed(c: CharacterData) -> void:
 	_card.show_character(c)
 	if _ledger.visible:
 		_ledger.refresh()
+	if _court.visible:
+		_court.refresh()
 
 
 ## Re-reads data into open panels (after a new day, debug reveal...).
@@ -161,6 +206,8 @@ func refresh() -> void:
 		_card.refresh()
 	if _ledger.visible:
 		_ledger.refresh()
+	if _court.visible:
+		_court.refresh()
 
 
 # --- Toasts & help ------------------------------------------------------------------------
@@ -189,10 +236,11 @@ func _build_help() -> void:
 	_help.add_theme_stylebox_override("panel", UITheme.box(Color("#1c1510d0"), UITheme.GOLD_DIM, 1, 6, 10))
 	var text := UITheme.label(
 		"Click a villager - appraise & open their card\n" +
+		"Card > Court tab - talk, give gifts, recruit, appoint, train\n" +
 		"Drag (left/right mouse) or WASD - move camera\n" +
 		"Wheel / pinch / R,F - zoom    Q,E or middle-drag - rotate\n" +
 		"Space - pause    1-4 - game speed    C - follow selected\n" +
-		"L - village ledger    F5 / F9 - quicksave / quickload\n" +
+		"K - your court    L - village ledger    F5 / F9 - quicksave / quickload\n" +
 		"Esc - close / menu    H - hide this help", 14, UITheme.TEXT_DIM)
 	_help.add_child(text)
 	_root.add_child(_help)
@@ -293,10 +341,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			world.deselect()
 		elif _ledger.visible:
 			toggle_ledger()
+		elif _court.visible:
+			toggle_court()
 		else:
 			open_pause_menu()
 	elif event.is_action_pressed("toggle_ledger"):
 		toggle_ledger()
+	elif event.is_action_pressed("toggle_court"):
+		toggle_court()
 	elif event.is_action_pressed("toggle_help"):
 		_help.visible = not _help.visible
 	else:

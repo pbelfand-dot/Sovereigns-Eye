@@ -13,6 +13,7 @@ var _summary: Label
 var _sort: OptionButton
 var _only_appraised: CheckBox
 var _only_talent: CheckBox
+var _only_household: CheckBox
 
 
 func _init() -> void:
@@ -38,7 +39,7 @@ func _ready() -> void:
 	root.add_child(controls)
 	controls.add_child(UITheme.label("Sort", 15, UITheme.TEXT_DIM))
 	_sort = OptionButton.new()
-	for item in ["Greatest talent", "Name", "Age", "Occupation", "Happiness"]:
+	for item in ["Greatest talent", "Name", "Age", "Occupation", "Happiness", "Opinion of you"]:
 		_sort.add_item(item)
 	_sort.item_selected.connect(func(_i: int) -> void: refresh())
 	controls.add_child(_sort)
@@ -50,6 +51,11 @@ func _ready() -> void:
 	_only_talent.text = "Talents (A+)"
 	_only_talent.toggled.connect(func(_on: bool) -> void: refresh())
 	controls.add_child(_only_talent)
+	_only_household = CheckBox.new()
+	_only_household.text = "Household"
+	_only_household.tooltip_text = "Only your retainers"
+	_only_household.toggled.connect(func(_on: bool) -> void: refresh())
+	controls.add_child(_only_household)
 
 	var header := _row_layout("Name", "Age", "Occupation", "Talent")
 	for l in header.get_children():
@@ -96,6 +102,8 @@ func refresh() -> void:
 			continue
 		if _only_talent.button_pressed and not (c.appraised and Appraisal.is_notable(c)):
 			continue
+		if _only_household.button_pressed and not c.retainer:
+			continue
 		people.append(c)
 	_summary.text = "%s  -  %d residents  -  appraised %d  -  exceptional talents found: %d" % [
 		world.state.village_name, world.state.characters.size(), world.appraised_count(), exceptional_found]
@@ -110,6 +118,8 @@ func refresh() -> void:
 			people.sort_custom(func(a: CharacterData, b: CharacterData) -> bool: return a.occupation_name() < b.occupation_name())
 		4:
 			people.sort_custom(func(a: CharacterData, b: CharacterData) -> bool: return a.happiness > b.happiness)
+		5:
+			people.sort_custom(func(a: CharacterData, b: CharacterData) -> bool: return a.player_opinion > b.player_opinion)
 	for c in people:
 		_list.add_child(_make_row(c))
 
@@ -128,7 +138,10 @@ func _make_row(c: CharacterData) -> Button:
 	b.theme_type_variation = "RowButton"
 	b.custom_minimum_size.y = 30
 	b.pressed.connect(func() -> void: character_chosen.emit(c.id))
-	var row := _row_layout(c.full_name(), str(c.age), c.occupation_name(), "")
+	var role := CourtSystem.role_name(world.state, c) if world.state.house else c.occupation_name()
+	var row := _row_layout(c.display_name(), str(c.age), role, "")
+	if c.retainer or world.state.is_player(c):
+		(row.get_child(0) as Label).add_theme_color_override("font_color", UITheme.ACCENT)
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	row.offset_left = 8
 	b.add_child(row)

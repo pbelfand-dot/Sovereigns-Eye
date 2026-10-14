@@ -95,6 +95,7 @@ static func loyalty_factors(c: CharacterData, world: WorldState) -> Array[Dictio
 		out.append({"label": "Contentment" if mood > 0 else "Discontent", "value": mood})
 	if wasted_talent_penalty(c) < 0.0 and c.has_trait("ambitious"):
 		out.append({"label": "Feels overlooked", "value": -5.0})
+	out.append_array(CourtSystem.loyalty_factors(world, c))
 	return out
 
 

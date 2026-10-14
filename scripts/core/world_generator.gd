@@ -12,6 +12,7 @@ static func generate(seed_text: String) -> WorldState:
 	state.last_daily_update = Calendar.day_index(int(state.minutes))
 	state.layout = VillageLayoutGenerator.new().generate(state.world_seed)
 	CharacterGenerator.new().generate(state)
+	CourtSystem.initialize(state)
 	return state
 
 

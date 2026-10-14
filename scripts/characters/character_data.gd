@@ -42,6 +42,26 @@ var appearance: Dictionary = {}
 ## True once the player has used Appraisal on this person.
 var appraised: bool = false
 
+# --- Court (Phase 2) ---------------------------------------------------------
+## Sworn to the player's house.
+var retainer: bool = false
+## Office held in the house ("steward", "marshal"...), "" for none.
+var office: String = ""
+## Attribute the player asked them to train ("" = their greatest talent).
+var focus: String = ""
+## What they think of the player, -100..100.
+var player_opinion: float = 0.0
+## attr_id -> fractional training progress toward the next point.
+var training_progress: Dictionary = {}
+## Day index of the last conversation with the player (-1 = never).
+var last_talk_day: int = -1
+## Day index before which a refused offer can't be repeated.
+var recruit_retry_day: int = -1
+## Status and workplace before joining the house (restored on dismissal).
+var former_status: String = ""
+var former_work: int = -1
+var joined_day: int = -1
+
 # --- Live world state (saved so the village resumes exactly) ---------------
 var position: Vector3 = Vector3.ZERO
 var facing: float = 0.0
@@ -59,6 +79,17 @@ func full_name() -> String:
 
 func is_adult() -> bool:
 	return age >= ADULT_AGE
+
+
+func is_knight() -> bool:
+	return social_status == "knight"
+
+
+## Name with a knightly title when they have one ("Sir Aldric Hunt").
+func display_name() -> String:
+	if is_knight():
+		return "%s %s" % ["Dame" if gender == "female" else "Sir", full_name()]
+	return full_name()
 
 
 func occupation() -> Dictionary:
@@ -231,7 +262,24 @@ func to_dict() -> Dictionary:
 		"inside": inside_building_id,
 		"activity": activity,
 		"activity_text": activity_text,
+		"retainer": retainer,
+		"office": office,
+		"focus": focus,
+		"player_opinion": snappedf(player_opinion, 0.01),
+		"training_progress": _snapped_progress(),
+		"last_talk_day": last_talk_day,
+		"recruit_retry_day": recruit_retry_day,
+		"former_status": former_status,
+		"former_work": former_work,
+		"joined_day": joined_day,
 	}
+
+
+func _snapped_progress() -> Dictionary:
+	var out := {}
+	for k: String in training_progress:
+		out[k] = snappedf(float(training_progress[k]), 0.0001)
+	return out
 
 
 ## Builds a character from saved data. JSON turns every number into a float,
@@ -269,6 +317,18 @@ static func from_dict(d: Dictionary) -> CharacterData:
 	c.inside_building_id = int(d.get("inside", -1))
 	c.activity = str(d.get("activity", ""))
 	c.activity_text = str(d.get("activity_text", ""))
+	c.retainer = bool(d.get("retainer", false))
+	c.office = str(d.get("office", ""))
+	c.focus = str(d.get("focus", ""))
+	c.player_opinion = float(d.get("player_opinion", 0.0))
+	var progress: Dictionary = d.get("training_progress", {})
+	for k: String in progress:
+		c.training_progress[k] = float(progress[k])
+	c.last_talk_day = int(d.get("last_talk_day", -1))
+	c.recruit_retry_day = int(d.get("recruit_retry_day", -1))
+	c.former_status = str(d.get("former_status", ""))
+	c.former_work = int(d.get("former_work", -1))
+	c.joined_day = int(d.get("joined_day", -1))
 	return c
 
 

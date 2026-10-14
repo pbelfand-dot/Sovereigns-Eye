@@ -69,10 +69,11 @@ func _run() -> void:
 		await _wait(30)
 		await _shot("04_card_appraisal.png")
 		var tabs := world.ui._card._tabs
-		for t in range(1, 4):
+		var tab_names := ["", "court", "personality", "relationships", "history"]
+		for t in range(1, 5):
 			tabs.current_tab = t
 			await _wait(8)
-			await _shot("0%d_card_tab_%d.png" % [4 + t, t])
+			await _shot("04_card_tab_%s.png" % tab_names[t])
 		tabs.current_tab = 0
 
 	for c in world.state.characters:
@@ -84,6 +85,8 @@ func _run() -> void:
 	await _shot("08_ledger.png")
 	world.ui.toggle_ledger()
 
+	await _court_shots(world)
+
 	world.state.minutes += 12.0 * 60.0
 	world.camera_rig.look_at_point(Vector3(0, 0, 0), 60.0, true)
 	await _wait(20)
@@ -93,3 +96,60 @@ func _run() -> void:
 	await _wait(5)
 	await _shot("10_pause_menu.png")
 	get_tree().quit()
+
+
+## Phase 2: recruit the best prospects, give them offices, show the court,
+## the player's own card, then a month of training.
+func _court_shots(world: VillageWorld) -> void:
+	var st := world.state
+	var people := st.characters.duplicate()
+	people.sort_custom(func(a: CharacterData, b: CharacterData) -> bool: return a.best_potential() > b.best_potential())
+	var office_for := {"administration": "steward", "leadership": "marshal", "combat": "marshal", "politics": "chancellor", "intelligence": "scholar"}
+	var recruited: Array[CharacterData] = []
+	for c: CharacterData in people:
+		if recruited.size() >= 3:
+			break
+		if not CourtSystem.recruit_check(st, c)["ok"]:
+			continue
+		c.appraised = true
+		CourtSystem.try_recruit(st, c, 0.0)
+		var office := str(office_for.get(CourtSystem.focus_of(c), "steward"))
+		if c.age >= 16 and st.house.holder_of(office) < 0:
+			CourtSystem.appoint(st, office, c)
+		world.court_changed(c.id)
+		recruited.append(c)
+	# A prospect who hasn't joined yet: the recruit view with its odds.
+	for c: CharacterData in people:
+		if not c.retainer and CourtSystem.recruit_check(st, c)["ok"]:
+			c.appraised = true
+			world.select_character(c.id, true)
+			world.ui._card._tabs.current_tab = 1
+			await _wait(20)
+			await _shot("11_court_recruit.png")
+			break
+	if not recruited.is_empty():
+		world.select_character(recruited[0].id, true)
+		world.ui._card._tabs.current_tab = 1
+		await _wait(20)
+		await _shot("12_court_retainer.png")
+	world.deselect()
+	world.ui.toggle_court()
+	await _wait(10)
+	await _shot("13_court_panel.png")
+	world.ui.toggle_court()
+	if st.player():
+		world.select_character(st.player_id, true)
+		world.ui._card._tabs.current_tab = 1
+		await _wait(20)
+		await _shot("14_player_card.png")
+	# A month passes: retainers train toward their potential.
+	for i in 30:
+		st.minutes += Calendar.MINUTES_PER_DAY
+		world._check_new_day()
+	if not recruited.is_empty():
+		world.select_character(recruited[0].id, true)
+		world.ui._card._tabs.current_tab = 1
+	await _wait(20)
+	await _shot("15_after_a_month.png")
+	world.deselect()
+

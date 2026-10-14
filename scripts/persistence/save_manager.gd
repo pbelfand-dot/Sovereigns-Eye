@@ -63,11 +63,21 @@ static func load_state(slot: String) -> WorldState:
 	if int(data.get("save_version", 0)) != WorldState.SAVE_VERSION:
 		push_error("SaveManager: unsupported save version %s" % data.get("save_version"))
 		return null
-	return WorldState.from_dict(data)
+	var state := WorldState.from_dict(data)
+	# Saves from before Phase 2 have no house yet: found it now.
+	CourtSystem.initialize(state)
+	return state
 
 
 ## Upgrades older save files. Add a step here whenever SAVE_VERSION changes.
 static func migrate(data: Dictionary) -> Dictionary:
+	var version := int(data.get("save_version", 0))
+	if version == 1:
+		# v2 (Phase 2) adds the player's house and court fields on characters.
+		# Characters default to "not a retainer"; the house, the player and
+		# everyone's opinion of the player are created on load by
+		# CourtSystem.initialize().
+		data["save_version"] = 2
 	return data
 
 
