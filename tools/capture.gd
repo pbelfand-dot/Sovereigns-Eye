@@ -3,7 +3,7 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
@@ -15,6 +15,7 @@ var out_dir := "user://captures"
 var seed_text := "12345"
 var court_only := false
 var art_only := false
+var menus_only := false
 
 
 func _ready() -> void:
@@ -25,6 +26,7 @@ func _ready() -> void:
 		out_dir = args[1]
 	court_only = args.has("court")
 	art_only = args.has("art")
+	menus_only = args.has("menus")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -45,6 +47,10 @@ func _wait(n: int) -> void:
 
 
 func _run() -> void:
+	if menus_only:
+		await _menu_shots()
+		get_tree().quit()
+		return
 	if court_only:
 		Game.state = WorldGenerator.generate(seed_text)
 		Game.state.minutes += 6.0 * 60.0  # early afternoon: people at work
@@ -196,4 +202,22 @@ func _court_shots(world: VillageWorld) -> void:
 	await _wait(20)
 	await _shot("15_after_a_month.png")
 	world.deselect()
+
+
+## Main menu Sound panel and the in-game pause menu (volume sliders).
+func _menu_shots() -> void:
+	var menu: Control = load("res://scenes/main/main.tscn").instantiate()
+	add_child(menu)
+	await _wait(10)
+	menu.call("_show_sound")
+	await _wait(5)
+	await _shot("16_menu_sound.png")
+	menu.queue_free()
+	Game.state = WorldGenerator.generate(seed_text)
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui.open_pause_menu()
+	await _wait(5)
+	await _shot("17_pause_sound.png")
 

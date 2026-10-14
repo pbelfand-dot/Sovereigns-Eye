@@ -190,6 +190,26 @@ market voices, tavern chatter, a village morning, active smithy and hearth.
 See [`audio/README.md`](audio/README.md) for the recommended district mix and
 track-to-scene map.
 
+**In game**, everything is configured in [`data/audio.json`](data/audio.json):
+- **Music.**
+  - The menu plays the inn theme.
+  - By day the village plays a rotating set of tracks with short pauses between them; at night it plays the inn theme.
+  - Opening the Court panel (**K**) crossfades to the feast music.
+- **Ambience.** Beds fade in around their places as the camera's focus nears them, and fade out as you zoom away:
+  - the market crowd on the square during market hours
+  - tavern chatter and the hearth
+  - the smithy at work
+  - a village-morning bed that fades at dusk
+- **Foley.** When the camera is close, nearby villagers make sounds:
+  - footsteps on grass or cobbles
+  - work sounds by job: axes, hammers, pots, soft field work
+- **Interface and court sounds.**
+  - Every button clicks, and tabs turn a page.
+  - Gifts jingle coins; recruits accepting or refusing get their own cue.
+  - Knighting draws a blade, and dismissal shuts a door.
+  - Appraising someone chimes, and exceptional talent rings out.
+- **Volume.** Four buses (Music, Ambience, Effects, Interface) have sliders in the main menu (**Sound**) and the pause menu. The levels are saved in `user://settings.cfg`.
+
 ## 7. How the art works
 
 * **Buildings** are prefabs assembled from the Quaternius village kit by recipe
@@ -241,7 +261,7 @@ To re-render that comparison: `godot --path . res://tools/style_demo.tscn -- out
 
 ```bash
 tools/run_tests.sh                       # Headless tests (generation, determinism, rank odds,
-                                         # court, save/load, art pipeline, live world)
+                                         # court, save/load, art pipeline, audio, live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
 ```
 

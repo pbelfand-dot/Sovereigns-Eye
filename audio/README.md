@@ -18,6 +18,13 @@ records are kept here so every asset remains traceable.
 `AUDIO_MANIFEST.csv` records the codec, duration, channels, sample rate, byte
 size, SHA-256 checksum, license and source page for every audio file.
 
+## In the game
+
+The library is wired in through `data/audio.json`:
+- `scripts/audio/audio_director.gd` (the `Audio` autoload) handles the buses, volume settings, music crossfades and one-shots.
+- `scripts/audio/soundscape.gd` handles the per-district ambience, villager foley and day/night/court music.
+- Tune levels, zones and which files play there.
+
 ## Suggested in-game soundscape
 
 Use four audio buses: `Music`, `Ambience`, `SFX`, and `UI`. Music should sit

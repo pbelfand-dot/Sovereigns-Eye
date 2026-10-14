@@ -55,6 +55,7 @@ func save_game(slot: String) -> bool:
 		notify.emit("Save failed: %s" % error_string(err), COLOR_BAD)
 		return false
 	current_slot = slot
+	Audio.play("saved")
 	game_saved.emit(slot)
 	notify.emit("Game saved to %s." % SaveManager.slot_label(slot), COLOR_GOOD)
 	return true

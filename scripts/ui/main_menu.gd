@@ -1,10 +1,11 @@
 extends Control
-## Title screen: Continue, New Game (with optional seed), Load Game, Quit.
+## Title screen: Continue, New Game (with optional seed), Load Game, Sound, Quit.
 
 var _menu: VBoxContainer
 var _new_game_panel: PanelContainer
 var _seed_edit: LineEdit
 var _slots: SaveSlotDialog
+var _sound_panel: PanelContainer
 
 
 func _ready() -> void:
@@ -12,6 +13,7 @@ func _ready() -> void:
 		return
 	theme = UITheme.get_theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	Audio.set_music("menu")
 
 	var bg := TextureRect.new()
 	var grad := Gradient.new()
@@ -66,9 +68,20 @@ func _ready() -> void:
 	var load_btn := UITheme.button("Load Game", _show_load)
 	load_btn.disabled = not SaveManager.any_save_exists()
 	_menu.add_child(load_btn)
+	_menu.add_child(UITheme.button("Sound", _show_sound))
 	_menu.add_child(UITheme.button("Quit", Game.quit_game))
 
 	_build_new_game_panel(col)
+	_sound_panel = PanelContainer.new()
+	_sound_panel.visible = false
+	_sound_panel.custom_minimum_size.x = 420
+	_sound_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(_sound_panel)
+	var sound_col := VBoxContainer.new()
+	sound_col.add_theme_constant_override("separation", 10)
+	_sound_panel.add_child(sound_col)
+	sound_col.add_child(SoundSettings.new())
+	sound_col.add_child(UITheme.button("Back", _show_menu))
 	_slots = SaveSlotDialog.new()
 	_slots.visible = false
 	_slots.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -136,7 +149,13 @@ func _build_new_game_panel(parent: Container) -> void:
 func _show_menu() -> void:
 	_menu.visible = true
 	_new_game_panel.visible = false
+	_sound_panel.visible = false
 	_slots.visible = false
+
+
+func _show_sound() -> void:
+	_menu.visible = false
+	_sound_panel.visible = true
 
 
 func _show_new_game() -> void:

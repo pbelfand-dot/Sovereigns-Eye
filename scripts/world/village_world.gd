@@ -21,6 +21,7 @@ var graph: RoadGraph
 var sky: SkyController
 var camera_rig: StrategyCamera
 var ui: GameUI
+var soundscape: Soundscape
 var npcs: Dictionary = {}
 
 var paused := false
@@ -65,6 +66,11 @@ func _ready() -> void:
 	ui.name = "UI"
 	add_child(ui)
 	ui.setup(self)
+
+	soundscape = Soundscape.new()
+	soundscape.name = "Soundscape"
+	add_child(soundscape)
+	soundscape.setup(self)
 
 	Game.before_save.connect(sync_to_state)
 	sky.set_time(state.minutes)
@@ -291,6 +297,7 @@ func appraise(c: CharacterData) -> void:
 	if c.appraised:
 		return
 	c.appraised = true
+	Audio.play("talent_found" if Appraisal.is_exceptional(c) else "appraise")
 	if Appraisal.is_exceptional(c):
 		var best := c.best_attribute()
 		var p := c.get_potential(best)

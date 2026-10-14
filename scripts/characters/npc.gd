@@ -174,6 +174,11 @@ func set_anim(mode: String) -> void:
 	_anim_mode = mode
 
 
+## What the villager is doing right now: "walk", "work", "talk" or "idle".
+func activity() -> String:
+	return "walk" if is_moving() else _anim_mode
+
+
 ## Hide inside a building (or come back out).
 func set_inside(inside: bool) -> void:
 	visible = not inside

@@ -516,11 +516,14 @@ func _on_talk() -> void:
 
 
 func _on_gift() -> void:
-	_after_action(CourtSystem.gift(world.state, character))
+	var result := CourtSystem.gift(world.state, character)
+	Audio.play("coins" if bool(result.get("ok", true)) else "ui_error")
+	_after_action(result)
 
 
 func _on_recruit() -> void:
 	var result := CourtSystem.try_recruit(world.state, character, _day_rng("recruit").randf())
+	Audio.play("court_good" if bool(result.get("success", false)) else "court_bad")
 	_after_action(result, bool(result.get("success", false)))
 
 
@@ -534,6 +537,7 @@ func _on_office_chosen(office_id: String) -> void:
 		return
 	var previous := st.house.holder_of(office_id)
 	var result := CourtSystem.appoint(st, office_id, character)
+	Audio.play("court_good" if bool(result.get("ok", false)) else "ui_error")
 	_after_action(result, bool(result.get("ok", false)))
 	if previous >= 0 and previous != character.id:
 		world.court_changed(previous)
@@ -546,6 +550,7 @@ func _on_focus_chosen(attr_id: String) -> void:
 
 func _on_knight() -> void:
 	var result := CourtSystem.knight(world.state, character)
+	Audio.play("knighted" if bool(result.get("ok", false)) else "ui_error")
 	_after_action(result, bool(result.get("ok", false)))
 
 
@@ -557,6 +562,7 @@ func _on_dismiss() -> void:
 	_dismiss_armed = false
 	var name_text := character.full_name()
 	CourtSystem.dismiss(world.state, character)
+	Audio.play("dismissed")
 	_after_action({"text": "You dismissed %s from your service." % name_text}, false)
 
 

@@ -81,6 +81,7 @@ func _build_top_bar() -> void:
 		b.tooltip_text = "Space" if i == 0 else "Key %d" % i
 		var index := i
 		b.pressed.connect(func() -> void: _on_speed_button(index))
+		b.set_meta("sfx", "ui_tick")
 		row.add_child(b)
 		_speed_buttons.append(b)
 	var spacer2 := Control.new()
@@ -235,6 +236,7 @@ func _build_court() -> void:
 
 func toggle_ledger() -> void:
 	_ledger.visible = not _ledger.visible
+	Audio.play("panel_open" if _ledger.visible else "panel_close")
 	if _ledger.visible:
 		_help.visible = false
 		_court.visible = false
@@ -243,13 +245,20 @@ func toggle_ledger() -> void:
 
 func toggle_court() -> void:
 	_court.visible = not _court.visible
+	Audio.play("panel_open" if _court.visible else "panel_close")
 	if _court.visible:
 		_help.visible = false
 		_ledger.visible = false
 		_court.refresh()
 
 
+func is_court_open() -> bool:
+	return _court != null and _court.visible
+
+
 func _on_selection_changed(c: CharacterData) -> void:
+	if c and not _card.visible:
+		Audio.play("card_open")
 	_card.show_character(c)
 	if _ledger.visible:
 		_ledger.refresh()
@@ -340,6 +349,8 @@ func _build_pause_menu() -> void:
 	col.add_child(UITheme.button("Load Game", func() -> void: _open_slots("load")))
 	col.add_child(UITheme.button("Main Menu", Game.quit_to_menu))
 	col.add_child(UITheme.button("Quit to Desktop", Game.quit_game))
+	col.add_child(HSeparator.new())
+	col.add_child(SoundSettings.new())
 
 	_slots = SaveSlotDialog.new()
 	_slots.visible = false

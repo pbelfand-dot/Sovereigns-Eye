@@ -61,6 +61,11 @@ func look_at_point(point: Vector3, distance: float = -1.0, instant: bool = false
 		_apply_transform()
 
 
+## Current distance from the focus point to the camera (zoom).
+func view_distance() -> float:
+	return _distance
+
+
 func set_yaw(yaw: float, instant: bool = false) -> void:
 	_target_yaw = yaw
 	if instant:
