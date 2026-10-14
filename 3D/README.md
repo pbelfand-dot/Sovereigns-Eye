@@ -9,12 +9,12 @@ Godot, Unity, Unreal, Blender, Three.js, and other modern tools.
 | Location | Contents | Models |
 | --- | --- | ---: |
 | `characters/blocky/` | Rigged cartoon characters, each with 27 animation clips | 18 |
-| `environments/castle-kit/architecture/` | Walls, towers, gates, bridges, stairs, and doors | 54 |
-| `environments/castle-kit/decor/` | Banners and pennants | 4 |
+| `environments/castle-kit/architecture/` | Walls, towers, gates, bridges, stairs, and doors | 53 |
+| `environments/castle-kit/decor/` | Flags, banners, and pennants | 5 |
 | `environments/castle-kit/siege/` | Ballista, catapult, ram, tower, trebuchet, and damaged variants | 10 |
 | `environments/castle-kit/terrain/` | Ground, rocks, trees, logs, and trunks | 8 |
-| `environments/fantasy-town-kit/architecture/` | Modular buildings, roofs, stairs, mills, walls, and structural parts | 120 |
-| `environments/fantasy-town-kit/decor/` | Carts, stalls, fences, banners, lanterns, and props | 16 |
+| `environments/fantasy-town-kit/architecture/` | Modular buildings, roofs, stairs, mills, walls, and structural parts | 121 |
+| `environments/fantasy-town-kit/decor/` | Carts, stalls, fences, banners, lanterns, and props | 15 |
 | `environments/fantasy-town-kit/terrain/` | Roads, rocks, trees, and hedges | 21 |
 | `environments/fantasy-town-kit/water/` | Modular fountain parts | 10 |
 
