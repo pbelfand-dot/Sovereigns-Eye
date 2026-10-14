@@ -2,7 +2,7 @@ extends Node3D
 ## Renders every kit building prefab (and, if present, a lineup of villagers)
 ## to PNGs for review. Needs a display/GPU (use xvfb-run on servers).
 ##
-##   godot --path . res://tools/prefab_gallery.tscn -- <output_dir> [people|nature]
+##   godot --path . res://tools/prefab_gallery.tscn -- <output_dir> [people|nature|props]
 
 var out_dir := "user://gallery"
 var _camera: Camera3D
@@ -67,6 +67,10 @@ func _run() -> void:
 		return
 	if OS.get_cmdline_user_args().has("nature"):
 		await _nature()
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("props"):
+		await _props()
 		get_tree().quit()
 		return
 	_look(Vector3(mid, 55, 70), Vector3(mid, 0, 0), 55.0)
@@ -153,4 +157,25 @@ func _nature() -> void:
 		_look(Vector3(0, 6.0 if group == "trees" else 2.6, z + width * 0.55), Vector3(0, 2.6 if group == "trees" else 0.5, z), 60.0)
 		await _shot("nature_%s.png" % group)
 		z += 40.0
+
+
+## Every Fantasy Props MegaKit model in rows of 12, seen from +Z (the side a
+## prop shows when unrotated). Prints the grid order.
+func _props() -> void:
+	var dir := "res://3D/props/quaternius-fantasy-props-standard/models/"
+	var names: Array[String] = []
+	for f in DirAccess.get_files_at(dir):
+		if f.ends_with(".gltf"):
+			names.append(f.get_basename())
+	names.sort()
+	var per_row := 12
+	for i in names.size():
+		var inst := (load(dir + names[i] + ".gltf") as PackedScene).instantiate() as Node3D
+		add_child(inst)
+		inst.position = Vector3((i % per_row - per_row * 0.5) * 3.2, 0, 80.0 - floori(float(i) / per_row) * 4.0)
+		print("%d %s" % [i, names[i]])
+	var rows := ceili(float(names.size()) / per_row)
+	for r in rows:
+		_look(Vector3(0, 3.2, 80.0 - r * 4.0 + 10.5), Vector3(0, 0.6, 80.0 - r * 4.0), 70.0)
+		await _shot("props_row_%d.png" % r)
 

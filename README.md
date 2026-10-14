@@ -232,6 +232,15 @@ track-to-scene map.
     kit rocks replace the old blobs.
   * Everything sways in the wind and is drawn as batched MultiMeshes.
   * Before/after: [`docs/screenshots/nature_before_after.jpg`](docs/screenshots/nature_before_after.jpg).
+* **Props** come from the Quaternius Fantasy Props MegaKit
+  ([`data/props.json`](data/props.json)).
+  * Market stalls carry fruit, coins, pots or crockery.
+  * Benches, barrels, crates, training dummies and the workshop cart use kit models.
+  * Buildings are dressed by trade: the smith's anvil, workbench and weapon stand; the
+    tavern's outdoor table with mugs and its barrel rack; sacks at the bakery and mill;
+    crates at farms and the storehouse; a woodworker's bench.
+  * Everything merges into one mesh per area and material.
+  * Showcase: [`docs/screenshots/props_showcase.jpg`](docs/screenshots/props_showcase.jpg).
 * **Card portraits** show an AI painting when one exists for that villager, and
   a live 3D portrait otherwise. Paint them locally with ComfyUI +
   FLUX.2 [klein]: see [`ai-art/README.md`](ai-art/README.md).
@@ -272,9 +281,9 @@ as readable JSON.
 
 * Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
   fine leather and there are no gowns, robes or plate armor yet.
-* The prop sampler is acquired but not integrated yet, so crops, market stalls,
-  the well and benches are still simple shapes; hats and hand tools aren't shown
-  in 3D yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
+* The free prop sampler has no well, haystack, lumber pile, signpost or banner
+  pole, so those are still simple shapes. Crops are simple shapes too, and hats and
+  hand tools aren't shown on villagers yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
 * From the farthest zoom, kit trees read smaller and darker than the old round
   blobs. Their size and tints are tunable in `data/nature.json`.
 * NPCs walk along roads and can clip through each other or props; there is

@@ -164,3 +164,38 @@ func test_nature_kit_trees_and_scatter() -> void:
 	check_eq(str(again.scatter_items(grass)), str(b.scatter_items(grass)), "scatter is deterministic")
 	b.free()
 	again.free()
+
+
+func test_props_kit_sets_and_dressing() -> void:
+	if not PropKit.available():
+		check(true, "props kit not in project; simple prop shapes are used")
+		return
+	var cfg := PropKit.config()
+	var sets: Dictionary = cfg.get("sets", {})
+	for type: String in cfg.get("replace", {}):
+		for set_name: String in cfg["replace"][type]:
+			check(sets.has(set_name), "%s props use known set %s" % [type, set_name])
+	for type: String in cfg.get("dressing", {}):
+		check(not GameData.building_type(type).is_empty(), "dressing is for a real building type (%s)" % type)
+		for e: Array in cfg["dressing"][type]:
+			check(sets.has(str(e[0])), "%s dressing uses known set %s" % [type, e[0]])
+	var w := WorldGenerator.generate("props-seed")
+	var b := VillageBuilder.new()
+	b.build(w.layout)
+	var merged := b.get_node("Props").find_children("Props *", "MeshInstance3D", false, false)
+	check(not merged.is_empty(), "kit props are merged into chunk meshes")
+	for mi: MeshInstance3D in merged:
+		check(mi.mesh.get_surface_count() <= 10, "%s has one surface per material (%d)" % [mi.name, mi.mesh.get_surface_count()])
+	var dressing := b.dressing_items()
+	check(dressing.size() > 20, "buildings are dressed with props (%d models)" % dressing.size())
+	var on_road := 0
+	for it: Array in dressing:
+		var o: Vector3 = (it[1] as Transform3D).origin
+		if b.road_clearance(Vector2(o.x, o.z)) < -0.3:
+			on_road += 1
+	check_eq(on_road, 0, "dressing stays off the roads")
+	var again := VillageBuilder.new()
+	again.build(w.layout)
+	check_eq(str(again.dressing_items()), str(dressing), "dressing is deterministic")
+	b.free()
+	again.free()

@@ -95,6 +95,22 @@ func _run() -> void:
 		world.camera_rig.look_at_point(Vector3(-62, 0, -48), 30.0, true)
 		await _wait(20)
 		await _shot("03c_forest_edge.png")
+		var stalls := Game.state.layout.props_of_type("stall")
+		if not stalls.is_empty():
+			var at: Vector3 = stalls[0]["pos"]
+			world.camera_rig.set_yaw(float(stalls[0]["rot"]) + PI, true)
+			world.camera_rig.look_at_point(at, 11.0, true)
+			await _wait(20)
+			await _shot("03d_market_stall.png")
+		for type: String in ["smithy", "tavern"]:
+			var list := Game.state.layout.buildings_of_type(type)
+			if list.is_empty():
+				continue
+			var b: BuildingData = list[0]
+			world.camera_rig.set_yaw(b.rotation + 0.5, true)
+			world.camera_rig.look_at_point(b.position + b.forward() * 3.0, 20.0, true)
+			await _wait(20)
+			await _shot("03e_%s.png" % type)
 		get_tree().quit()
 		return
 

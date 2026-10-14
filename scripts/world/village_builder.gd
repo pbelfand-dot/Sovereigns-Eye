@@ -467,12 +467,22 @@ func _build_props() -> void:
 	var wood := Mats.hex("#7a5636")
 	var dark_wood := Mats.hex("#4f3826")
 	var stone := Mats.hex("#8e8a80")
+	var use_kit := PropKit.available()
+	var replace: Dictionary = PropKit.config().get("replace", {}) if use_kit else {}
+	var kit_items := []
 	for p in layout.props:
+		var type := str(p["type"])
+		if replace.has(type):
+			var sets: Array = replace[type]
+			var at: Vector3 = p["pos"]
+			var set_name := str(sets[absi(hash(Vector2i(roundi(at.x * 10.0), roundi(at.z * 10.0)))) % sets.size()])
+			kit_items.append_array(PropKit.set_items(set_name, Transform3D(Basis(Vector3.UP, float(p["rot"])), TerrainHeight.on_ground(at))))
+			continue
 		var node := Node3D.new()
 		node.position = TerrainHeight.on_ground(p["pos"])
 		node.rotation.y = float(p["rot"])
 		holder.add_child(node)
-		match str(p["type"]):
+		match type:
 			"well":
 				Mats.cylinder(node, 1.1, 1.2, 0.9, Vector3(0, 0.45, 0), stone, 14)
 				Mats.cylinder(node, 0.85, 0.85, 0.05, Vector3(0, 0.88, 0), Mats.hex("#2f4a5e"), 14)
@@ -537,6 +547,66 @@ func _build_props() -> void:
 					Mats.add_mesh(node, kit_mesh, null, Vector3(0, -0.15 * k, 0), Vector3.ZERO, Vector3(k, k, k))
 				else:
 					Mats.sphere(node, 0.8, Vector3(0, 0.2 * s, 0), Mats.hex("#8d8a82"), Vector3(s * 1.3, s * 0.6, s))
+
+
+	if use_kit:
+		kit_items.append_array(dressing_items())
+		PropKit.add_merged(holder, kit_items)
+
+
+## Extra kit props around buildings by type (data/props.json "dressing"):
+## [[model, Transform3D], ...]. Spots on roads, in fields or inside another
+## building are skipped; chances are rolled per building so it's stable.
+func dressing_items() -> Array:
+	var cfg := PropKit.config()
+	var dressing: Dictionary = cfg.get("dressing", {})
+	var clearance := float(cfg.get("road_clearance", 0.8))
+	var out := []
+	for b in layout.buildings:
+		var list: Array = dressing.get(b.type, [])
+		for i in list.size():
+			var e: Array = list[i]
+			var roll := float(absi(hash("%d:%d" % [b.id, i])) % 1000) / 1000.0
+			if roll >= float(e[6]):
+				continue
+			var local := Vector3(float(e[1]) * b.footprint.x * 0.5 + float(e[3]), 0, float(e[2]) * b.footprint.y * 0.5 + float(e[4]))
+			var pos := b.position + b.basis() * local
+			if road_clearance(Vector2(pos.x, pos.z)) < clearance or _blocked_for_props(pos, b):
+				continue
+			var origin := Transform3D(Basis(Vector3.UP, b.rotation + deg_to_rad(float(e[5]))), TerrainHeight.on_ground(pos))
+			out.append_array(PropKit.set_items(str(e[0]), origin))
+	return out
+
+
+## Distance from a point to the nearest road edge (negative = on the road).
+func road_clearance(p: Vector2) -> float:
+	var best := INF
+	for road in layout.roads:
+		var pts: PackedVector3Array = road["points"]
+		var half := float(road["width"]) * 0.5
+		for i in range(1, pts.size()):
+			var a := Vector2(pts[i - 1].x, pts[i - 1].z)
+			var b := Vector2(pts[i].x, pts[i].z)
+			var t := clampf((p - a).dot(b - a) / maxf((b - a).length_squared(), 0.0001), 0.0, 1.0)
+			best = minf(best, p.distance_to(a.lerp(b, t)) - half)
+	return best
+
+
+## Inside (or right against) another building, or in a field.
+func _blocked_for_props(pos: Vector3, owner: BuildingData) -> bool:
+	for b in layout.buildings:
+		if b == owner:
+			continue
+		var local := b.basis().inverse() * (pos - b.position)
+		if absf(local.x) < b.footprint.x * 0.5 + 0.6 and absf(local.z) < b.footprint.y * 0.5 + 0.6:
+			return true
+	for f in layout.fields:
+		var c: Vector3 = f["center"]
+		var size: Vector2 = f["size"]
+		var local := Basis(Vector3.UP, float(f["rot"])).inverse() * (pos - c)
+		if absf(local.x) < size.x * 0.5 + 1.0 and absf(local.z) < size.y * 0.5 + 1.0:
+			return true
+	return false
 
 
 # --- Buildings -----------------------------------------------------------------------------------
