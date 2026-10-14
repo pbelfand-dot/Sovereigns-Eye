@@ -138,6 +138,7 @@ scripts/world/         Layout generator, village builder, VillageKit prefabs, ro
 scripts/persistence/   Save/load (JSON in user://saves)
 scripts/ui/            Theme, HUD, character card, ledger, menus
 3D/                    Asset library (Quaternius used; reference packs .gdignore'd)
+audio/                 CC0 music, ambience and SFX with licenses and checksums
 shaders/               Villager skin/clothing/hair, experimental toon unifier
 assets/                Fonts and extra models (see assets/*/README.md)
 ai-art/                Local AI portrait painter (ComfyUI + FLUX.2 klein); not shipped
@@ -175,7 +176,19 @@ See [`3D/README.md`](3D/README.md) for the full catalog and
 
 ![Quaternius Medieval Village MegaKit](3D/environments/quaternius-medieval-village-standard/previews/overview.jpg)
 
-## 6. How the art works
+## 6. Audio library (`audio/`)
+
+The [`audio/`](audio/) folder contains 297 CC0 Ogg files: 10 medieval music
+tracks, 6 lived-in settlement ambience beds, and 281 interaction, footstep,
+impact and UI sounds. Every file is cataloged with source, license, duration,
+codec and checksum in [`audio/AUDIO_MANIFEST.csv`](audio/AUDIO_MANIFEST.csv).
+
+The location layers are intended to make the world feel occupied: indistinct
+market voices, tavern chatter, a village morning, active smithy and hearth.
+See [`audio/README.md`](audio/README.md) for the recommended district mix and
+track-to-scene map.
+
+## 7. How the art works
 
 * **Buildings** are prefabs assembled from the Quaternius village kit by recipe
   ([`data/building_kit.json`](data/building_kit.json)), merged into one mesh per
@@ -214,7 +227,7 @@ switched on in the game yet.
 To re-render that comparison: `godot --path . res://tools/style_demo.tscn -- out.png`
 (needs the reference packs, which are hidden from Godot with `.gdignore`).
 
-## 7. Tests & tools
+## 8. Tests & tools
 
 ```bash
 tools/run_tests.sh                       # Headless tests (generation, determinism, rank odds,
@@ -225,7 +238,7 @@ godot --headless --path . --script res://tools/print_village.gd -- 12345   # cen
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 8. Known limitations (Phase 2 first playable)
+## 9. Known limitations (Phase 2 first playable)
 
 * Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
   fine leather and there are no gowns, robes or plate armor yet. Crops, market
