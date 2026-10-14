@@ -131,7 +131,9 @@ def main() -> None:
 
     manifest_path = ASSET_ROOT / "ASSET_MANIFEST.csv"
     with manifest_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(
+            handle, fieldnames=list(rows[0]), lineterminator="\n"
+        )
         writer.writeheader()
         writer.writerows(rows)
 
