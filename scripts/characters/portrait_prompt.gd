@@ -110,3 +110,30 @@ static func build(c: CharacterData, world_seed: int) -> Dictionary:
 		"height": int(s.get("height", 960)),
 		"output": file_path(c, world_seed),
 	}
+
+
+## Writes every villager's prompt to user://portraits/<world seed>/prompts.json
+## so the local generator (ai-art/generate_portraits.py) can paint the whole
+## village without opening Godot. Returns the file's absolute path.
+static func write_prompt_file(state: WorldState) -> String:
+	var dir := "%s%d/" % [PORTRAIT_DIR, state.world_seed]
+	DirAccess.make_dir_recursive_absolute(dir)
+	var list: Array = []
+	for c in state.characters:
+		var p := build(c, state.world_seed)
+		p["output_file"] = ProjectSettings.globalize_path(str(p["output"]))
+		list.append(p)
+	var path := dir + "prompts.json"
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return ""
+	f.store_string(JSON.stringify({
+		"game": "Sovereign's Eye",
+		"seed_text": state.seed_text,
+		"world_seed": state.world_seed,
+		"village": state.village_name,
+		"portraits": list,
+	}, "  "))
+	f.close()
+	return ProjectSettings.globalize_path(path)
+

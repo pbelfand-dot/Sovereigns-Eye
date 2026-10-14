@@ -13,7 +13,9 @@ func _initialize() -> void:
 	var w := WorldGenerator.generate(seed_text)
 	var list: Array = []
 	for c in w.characters:
-		list.append(PortraitPrompt.build(c, w.world_seed))
+		var p := PortraitPrompt.build(c, w.world_seed)
+		p["output_file"] = ProjectSettings.globalize_path(str(p["output"]))
+		list.append(p)
 	var f := FileAccess.open(out, FileAccess.WRITE)
 	f.store_string(JSON.stringify({"seed_text": seed_text, "world_seed": w.world_seed, "village": w.village_name, "portraits": list}, "  "))
 	f.close()

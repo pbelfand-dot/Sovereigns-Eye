@@ -71,12 +71,14 @@ func occupation_name() -> String:
 	return str(occ.get(gendered_key, occ.get("name", occupation_id.capitalize())))
 
 
-## Outfit style from the occupation, adjusted for the wearer (a lord
-## consort wears a fine doublet, not a gown).
+## Outfit style from the occupation, adjusted for the wearer: noblemen wear
+## a fine doublet, noblewomen a gown, whichever title they hold.
 func outfit() -> String:
 	var o := str(occupation().get("outfit", "tunic"))
 	if o == "gown" and gender == "male":
 		return "fine"
+	if o == "fine" and gender == "female":
+		return "gown"
 	return o
 
 

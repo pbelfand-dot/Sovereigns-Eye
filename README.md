@@ -6,9 +6,10 @@ hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
 > **Status: Phase 1 prototype** (internal codename "Project Appraisal").
-> Godot 4.7 · GDScript · placeholder art built from primitives.
+> Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The village](docs/screenshots/village.jpg)
+![Town square](docs/screenshots/town_square.jpg)
 ![Appraising a villager](docs/screenshots/character_card.jpg)
 
 ---
@@ -114,19 +115,26 @@ All of these numbers live in `data/*.json`, so you can rebalance without code.
 ```text
 project.godot          Godot project (main scene = scenes/main/main.tscn)
 data/                  Design data (JSON): ranks, occupations, traits, names,
-                       families, buildings, schedules, appearance palettes
+                       families, buildings, building_kit recipes, animations,
+                       schedules, appearance palettes, art style
 scenes/main, world/    Main menu and the playable world (built from code)
 scripts/core/          Game autoload, world state, seeds, calendar, data loader
-scripts/characters/    CharacterData, generator, 3D model builder, NPC body
+scripts/characters/    CharacterData, generator, Quaternius HumanModel (+ primitive
+                       fallback), NPC body, AI portrait prompts
 scripts/appraisal/     Appraisal skill + talent roller (potential/current)
 scripts/ai/            NPC daily-routine brain + mood (happiness/loyalty/stress)
-scripts/world/         Layout generator, village builder, roads, camera, sky
+scripts/world/         Layout generator, village builder, VillageKit prefabs, roads,
+                       camera, sky
 scripts/persistence/   Save/load (JSON in user://saves)
 scripts/ui/            Theme, HUD, character card, ledger, menus
-assets/                Drop real models here (see assets/*/README.md)
+3D/                    Asset library (Quaternius used; reference packs .gdignore'd)
+shaders/               Villager skin/clothing/hair, experimental toon unifier
+assets/                Fonts and extra models (see assets/*/README.md)
+ai-art/                Local AI portrait painter (ComfyUI + FLUX.2 klein); not shipped
 tests/                 Headless test suite
-tools/                 run_tests.sh, village census, screenshot capture
+tools/                 run_tests.sh, village census, screenshot capture, prefab gallery
 docs/ARCHITECTURE.md   How the systems fit together
+docs/ART_PLAN.md       Art direction, assets used, missing models, scaling plan
 ```
 
 ## 5. The 3D asset library (`3D/`)
@@ -152,15 +160,24 @@ See [`3D/README.md`](3D/README.md) for the full catalog and
 
 ![Quaternius Medieval Village MegaKit](3D/environments/quaternius-medieval-village-standard/previews/overview.jpg)
 
-## 6. Swapping in real art
+## 6. How the art works
 
-Every building type in `data/buildings.json` has a `"model"` field. Put a
-`.glb` file in `assets/buildings/` and set the field, for example
-`"model": "res://assets/buildings/cottage.glb"`. The game falls back to the
-primitive version when no model is set. Characters store appearance as data
-(colors, hair, height…), so a future character-model pipeline reads the same
-values. Portraits on the cards are rendered live from the 3D model, so they
-upgrade automatically.
+* **Buildings** are prefabs assembled from the Quaternius village kit by recipe
+  ([`data/building_kit.json`](data/building_kit.json)), merged into one mesh per
+  shared material, with distance-culled details and box collisions.
+  `godot --path . res://tools/prefab_gallery.tscn -- out_dir` renders every prefab.
+* **Villagers** are Quaternius base characters: body, hair, beard, skin and
+  outfit colors come from each character's data, and in-place animation clips
+  follow their activity and job ([`data/animations.json`](data/animations.json)).
+  Clothing is painted on until the free Quaternius outfit pack is added.
+* **Card portraits** show an AI painting when one exists for that villager, and
+  a live 3D portrait otherwise. Paint them locally with ComfyUI +
+  FLUX.2 [klein]: see [`ai-art/README.md`](ai-art/README.md).
+* Missing art (trees, props, outfits, windmill, kingdom and harbor pieces) is
+  listed with sources and prices in [`docs/ART_PLAN.md`](docs/ART_PLAN.md).
+
+![Villagers](docs/screenshots/villagers.jpg)
+![Night](docs/screenshots/night.jpg)
 
 ### One consistent look from any source (experimental)
 
@@ -173,14 +190,14 @@ switched on in the game yet.
 
 ![Style unifier: as imported vs. unified](docs/screenshots/style_unifier_demo.jpg)
 
-To re-render that comparison: remove `3D/.gdignore`, then run
-`godot --path . res://tools/style_demo.tscn -- out.png`.
+To re-render that comparison: `godot --path . res://tools/style_demo.tscn -- out.png`
+(needs the reference packs, which are hidden from Godot with `.gdignore`).
 
 ## 7. Tests & tools
 
 ```bash
-tools/run_tests.sh                       # 17 headless tests (generation, determinism,
-                                         # rank odds, relationships, save/load, live world)
+tools/run_tests.sh                       # 21 headless tests (generation, determinism, rank odds,
+                                         # relationships, save/load, art pipeline, live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
 ```
 
@@ -189,7 +206,9 @@ as readable JSON.
 
 ## 8. Known limitations (Phase 1)
 
-* Placeholder art: buildings and people are built from simple shapes.
+* Art gaps: clothing is painted on (outfit pack pending); trees, crops, market
+  stalls, the well and benches are still simple shapes; hats and hand tools
+  aren't shown in 3D yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
 * NPCs walk along roads and can clip through each other or props; there is
   no navmesh yet.
 * People don't age, train or have children yet. The APIs exist
