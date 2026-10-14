@@ -114,3 +114,20 @@ func test_portrait_prompts_match_character_data() -> void:
 	check(PortraitPrompt.image_for(c0, w.world_seed) != null, "AI portrait file is loaded")
 	DirAccess.remove_absolute(path)
 	check(PortraitPrompt.image_for(c0, w.world_seed) == null, "no file -> no AI portrait")
+
+
+func test_portrait_figures_are_adults_only() -> void:
+	var curvy_women := 0
+	for s in SEEDS:
+		var w := WorldGenerator.generate(s)
+		for c in w.characters:
+			check(not str(c.appearance.get("figure", "")).is_empty(), "%s has a stored figure" % c.full_name())
+			var prompt: String = PortraitPrompt.build(c, w.world_seed)["prompt"]
+			if c.age < 18:
+				check(FaceFeatures.figure_text(c).is_empty(), "%s (age %d) gets no body description" % [c.full_name(), c.age])
+				for word: String in ["bust", "figure", "build", "hourglass", "curvy", "voluptuous"]:
+					check(not prompt.contains(word), "%s (age %d) prompt has no '%s'" % [c.full_name(), c.age, word])
+			elif c.gender == "female" and FaceFeatures.figure_text(c).contains("bust"):
+				curvy_women += 1
+				check(prompt.contains("bust"), "%s prompt describes her figure" % c.full_name())
+	check(curvy_women > 0, "some adult women have full figures (%d)" % curvy_women)

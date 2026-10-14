@@ -29,7 +29,8 @@ func _ready() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_white = 6.0
-	env.ssao_enabled = true
+	# SSAO is unsupported on the Mobile renderer (phones, tablets).
+	env.ssao_enabled = RenderingServer.get_current_rendering_method() != "mobile"
 	env.ssao_radius = 1.2
 	env.ssao_intensity = 1.4
 	env.glow_enabled = true

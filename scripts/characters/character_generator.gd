@@ -24,6 +24,8 @@ var rng_looks: RandomNumberGenerator
 var rng_talent: RandomNumberGenerator
 var rng_social: RandomNumberGenerator
 var rng_story: RandomNumberGenerator
+## Separate stream so adding portrait-only data never changes other rolls.
+var rng_figure: RandomNumberGenerator
 
 var _next_character_id := 1
 var _next_family_id := 1
@@ -41,6 +43,7 @@ func generate(world: WorldState) -> void:
 	rng_talent = Seeds.rng(s, "talent")
 	rng_social = Seeds.rng(s, "social")
 	rng_story = Seeds.rng(s, "story")
+	rng_figure = Seeds.rng(s, "figure")
 
 	_create_households()
 	_fill_population()
@@ -350,6 +353,7 @@ func _roll_personalities_and_looks() -> void:
 					hair = str(p.appearance.get("hair_base", hair))
 			c.appearance = _roll_appearance(c, skin, hair)
 			c.appearance["face"] = FaceFeatures.roll_child(rng_looks, c, parents) if is_child else FaceFeatures.roll(rng_looks, c)
+			c.appearance["figure"] = FaceFeatures.roll_figure(rng_figure, c)
 
 
 func _roll_traits(c: CharacterData, parents: Array) -> void:

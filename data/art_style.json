@@ -104,6 +104,59 @@
       "bright gold": "#e3c055",
       "silver": "#d0d0d0",
       "scarlet": "#a01f2f"
+    },
+    "figure": {
+      "_comment": "Body shape words for AI portraits. Rolled once per character at generation (stored as appearance.figure) and only ever used for adults: anyone under min_age gets no body description at all. Everyone is described as clothed. 'weight' is the relative chance.",
+      "min_age": 18,
+      "female": [
+        {
+          "id": "average",
+          "weight": 25,
+          "text": ""
+        },
+        {
+          "id": "slender",
+          "weight": 15,
+          "text": "a slender figure"
+        },
+        {
+          "id": "curvy",
+          "weight": 30,
+          "text": "a curvy figure with a full bust"
+        },
+        {
+          "id": "voluptuous",
+          "weight": 22,
+          "text": "a voluptuous hourglass figure with a large bust"
+        },
+        {
+          "id": "stout",
+          "weight": 8,
+          "text": "a sturdy, full-bodied figure"
+        }
+      ],
+      "male": [
+        {
+          "id": "average",
+          "weight": 45,
+          "text": ""
+        },
+        {
+          "id": "broad",
+          "weight": 25,
+          "text": "broad shoulders and a strong build"
+        },
+        {
+          "id": "lean",
+          "weight": 15,
+          "text": "a lean, wiry build"
+        },
+        {
+          "id": "stout",
+          "weight": 15,
+          "text": "a stout, heavy build"
+        }
+      ]
     }
   }
 }

@@ -58,3 +58,51 @@ static func for_character(c: CharacterData) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("face:%d:%s" % [c.id, c.full_name()]).hash()
 	return roll(rng, c)
+
+
+## Body shape for portraits ("curvy", "broad"...), weighted by
+## data/art_style.json portrait.figure. Rolled for everyone at generation so
+## it never changes, but only described for adults (see figure_text()).
+static func roll_figure(rng: RandomNumberGenerator, c: CharacterData) -> String:
+	var options: Array = _figure_options(c.gender)
+	if options.is_empty():
+		return "average"
+	var total := 0.0
+	for o: Dictionary in options:
+		total += float(o.get("weight", 1.0))
+	var r := rng.randf() * total
+	for o: Dictionary in options:
+		r -= float(o.get("weight", 1.0))
+		if r <= 0.0:
+			return str(o["id"])
+	return str(options[-1]["id"])
+
+
+## The stored figure, or a stable one derived from identity (older saves).
+static func figure_for(c: CharacterData) -> String:
+	var stored := str(c.appearance.get("figure", ""))
+	if not stored.is_empty():
+		return stored
+	var rng := RandomNumberGenerator.new()
+	rng.seed = ("figure:%d:%s" % [c.id, c.full_name()]).hash()
+	return roll_figure(rng, c)
+
+
+## Portrait wording for the character's figure. Always empty for anyone
+## younger than portrait.figure.min_age (18): children and teenagers are
+## never described by body shape.
+static func figure_text(c: CharacterData) -> String:
+	var cfg: Dictionary = GameData.load_file("art_style").get("portrait", {}).get("figure", {})
+	if c.age < int(cfg.get("min_age", 18)):
+		return ""
+	var id := figure_for(c)
+	for o: Dictionary in _figure_options(c.gender):
+		if str(o["id"]) == id:
+			return str(o.get("text", ""))
+	return ""
+
+
+static func _figure_options(gender: String) -> Array:
+	var cfg: Dictionary = GameData.load_file("art_style").get("portrait", {}).get("figure", {})
+	return cfg.get("female" if gender == "female" else "male", [])
+

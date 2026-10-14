@@ -73,6 +73,9 @@ static func build(c: CharacterData, world_seed: int) -> Dictionary:
 	var parts: Array[String] = []
 	var job := c.occupation_name().to_lower()
 	parts.append("Portrait of %s, %s %s in a medieval village" % [_age_words(c), "an" if "aeiou".contains(job.left(1)) else "a", job])
+	var figure := FaceFeatures.figure_text(c)  # adults only
+	if not figure.is_empty():
+		parts.append("with " + figure)
 	parts.append("%s skin" % _color_name(str(ap.get("skin", "#e0b48c")), skin_names))
 	var hair_style := str(ap.get("hair_style", "short"))
 	if hair_style == "bald":
