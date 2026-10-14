@@ -43,6 +43,16 @@ func setup(c: CharacterData) -> void:
 	set_inside(c.inside_building_id >= 0)
 
 
+## Rebuilds the body after a change of job (new clothes and tools).
+func refresh_model() -> void:
+	var old := model
+	model = HumanModel.for_character(character)
+	add_child(model)
+	if old:
+		remove_child(old)
+		old.queue_free()
+
+
 func _build_markers() -> void:
 	_ring = MeshInstance3D.new()
 	var torus := TorusMesh.new()

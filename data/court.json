@@ -141,6 +141,13 @@
       "primary": "intelligence", "secondary": "politics",
       "work": "manor", "work_style": "estate", "activity": "Tutoring the household",
       "effect": "mentor", "mentors": ["intelligence", "politics", "administration"]
+    },
+    {
+      "id": "master_of_works", "name": "Master of Works",
+      "description": "Oversees every building site. Construction runs faster with their Administration.",
+      "primary": "administration", "secondary": "leadership",
+      "work": "manor", "work_style": "oversee", "activity": "Overseeing the building works",
+      "effect": "construction"
     }
   ]
 }

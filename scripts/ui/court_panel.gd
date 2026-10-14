@@ -122,6 +122,10 @@ func _office_effect(st: WorldState, o: Dictionary, holder: CharacterData) -> Str
 			for a: String in o.get("mentors", []):
 				names.append(CourtSystem.attr_name(a))
 			return "Mentors the household in %s (faster training for those behind them)." % ", ".join(names)
+		"construction":
+			if holder:
+				return "Building works go %d%% faster from their Administration." % roundi((TerritorySystem.speed_factor(st) - 1.0) * 100.0)
+			return "Speeds every building site with their Administration."
 	return str(o.get("description", ""))
 
 

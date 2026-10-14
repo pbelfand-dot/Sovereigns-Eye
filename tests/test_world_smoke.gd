@@ -113,3 +113,47 @@ func test_save_restores_live_state() -> void:
 		world2.queue_free()
 		await frames(1)
 	SaveManager.delete(SLOT)
+
+
+func test_building_rises_in_the_live_world() -> void:
+	var world: VillageWorld = await _boot("smoke-build")
+	var st := world.state
+	st.house.gold = 500
+	var spot := TerritorySystem.find_spot(st, "quarry")
+	check(not spot.is_empty(), "a spot for a yard")
+	if spot.is_empty():
+		world.queue_free()
+		return
+	world.start_placing("quarry")
+	check(world.is_placing(), "the Build menu starts placement")
+	world.preview_at(spot["pos"])
+	check(world.placement_reason().is_empty(), "the preview accepts a good spot")
+	world.confirm_placement()
+	check(not world.is_placing(), "placing ends after a click")
+	check_eq(st.territory.sites.size(), 1, "a site is opened")
+	if st.territory.sites.is_empty():
+		world.queue_free()
+		return
+	var site := st.territory.sites[0]
+	check(world.builder.site_nodes.has(site.id()), "the site is drawn")
+	# Most of the work done already, so the test stays quick.
+	site.work_done = site.work_needed * 0.7
+	world.set_speed(3)
+	var crew_at_work := false
+	for i in 400:
+		world._process(0.1)
+		if not crew_at_work:
+			for id in site.builders:
+				var npc := world.npc_of(id)
+				if npc and npc.character.activity_text.begins_with("Building"):
+					crew_at_work = true
+		if st.territory.sites.is_empty():
+			break
+	check(crew_at_work, "the crew walks over and builds")
+	check(st.territory.sites.is_empty(), "the yard is finished within a few days")
+	check(world.builder.building_nodes.has(site.id()), "the finished building is drawn")
+	check(not world.builder.site_nodes.has(site.id()), "the site is cleared away")
+	var path := world.graph.find_path(st.layout.square_center, site.building.door_position())
+	check(path.size() >= 2, "the new door is on the road network")
+	world.queue_free()
+	await frames(2)

@@ -104,6 +104,7 @@
     "stone_wear": 0.5,
     "unit_size": 12.0,
     "work_interval": [1.1, 2.0],
+    "build": "work_wood",
     "work": {
       "woodcutter": "work_chop",
       "carpenter": "work_wood",
@@ -116,7 +117,8 @@
       "baker": "work_pot",
       "innkeeper": "work_pot",
       "tavern_hand": "work_pot",
-      "housekeeper": "work_pot"
+      "housekeeper": "work_pot",
+    "stonecutter": "work_metal"
     }
   },
 

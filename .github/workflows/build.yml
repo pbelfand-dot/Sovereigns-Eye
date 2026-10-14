@@ -13,7 +13,7 @@ name: Build game
 on:
   push:
     branches: ["**"]
-    paths-ignore: ["**.md", "3D/alternatives/**", "3D/characters/**", "3D/previews/**", "3D/research/**"]
+    paths-ignore: ["**.md", "3D/alternatives/**", "3D/characters/blocky/**", "3D/previews/**", "3D/research/**"]
   workflow_dispatch:
 
 permissions:

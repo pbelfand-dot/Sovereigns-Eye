@@ -139,6 +139,8 @@ static func prefab(type: String, variant: int) -> Dictionary:
 		"sails": bool(recipe.get("sails", false)),
 		"height": top,
 		"pieces": shell.count + details.count,
+		"parts": shell.parts,
+		"detail_parts": details.parts,
 	}
 	_prefabs[key] = out
 	return out
@@ -185,18 +187,31 @@ static func clear_cache() -> void:
 	_prefabs.clear()
 
 
+## Merges a list of [module, Transform3D] parts into one mesh (one surface
+## per shared material), e.g. the walls raised so far on a building site.
+static func assemble(parts: Array) -> ArrayMesh:
+	var a := _Assembler.new()
+	for p: Array in parts:
+		a.add(str(p[0]), p[1])
+	return a.commit()
+
+
 # --- Assembly -------------------------------------------------------------------
 
 class _Assembler:
 	var tools: Dictionary = {}  # material key -> SurfaceTool
 	var mats: Dictionary = {}
 	var count := 0
+	## [[module, Transform3D], ...] in the order added (construction sites
+	## re-assemble a subset of these to raise a building piece by piece).
+	var parts: Array = []
 
 	func add(module: String, xf: Transform3D) -> void:
 		var mesh := VillageKit.module_mesh(module)
 		if mesh == null:
 			return
 		count += 1
+		parts.append([module, xf])
 		for s in mesh.get_surface_count():
 			var mat := VillageKit.shared_material(mesh.surface_get_material(s))
 			var key := mat.resource_name if mat else "_none"

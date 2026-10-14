@@ -161,6 +161,10 @@ func _update_foley(delta: float, focus: Vector3, distance: float) -> void:
 			var stone := world.builder.wear_at(Vector2(p.x, p.z)) > float(foley.get("stone_wear", 0.5))
 			event = "step_stone" if stone else "step_grass"
 			interval = float(foley.get("step_interval", 0.42))
+		elif activity == "work" and TerritorySystem.builder_site(world.state, npc.character) != null:
+			event = str(foley.get("build", "work_wood"))
+			var span: Array = foley.get("work_interval", [1.1, 2.0])
+			interval = _rng.randf_range(float(span[0]), float(span[1]))
 		elif activity == "work" and work.has(npc.character.occupation_id):
 			event = str(work[npc.character.occupation_id])
 			var span: Array = foley.get("work_interval", [1.1, 2.0])

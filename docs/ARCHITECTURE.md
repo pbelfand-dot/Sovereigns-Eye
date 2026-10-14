@@ -1,4 +1,4 @@
-# Architecture (Phase 2)
+# Architecture (Phase 3, step 1)
 
 The core rule: **data is separate from presentation.** Every person,
 building and road exists as plain data first (`RefCounted` classes that know
@@ -12,10 +12,11 @@ data off-screen with no body spawned.
                  │  GameData (static, cached)
                  ▼
  seed ──► WorldGenerator ──► WorldState ◄──────── SaveManager (JSON in user://saves)
-          ├ VillageLayoutGenerator   │  layout, families, characters, clock
-          ├ CharacterGenerator       │
+          ├ VillageLayoutGenerator   │  layout, families, characters, clock,
+          ├ CharacterGenerator       │  house, territory (stores + sites)
           │  └ TalentRoller          │
-          └ CourtSystem.initialize   ▼
+          ├ CourtSystem.initialize   │
+          └ TerritorySystem.initialize ▼
                               VillageWorld (scenes/world/world.tscn)
                  ┌───────────────┼────────────────┬───────────────┐
            VillageBuilder     RoadGraph        NPC × N          GameUI
@@ -38,12 +39,14 @@ data off-screen with no body spawned.
 | Generation | `character_generator.gd` | Households from `data/backgrounds.json` → fill to 50 → jobs → homes/workplaces → traits & looks (children resemble parents) → talents (children after parents) → relationships → histories with "rumor" hints → starting mood. |
 | Appraisal | `scripts/appraisal/appraisal.gd`, `talent_roller.gd` | `Appraisal.appraise(character, level)` returns a report; the UI only reads reports, so weaker appraisal, fog of war or concealment magic only touch this one function. |
 | Noble society | `scripts/court/court_system.gd`, `house_data.gd`, `data/court.json` | Selects the playable heir, tracks the house treasury and renown, and owns recruitment, offices, training, wages, loyalty, departures and knighthood. Court fields serialize on `WorldState` and `CharacterData`. |
+| Territory (Phase 3) | `scripts/territory/territory_system.gd`, `territory_data.gd`, `construction_site.gd`, `data/territory.json` | Stores (food/wood/stone; gold stays `HouseData.gold`), daily production by occupation × mood × season, consumption, storage caps. Building orders: `snap()` beside the nearest road, `check_placement()` (roads, square, buildings, sites, fields, props, door, lane), `place()` pays, lays a lane road, fells trees/rocks, opens a `ConstructionSite` with a reserved building id and a crew. `advance()` adds builder-hours during work shifts × Master of Works; `complete()` adds the `BuildingData` to the layout, lays fields, hires workers. Saved on `WorldState.territory` (save v3). |
+| Construction look | `scripts/world/construction_view.gd`, `build_ghost.gd` | `ConstructionView` re-assembles the kit prefab's own pieces (`VillageKit.prefab()["parts"]`) bottom-up inside a scaffold, in a few steps. `BuildGhost` is the translucent green/red placement preview with its lane. `VillageBuilder.refresh_ground()` re-bakes wear and re-filters (never re-rolls) cached grass, so the rest of the meadow stays put. |
 | NPC behaviour | `scripts/ai/npc_brain.gd`, `scripts/characters/npc.gd` | Schedule block (sleep/home/work/leisure/play) → queue of steps (go / enter / stay). Work styles: stationary, fields, patrol, drill, market, forest, estate, assist. Traits bias leisure (gregarious → tavern, devout → chapel). |
 | Mood | `scripts/ai/mood_system.gd` | Daily drift toward a target built from labelled factors (shown on the card). Stress changes hourly with activity. |
 | Navigation | `scripts/world/road_graph.gd` | A* over road centerlines + square ring + door nodes. `find_path(from, to)` is the only API the brain uses, so a navmesh can replace it later. |
 | Camera | `scripts/world/strategy_camera.gd` | Smooth pan/zoom/rotate; mouse, keyboard and macOS trackpad gestures; follow mode. |
 | UI | `scripts/ui/*` | Built in code from one theme (`ui_theme.gd`). The card's portrait is a live render of the character's own 3D model. |
-| Saving | `scripts/persistence/save_manager.gd` | Versioned JSON, written to a temp file then renamed (crash-safe). Version 1 saves migrate to Phase 2 by deterministically creating their player house and opinions. |
+| Saving | `scripts/persistence/save_manager.gd` | Versioned JSON, written to a temp file then renamed (crash-safe). Version 1 saves migrate to Phase 2 by deterministically creating their player house and opinions; version 2 saves get the Phase 3 starting stores. |
 
 ## Time
 
@@ -52,8 +55,12 @@ data off-screen with no body spawned.
 
 ## Extension points for later phases
 
-* **Phase 3 (economy):** buildings are data with ids, workers and residents;
-  add production per building type in `data/buildings.json`.
+* **Phase 3 step 2 (growth):** homes upgrade through tiers and new families
+  arrive. `TerritorySystem.find_spot()` and `check_placement()` already work
+  without the player, so automatic house placement can reuse them.
+* **Phase 3 step 3 (charters):** Hamlet → Village → Market Town → Town gates
+  on population and buildings. `TerritoryData.built` records what the player
+  raised.
 * **Phase 5 (military):** combat/leadership already exist; `train()` grows
   current toward potential.
 * **Phase 6 (dynasties):** `TalentRoller.inheritance_affinity()` already

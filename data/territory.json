@@ -1,0 +1,118 @@
+{
+  "_comment": "Phase 3 - Territory, step 1: the village's stores (food, wood, stone; gold is the house treasury) and building. The player places important buildings from the Build menu; villagers raise them; a Master of Works speeds every site. All tuning lives here.",
+
+  "resources": [
+    { "id": "food",  "name": "Food",  "color": "#d9b94c", "description": "Grain, bread and greens. Everyone eats every day; an empty granary makes the village miserable." },
+    { "id": "wood",  "name": "Wood",  "color": "#b07a45", "description": "Timber for building and firewood for every hearth." },
+    { "id": "stone", "name": "Stone", "color": "#b3aea4", "description": "Cut stone for foundations and walls. Build a Stonecutter's Yard to quarry it." },
+    { "id": "gold",  "name": "Gold",  "color": "#e8c35a", "description": "Your house's treasury (rents, dues and wages)." }
+  ],
+
+  "start": { "food": 150, "wood": 120, "stone": 60 },
+
+  "storage": {
+    "_comment": "Most of each resource the village can hold: base + bonus for every finished building of a type.",
+    "base": 400,
+    "per_building": { "storehouse": 300 }
+  },
+
+  "consumption": {
+    "food_adult": 1.0,
+    "food_child": 0.6,
+    "child_below_age": 14,
+    "wood_per_household": 0.35
+  },
+
+  "production": {
+    "_comment": "Per worker per day at normal productivity. Builders on a construction site produce nothing that day.",
+    "farmer":      { "food": 5.0 },
+    "farmhand":    { "food": 3.5 },
+    "miller":      { "food": 3.0 },
+    "baker":       { "food": 4.0 },
+    "herbalist":   { "food": 1.0 },
+    "woodcutter":  { "wood": 8.0 },
+    "carpenter":   { "wood": 2.0 },
+    "stonecutter": { "stone": 6.0 }
+  },
+
+  "productivity": {
+    "_comment": "Worker output multiplier: happiness 0 -> min, 100 -> max; traits multiply.",
+    "happiness_min": 0.75,
+    "happiness_max": 1.2,
+    "traits": { "diligent": 1.15, "lazy": 0.85 }
+  },
+
+  "seasons": {
+    "_comment": "Food output by season: fields lie fallow in winter, the harvest comes in autumn.",
+    "Spring": { "food": 1.0 },
+    "Summer": { "food": 1.1 },
+    "Autumn": { "food": 1.25 },
+    "Winter": { "food": 0.6 }
+  },
+
+  "hunger": { "happiness": -20, "label": "The granary is empty" },
+
+  "construction": {
+    "_comment": "Work is counted in builder-hours. Each builder adds their rate for every hour of their work shift; the Master of Works multiplies everything.",
+    "crew": 3,
+    "builder_min_age": 14,
+    "builder_max_age": 59,
+    "builders": { "carpenter": 1.5, "farmhand": 1.0, "tavern_hand": 0.9, "apprentice": 0.8 },
+    "overseer_office": "master_of_works",
+    "overseer_divisor": 100.0,
+    "clear_tree_wood": 3,
+    "clear_rock_stone": 5,
+    "refund_unstarted": 1.0,
+    "refund_started": 0.5,
+    "visual_steps": 14
+  },
+
+  "placement": {
+    "_comment": "Meters. New buildings snap beside a road and face it; lanes are laid automatically from the door to the nearest road.",
+    "road_snap": 8.0,
+    "setback": 2.6,
+    "building_gap": 1.5,
+    "field_gap": 1.0,
+    "prop_gap": 1.2,
+    "square_gap": 2.0,
+    "lane_width": 3.0,
+    "lane_min": 1.5,
+    "lane_max": 28.0,
+    "tree_clear": 1.8
+  },
+
+  "hiring": {
+    "_comment": "Who takes the jobs at a finished building, in order of preference. Adults only.",
+    "from": ["farmhand", "tavern_hand", "apprentice", "herbalist"],
+    "min_age": 16,
+    "max_age": 59
+  },
+
+  "buildable": [
+    {
+      "type": "quarry", "name": "Stonecutter's Yard",
+      "description": "Stonecutters haul and dress stone from the hills. The village's only source of stone.",
+      "cost": { "wood": 40, "gold": 20 }, "work": 30, "jobs": { "stonecutter": 2 }, "limit": 3
+    },
+    {
+      "type": "workshop", "name": "Woodcutters' Lodge",
+      "description": "Two more woodcutters fell timber in the forest.",
+      "cost": { "wood": 30, "stone": 10, "gold": 20 }, "work": 36, "jobs": { "woodcutter": 2 }, "limit": 3
+    },
+    {
+      "type": "farmhouse", "name": "Farmstead",
+      "description": "A farmer and a farmhand work new fields around the house.",
+      "cost": { "wood": 50, "stone": 15, "gold": 30 }, "work": 40, "jobs": { "farmer": 1, "farmhand": 1 }, "fields": [2, 3], "limit": 4
+    },
+    {
+      "type": "storehouse", "name": "Granary",
+      "description": "Raises how much food, wood and stone the village can store.",
+      "cost": { "wood": 60, "stone": 30, "gold": 30 }, "work": 50, "limit": 3
+    },
+    {
+      "type": "bakery", "name": "Bakery",
+      "description": "A baker turns flour into bread for the village.",
+      "cost": { "wood": 40, "stone": 25, "gold": 30 }, "work": 36, "jobs": { "baker": 1 }, "limit": 2
+    }
+  ]
+}

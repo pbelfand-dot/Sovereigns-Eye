@@ -69,6 +69,12 @@
       "variants": [
         { "blocks": [ { "cells": [5, 4], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "props": ["wagon", "crate", "crate", "crate"] }
       ]
+    },
+    "quarry": {
+      "variants": [
+        { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "props": ["crate", "crate"] },
+        { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 1, "walls": "plaster", "ground": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "props": ["crate"] }
+      ]
     }
   },
   "missing": {

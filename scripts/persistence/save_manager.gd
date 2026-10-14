@@ -66,6 +66,8 @@ static func load_state(slot: String) -> WorldState:
 	var state := WorldState.from_dict(data)
 	# Saves from before Phase 2 have no house yet: found it now.
 	CourtSystem.initialize(state)
+	# Saves from before Phase 3 have no stores yet.
+	TerritorySystem.initialize(state)
 	return state
 
 
@@ -78,6 +80,12 @@ static func migrate(data: Dictionary) -> Dictionary:
 		# everyone's opinion of the player are created on load by
 		# CourtSystem.initialize().
 		data["save_version"] = 2
+		version = 2
+	if version == 2:
+		# v3 (Phase 3) adds the village's stores and building sites. They are
+		# created on load by TerritorySystem.initialize() with the starting
+		# stock; nothing else changes.
+		data["save_version"] = 3
 	return data
 
 

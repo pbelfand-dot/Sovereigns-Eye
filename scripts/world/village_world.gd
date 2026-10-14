@@ -9,6 +9,10 @@ extends Node3D
 signal selection_changed(character: CharacterData)
 signal speed_changed(time_scale: float)
 signal day_passed(day_index: int)
+## The village's stores or building sites changed (UI refresh).
+signal territory_changed
+## Entered or left building placement (type "" = left).
+signal placing_changed(type: String)
 
 ## In-game minutes per real second at 1x speed (1 hour = 40 s, 1 day = 16 min).
 const GAME_MINUTES_PER_SECOND := 1.5
@@ -33,6 +37,14 @@ var _worker_slots: Dictionary = {}
 var _forest_spots: Array[Vector3] = []
 var _npc_root: Node3D
 
+## Building placement (Build menu): the type being placed, its preview and
+## quarter-turns away from facing the road.
+var placing_type := ""
+var _ghost: BuildGhost
+var _turn := 0
+var _placement: Dictionary = {}
+var _placement_check: Dictionary = {}
+
 
 func _ready() -> void:
 	state = Game.state
@@ -41,12 +53,14 @@ func _ready() -> void:
 		state = WorldGenerator.generate(DEFAULT_SEED)
 		Game.state = state
 	TerrainHeight.configure(state.layout.terrain_seed, state.layout.flat_radius)
+	TerritorySystem.initialize(state)
 
 	sky = SkyController.new()
 	sky.name = "Sky"
 	add_child(sky)
 	builder = VillageBuilder.new()
 	builder.name = "Village"
+	builder.territory = state.territory
 	add_child(builder)
 	builder.build(state.layout)
 	graph = RoadGraph.new()
@@ -154,11 +168,15 @@ func _process(delta: float) -> void:
 	if game_minutes > 0.0:
 		state.minutes += game_minutes
 		_check_new_day()
+		_advance_construction(game_minutes)
 	for npc: NPC in npcs.values():
 		npc.brain.update(game_minutes)
 		npc.tick(delta, scale_now)
 	sky.set_time(state.minutes)
-	_update_hover()
+	if placing_type.is_empty():
+		_update_hover()
+	else:
+		_update_ghost()
 
 
 func _check_new_day() -> void:
@@ -174,6 +192,13 @@ func _check_new_day() -> void:
 		_announce(e)
 		if str(e.get("kind", "")) == "bad" and e.has("character"):
 			court_changed(int(e["character"]))
+	var crews_before := _crews()
+	for e: Dictionary in TerritorySystem.daily_update(state):
+		_announce(e)
+		if e.has("hired"):
+			_on_hired(int(e["hired"]))
+	_replan_crew_changes(crews_before)
+	territory_changed.emit()
 	day_passed.emit(day)
 
 
@@ -188,6 +213,195 @@ func _announce(e: Dictionary) -> void:
 		"bad", "leave":
 			color = Game.COLOR_BAD
 	Game.notify.emit(str(e["text"]), color)
+
+
+# --- Building (Phase 3) -------------------------------------------------------------------
+
+func _advance_construction(game_minutes: float) -> void:
+	if state.territory.sites.is_empty():
+		return
+	var finished := TerritorySystem.advance(state, game_minutes)
+	builder.update_sites()
+	for site in finished:
+		_finish_site(site)
+
+
+## Character id -> building site id, for everyone on a crew.
+func _crews() -> Dictionary:
+	var out := {}
+	for s in state.territory.sites:
+		for id in s.builders:
+			out[id] = s.id()
+	return out
+
+
+## Builders who joined, left or switched sites re-plan their day.
+func _replan_crew_changes(before: Dictionary) -> void:
+	var after := _crews()
+	for id: int in before:
+		if after.get(id, -1) != before[id]:
+			court_changed(id)
+	for id: int in after:
+		if before.get(id, -1) != after[id]:
+			court_changed(id)
+
+
+func _finish_site(site: ConstructionSite) -> void:
+	var crews_before := _crews()
+	var events := TerritorySystem.complete(state, site)
+	var b := site.building
+	builder.remove_site(b.id)
+	builder.add_building_node(b)
+	for f in state.layout.fields_of_building(b.id):
+		builder.add_field(f)
+	_layout_changed()
+	builder.refresh_props()
+	Audio.play("court_good")
+	for e in events:
+		_announce(e)
+		if e.has("hired"):
+			_on_hired(int(e["hired"]))
+	_replan_crew_changes(crews_before)
+	territory_changed.emit()
+
+
+## Someone took a new job: new clothes, new workplace, new routine.
+func _on_hired(character_id: int) -> void:
+	var npc := npc_of(character_id)
+	if npc:
+		npc.refresh_model()
+	_compute_worker_slots()
+	court_changed(character_id)
+
+
+## Roads, doors and the ground follow the layout after building changes.
+func _layout_changed() -> void:
+	graph.build(state.layout)
+	builder.refresh_ground()
+
+
+func is_placing() -> bool:
+	return not placing_type.is_empty()
+
+
+## Enters placement mode for a building type from the Build menu.
+func start_placing(type: String) -> void:
+	cancel_placing()
+	var allowed := TerritorySystem.can_build(state, type)
+	if not allowed["ok"]:
+		Audio.play("ui_error")
+		Game.notify.emit(str(allowed["reason"]), Game.COLOR_BAD)
+		return
+	placing_type = type
+	_turn = 0
+	_ghost = BuildGhost.new()
+	add_child(_ghost)
+	_ghost.setup(type)
+	_placement = {}
+	if hovered:
+		hovered.set_hovered(false)
+		hovered = null
+	Input.set_default_cursor_shape(Input.CURSOR_CROSS)
+	placing_changed.emit(type)
+
+
+func cancel_placing() -> void:
+	if placing_type.is_empty():
+		return
+	placing_type = ""
+	if _ghost:
+		_ghost.queue_free()
+		_ghost = null
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+	placing_changed.emit("")
+
+
+## Turns the building being placed by a quarter (T).
+func turn_ghost() -> void:
+	_turn = (_turn + 1) % 4
+
+
+## Why the current spot does or doesn't work ("" while there is no spot).
+func placement_reason() -> String:
+	return str(_placement_check.get("reason", ""))
+
+
+func placement_trees() -> int:
+	return (_placement_check.get("trees", []) as Array).size()
+
+
+func _update_ghost() -> void:
+	var vp := get_viewport()
+	if vp.gui_get_hovered_control() != null:
+		_ghost.visible = false
+		return
+	var g: Variant = camera_rig.ground_point(vp.get_mouse_position())
+	if g == null:
+		_ghost.visible = false
+		return
+	preview_at(g)
+
+
+## Shows the building being placed snapped to the spot nearest `point`.
+func preview_at(point: Vector3) -> void:
+	_ghost.visible = true
+	_placement = TerritorySystem.snap(state, placing_type, point, _turn)
+	_placement_check = TerritorySystem.check_placement(state, placing_type, _placement["pos"], _placement["rot"])
+	_ghost.show_at(_placement["pos"], _placement["rot"], _placement_check, state.layout.trees)
+
+
+## Places the previewed building (left click). Shift keeps placing.
+func confirm_placement() -> void:
+	if _placement.is_empty():
+		return
+	var result := place_building(placing_type, _placement["pos"], _placement["rot"])
+	if result["ok"] and not Input.is_key_pressed(KEY_SHIFT):
+		cancel_placing()
+	elif result["ok"] and not TerritorySystem.can_build(state, placing_type)["ok"]:
+		cancel_placing()
+
+
+## Orders a building at a spot and shows its site. Returns TerritorySystem.place()'s result.
+func place_building(type: String, pos: Vector3, rot: float) -> Dictionary:
+	var crews_before := _crews()
+	var result := TerritorySystem.place(state, type, pos, rot)
+	if not result["ok"]:
+		Audio.play("ui_error")
+		Game.notify.emit(str(result["text"]), Game.COLOR_BAD)
+		return result
+	var site: ConstructionSite = result["site"]
+	builder.add_site(site)
+	_layout_changed()
+	builder.refresh_props()
+	Audio.play("coins")
+	Audio.play("work_wood")
+	Game.notify.emit(str(result["text"]), Game.COLOR_GOOD)
+	_replan_crew_changes(crews_before)
+	territory_changed.emit()
+	return result
+
+
+## Abandons a building site from the Build panel.
+func cancel_site(building_id: int) -> void:
+	var site := state.territory.get_site(building_id)
+	if site == null:
+		return
+	var crews_before := _crews()
+	var result := TerritorySystem.cancel(state, site)
+	builder.remove_site(building_id)
+	_layout_changed()
+	builder.refresh_props()
+	Game.notify.emit(str(result["text"]), Game.COLOR_INFO)
+	_replan_crew_changes(crews_before)
+	territory_changed.emit()
+
+
+## Moves the camera to a building site.
+func focus_site(building_id: int) -> void:
+	var site := state.territory.get_site(building_id)
+	if site:
+		camera_rig.follow_target = null
+		camera_rig.look_at_point(site.building.position, 38.0)
 
 
 ## Call after someone's court role changes so their body re-plans its day
@@ -247,6 +461,9 @@ func _update_hover() -> void:
 
 
 func _on_clicked(screen_pos: Vector2) -> void:
+	if is_placing():
+		confirm_placement()
+		return
 	var npc := pick_npc(screen_pos)
 	if npc:
 		select_character(npc.character.id)

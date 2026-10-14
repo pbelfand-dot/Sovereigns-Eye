@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 2 first playable** (internal codename "Project Appraisal").
+> **Status: Phase 3 in progress: building your village** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The village](docs/screenshots/village.jpg)
@@ -70,12 +70,39 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 11 | Develop retainers | Choose a training focus, appoint a Steward, Marshal, Chancellor, or Court Scholar, and knight proven servants |
 | 12 | Run your court | Press **K** to see gold, daily income and wages, renown, offices, retainers, loyalty, and the house chronicle |
 | 13 | Save / load | **F5** quicksave, **F9** quickload, or **Esc → Save Game / Load Game**. Quit, relaunch, **Continue** |
+| 14 | Watch the stores | The bar under the top bar shows **food, wood and stone** and their change per day. Farmers grow food, woodcutters fell timber, everyone eats and burns firewood. Winter fields yield less |
+| 15 | Order a building | Press **B** → pick a building → click beside a road. It turns to face the road, a lane is laid to its door, and trees in the way are felled for wood. **T** turns it, **Shift+click** places another, **Esc** cancels |
+| 16 | Watch it go up | A crew (carpenters first) stakes out the ground, then the walls rise inside a scaffold and the roof goes on. When it's finished, villagers take the new jobs |
+| 17 | Build faster | Appraise villagers for a hidden **Administration** talent, recruit them and appoint them **Master of Works** (Court tab). Every site speeds up with their Administration |
 
 The same seed always creates the same village and the same people.
 
 ![Recruiting from the Court tab](docs/screenshots/court_recruit.jpg)
 ![A retainer's office and training](docs/screenshots/court_retainer.jpg)
 ![The Court panel (K)](docs/screenshots/court_panel.jpg)
+
+### Building (Phase 3, step 1)
+
+You decide **what** goes up and **where**, and the village builds it. Homes
+growing on their own and town charters come next.
+
+| Building | Cost | What it adds |
+|---|---|---|
+| Stonecutter's Yard | 40 wood, 20 gold | 2 stonecutters: the only source of **stone** |
+| Woodcutters' Lodge | 30 wood, 10 stone, 20 gold | 2 more woodcutters |
+| Farmstead | 50 wood, 15 stone, 30 gold | a farmer, a farmhand and 2–3 new fields |
+| Granary | 60 wood, 30 stone, 30 gold | +300 storage for food, wood and stone |
+| Bakery | 40 wood, 25 stone, 30 gold | a baker |
+
+New jobs are filled by farmhands, tavern hands and older apprentices, so building
+moves people around: a new farm promotes a farmhand to farmer, and a quarry takes
+hands away from the fields. Builders don't do their normal work while they build.
+All costs, rates and limits are in `data/territory.json`.
+
+![Building stages](docs/screenshots/construction_stages.jpg)
+![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
+![The Build panel (B)](docs/screenshots/build_panel.jpg)
+![A new farmstead with its fields](docs/screenshots/new_farmstead.jpg)
 
 ### Controls
 
@@ -89,6 +116,9 @@ The same seed always creates the same village and the same people.
 | Pause / speed | Top bar buttons | Space · 1 2 3 4 |
 | Village ledger | Top bar | L |
 | Your court | Top bar | K |
+| Build menu / stores | Top bar | B |
+| Turn building being placed | — | T |
+| Place another of the same | Shift + left-click | — |
 | Quicksave / quickload | — | F5 / F9 |
 | Close / menu | — | Esc |
 | Help overlay | — | H |
@@ -132,6 +162,7 @@ scripts/characters/    CharacterData, generator, Quaternius HumanModel (+ primit
 scripts/appraisal/     Appraisal skill + talent roller (potential/current)
 scripts/court/         Noble-house rules: recruitment, offices, training, wages,
                        loyalty, knighthood, treasury and renown
+scripts/territory/     Village stores, building orders, construction sites, hiring
 scripts/ai/            NPC daily-routine brain + mood (happiness/loyalty/stress)
 scripts/world/         Layout generator, village builder, VillageKit prefabs, roads,
                        camera, sky
@@ -270,14 +301,27 @@ To re-render that comparison: `godot --path . res://tools/style_demo.tscn -- out
 
 ```bash
 tools/run_tests.sh                       # Headless tests (generation, determinism, rank odds,
-                                         # court, save/load, art pipeline, audio, live world)
+                                         # court, territory, save/load, art pipeline, audio,
+                                         # live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
+# Screenshots (needs a display): court | art | menus | build
+godot --path . res://tools/capture.tscn -- 12345 /tmp/shots build
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 2 first playable)
+## 9. Known limitations (Phase 3, step 1)
+
+* The population is fixed at about 50 for now. New jobs are filled by moving
+  people around, so after a few buildings no one is free to work or build. New
+  families and homes that grow on their own come in step 2.
+* Only five building types can be ordered. Taverns, chapels, markets and the town
+  charters (Hamlet → Village → Market Town → Town) come in step 3.
+* Placing or finishing a building rebuilds the ground, grass and props
+  (about 0.1 s, one hitch per click).
+* There is no demolition yet. You can cancel a site (full refund before work
+  starts, half after).
 
 * Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
   fine leather and there are no gowns, robes or plate armor yet.

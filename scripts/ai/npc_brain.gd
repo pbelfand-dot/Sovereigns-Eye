@@ -199,6 +199,10 @@ func _plan_home() -> void:
 
 
 func _plan_work(style: String) -> void:
+	var site := TerritorySystem.builder_site(world.state, c)
+	if site:
+		_plan_build(site)
+		return
 	var wp := world.state.get_building(c.work_building_id)
 	var occ := c.occupation()
 	var text := str(occ.get("activity", "Working"))
@@ -265,12 +269,27 @@ func _plan_work(style: String) -> void:
 				_stay(rng.randf_range(40, 90), "work", text, wp.position)
 			else:
 				_plan_play()
+		"oversee":
+			var sites := world.state.territory.sites if world.state.territory else []
+			if sites.is_empty():
+				_plan_work("estate")
+			else:
+				var s: ConstructionSite = sites[rng.randi_range(0, sites.size() - 1)]
+				_go(TerritorySystem.work_spot(s, 4 + rng.randi_range(0, 1)), "Off to inspect the works")
+				_stay(rng.randf_range(30, 60), "talk", "Overseeing the new %s" % TerritorySystem.display_name(s.building.type), s.building.position)
 		"play":
 			_plan_play()
 		"stroll":
 			_plan_stroll()
 		_:
 			_plan_home()
+
+
+## On a building crew: work at the site instead of the usual job.
+func _plan_build(site: ConstructionSite) -> void:
+	var spot := TerritorySystem.work_spot(site, site.builders.find(c.id))
+	_go(spot, "Off to the building site")
+	_stay(rng.randf_range(40, 90), "work", "Building the new %s" % TerritorySystem.display_name(site.building.type), site.building.position)
 
 
 func _plan_fields(wp: BuildingData, text: String) -> void:

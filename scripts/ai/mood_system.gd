@@ -54,6 +54,9 @@ static func happiness_factors(c: CharacterData, world: WorldState) -> Array[Dict
 		var residents := world.residents_of(c.home_building_id).size()
 		if residents > 7:
 			out.append({"label": "Crowded home", "value": -3.0})
+	if TerritorySystem.is_hungry(world):
+		var hunger := TerritorySystem.section("hunger")
+		out.append({"label": str(hunger.get("label", "Hungry")), "value": float(hunger.get("happiness", -20))})
 	return out
 
 

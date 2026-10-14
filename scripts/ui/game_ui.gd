@@ -16,6 +16,12 @@ var _speed_buttons: Array[Button] = []
 var _card: CharacterCard
 var _ledger: LedgerPanel
 var _court: CourtPanel
+var _build: BuildPanel
+var _stores_row: HBoxContainer
+var _stores_key := ""
+var _place_hint: PanelContainer
+var _place_title: Label
+var _place_reason: Label
 var _help: PanelContainer
 var _pause_overlay: Control
 var _pause_menu: PanelContainer
@@ -34,12 +40,17 @@ func setup(owner_world: VillageWorld) -> void:
 	_build_card()
 	_build_ledger()
 	_build_court()
+	_build_build_panel()
+	_build_stores_bar()
+	_build_place_hint()
 	_build_toasts()
 	_build_help()
 	_build_pause_menu()
 	world.selection_changed.connect(_on_selection_changed)
 	world.speed_changed.connect(_on_speed_changed)
 	world.day_passed.connect(func(_d: int) -> void: refresh())
+	world.territory_changed.connect(_on_territory_changed)
+	world.placing_changed.connect(_on_placing_changed)
 	_on_speed_changed(world.time_scale())
 	var p := world.state.player()
 	if p:
@@ -94,6 +105,9 @@ func _build_top_bar() -> void:
 	row.add_child(_house_label)
 	_appraised_label = UITheme.label("", 15, UITheme.TEXT_DIM)
 	row.add_child(_appraised_label)
+	var build_button := UITheme.button("Build", toggle_build)
+	build_button.tooltip_text = "Order new buildings, see the stores (B)"
+	row.add_child(build_button)
 	var court_button := UITheme.button("Court", toggle_court)
 	court_button.tooltip_text = "Your court (K)"
 	row.add_child(court_button)
@@ -125,6 +139,9 @@ func _process(_delta: float) -> void:
 	if world == null:
 		return
 	_layout_top_bar()
+	_update_stores_bar()
+	if _place_hint.visible:
+		_update_place_hint()
 
 
 ## Fills the top bar, dropping detail step by step (the "Appraised" count,
@@ -209,7 +226,7 @@ func _build_ledger() -> void:
 	_ledger.anchor_bottom = 1.0
 	_ledger.offset_left = 12
 	_ledger.offset_right = 12 + 540
-	_ledger.offset_top = 60
+	_ledger.offset_top = 96
 	_ledger.offset_bottom = -12
 	_ledger.visible = false
 	_root.add_child(_ledger)
@@ -226,7 +243,7 @@ func _build_court() -> void:
 	_court.anchor_bottom = 1.0
 	_court.offset_left = 12
 	_court.offset_right = 12 + 540
-	_court.offset_top = 60
+	_court.offset_top = 96
 	_court.offset_bottom = -12
 	_court.visible = false
 	_root.add_child(_court)
@@ -240,6 +257,7 @@ func toggle_ledger() -> void:
 	if _ledger.visible:
 		_help.visible = false
 		_court.visible = false
+		_build.visible = false
 		_ledger.refresh()
 
 
@@ -249,7 +267,23 @@ func toggle_court() -> void:
 	if _court.visible:
 		_help.visible = false
 		_ledger.visible = false
+		_build.visible = false
 		_court.refresh()
+
+
+func toggle_build() -> void:
+	_build.visible = not _build.visible
+	Audio.play("panel_open" if _build.visible else "panel_close")
+	if _build.visible:
+		world.cancel_placing()
+		_help.visible = false
+		_ledger.visible = false
+		_court.visible = false
+		_build.refresh()
+
+
+func is_build_open() -> bool:
+	return _build != null and _build.visible
 
 
 func is_court_open() -> bool:
@@ -274,6 +308,133 @@ func refresh() -> void:
 		_ledger.refresh()
 	if _court.visible:
 		_court.refresh()
+	if _build.visible:
+		_build.refresh()
+
+
+# --- Building (Phase 3) -------------------------------------------------------------------
+
+func _build_build_panel() -> void:
+	_build = BuildPanel.new()
+	_build.world = world
+	_build.anchor_left = 0.0
+	_build.anchor_right = 0.0
+	_build.anchor_top = 0.0
+	_build.anchor_bottom = 1.0
+	_build.offset_left = 12
+	_build.offset_right = 12 + 540
+	_build.offset_top = 96
+	_build.offset_bottom = -12
+	_build.visible = false
+	_root.add_child(_build)
+	_build.character_chosen.connect(func(id: int) -> void: world.select_character(id, true))
+	_build.close_requested.connect(toggle_build)
+
+
+## Food, wood and stone with their daily change, under the top bar.
+func _build_stores_bar() -> void:
+	var bar := PanelContainer.new()
+	bar.add_theme_stylebox_override("panel", UITheme.box(Color("#1c1510d8"), UITheme.GOLD_DIM, 1, 6, 6))
+	bar.anchor_left = 0.5
+	bar.anchor_right = 0.5
+	bar.offset_top = 54
+	bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	bar.mouse_filter = Control.MOUSE_FILTER_PASS
+	bar.tooltip_text = "Village stores (amount, change per day). B opens the Build panel."
+	_root.add_child(bar)
+	_stores_row = HBoxContainer.new()
+	_stores_row.add_theme_constant_override("separation", 18)
+	bar.add_child(_stores_row)
+	for r: String in TerritorySystem.RESOURCES:
+		var l := UITheme.label("", 15, Color(str(TerritorySystem.resource_def(r).get("color", "#ffffff"))))
+		l.name = r
+		l.mouse_filter = Control.MOUSE_FILTER_PASS
+		_stores_row.add_child(l)
+	var sites := UITheme.label("", 15, UITheme.ACCENT)
+	sites.name = "sites"
+	_stores_row.add_child(sites)
+
+
+func _update_stores_bar() -> void:
+	var st := world.state
+	if st.territory == null:
+		return
+	var net := TerritorySystem.net_change(st) if Engine.get_process_frames() % 30 == 0 or _stores_key.is_empty() else {}
+	var key := ""
+	for r: String in TerritorySystem.RESOURCES:
+		key += "%d|" % floori(st.territory.amount(r))
+	key += "%d|%d" % [st.territory.sites.size(), int(TerritorySystem.is_hungry(st))]
+	if net.is_empty() and key == _stores_key:
+		return
+	if net.is_empty():
+		net = TerritorySystem.net_change(st)
+	_stores_key = key
+	for r: String in TerritorySystem.RESOURCES:
+		var l: Label = _stores_row.get_node(r)
+		var cap := TerritorySystem.capacity(st, r)
+		var amount := st.territory.amount(r)
+		l.text = "%s %d (%+d)" % [TerritorySystem.resource_name(r), floori(amount), roundi(float(net[r]))]
+		l.tooltip_text = "%s: %d of %d stored, %+.1f per day" % [TerritorySystem.resource_name(r), floori(amount), roundi(cap), float(net[r])]
+		var hungry := r == "food" and TerritorySystem.is_hungry(st)
+		l.add_theme_color_override("font_color", UITheme.BAD if hungry else Color(str(TerritorySystem.resource_def(r).get("color", "#ffffff"))))
+	var sites: Label = _stores_row.get_node("sites")
+	sites.visible = not st.territory.sites.is_empty()
+	sites.text = "Building %d" % st.territory.sites.size()
+
+
+func _build_place_hint() -> void:
+	_place_hint = PanelContainer.new()
+	_place_hint.add_theme_stylebox_override("panel", UITheme.box(Color("#1c1510ee"), UITheme.GOLD, 2, 8, 10))
+	_place_hint.anchor_left = 0.5
+	_place_hint.anchor_right = 0.5
+	_place_hint.anchor_top = 1.0
+	_place_hint.anchor_bottom = 1.0
+	_place_hint.offset_bottom = -16
+	_place_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_place_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_place_hint.visible = false
+	_root.add_child(_place_hint)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	_place_hint.add_child(col)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 12)
+	col.add_child(top)
+	_place_title = UITheme.label("", 17, UITheme.ACCENT, true)
+	top.add_child(_place_title)
+	top.add_child(UITheme.button("Turn (T)", func() -> void: world.turn_ghost()))
+	top.add_child(UITheme.button("Cancel (Esc)", func() -> void: world.cancel_placing()))
+	_place_reason = UITheme.label("", 15)
+	col.add_child(_place_reason)
+	col.add_child(UITheme.label("Click beside a road to place  -  Shift+click to place another", 13, UITheme.TEXT_DIM))
+
+
+func _on_placing_changed(type: String) -> void:
+	_place_hint.visible = not type.is_empty()
+	if type.is_empty():
+		return
+	_build.visible = false
+	var cost: Dictionary = TerritorySystem.buildable_def(type).get("cost", {})
+	_place_title.text = "Placing: %s  (%s)" % [TerritorySystem.display_name(type), TerritorySystem.cost_text(cost)]
+
+
+func _update_place_hint() -> void:
+	var reason := world.placement_reason()
+	if reason.is_empty():
+		var trees := world.placement_trees()
+		_place_reason.text = "Good spot." + (" %d trees will be felled for wood." % trees if trees > 0 else "")
+		_place_reason.add_theme_color_override("font_color", UITheme.GOOD)
+	else:
+		_place_reason.text = reason
+		_place_reason.add_theme_color_override("font_color", UITheme.BAD)
+
+
+func _on_territory_changed() -> void:
+	_stores_key = ""
+	if _build.visible:
+		_build.refresh()
+	if _card.visible:
+		_card.refresh()
 
 
 # --- Toasts & help ------------------------------------------------------------------------
@@ -285,8 +446,8 @@ func _build_toasts() -> void:
 	toasts.anchor_right = 0.5
 	toasts.offset_left = -520
 	toasts.offset_right = 140
-	toasts.offset_top = 62
-	toasts.offset_bottom = 300
+	toasts.offset_top = 96
+	toasts.offset_bottom = 340
 	_root.add_child(toasts)
 
 
@@ -306,7 +467,7 @@ func _build_help() -> void:
 		"Drag (left/right mouse) or WASD - move camera\n" +
 		"Wheel / pinch / R,F - zoom    Q,E or middle-drag - rotate\n" +
 		"Space - pause    1-4 - game speed    C - follow selected\n" +
-		"K - your court    L - village ledger    F5 / F9 - quicksave / quickload\n" +
+		"B - build    K - your court    L - village ledger    F5 / F9 - quicksave / quickload\n" +
 		"Esc - close / menu    H - hide this help", 14, UITheme.TEXT_DIM)
 	_help.add_child(text)
 	_root.add_child(_help)
@@ -399,6 +560,15 @@ func _on_slot_chosen(slot: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if world.is_placing() and not _pause_overlay.visible:
+		if event.is_action_pressed("menu"):
+			world.cancel_placing()
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("turn_building"):
+			world.turn_ghost()
+			get_viewport().set_input_as_handled()
+			return
 	if event.is_action_pressed("menu"):
 		if _pause_overlay.visible:
 			if _slots.visible:
@@ -411,8 +581,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			toggle_ledger()
 		elif _court.visible:
 			toggle_court()
+		elif _build.visible:
+			toggle_build()
 		else:
 			open_pause_menu()
+	elif event.is_action_pressed("toggle_build"):
+		toggle_build()
 	elif event.is_action_pressed("toggle_ledger"):
 		toggle_ledger()
 	elif event.is_action_pressed("toggle_court"):

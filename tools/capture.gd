@@ -3,19 +3,21 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
 ## which is much faster on software renderers. "art" only renders the
 ## village overview, the square, a meadow close-up and a forest edge (for
-## art changes).
+## art changes). "build" renders Phase 3: building sites at several stages,
+## a finished farmstead, the Build panel and a placement preview.
 
 var out_dir := "user://captures"
 var seed_text := "12345"
 var court_only := false
 var art_only := false
 var menus_only := false
+var build_only := false
 
 
 func _ready() -> void:
@@ -27,6 +29,7 @@ func _ready() -> void:
 	court_only = args.has("court")
 	art_only = args.has("art")
 	menus_only = args.has("menus")
+	build_only = args.has("build")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -49,6 +52,10 @@ func _wait(n: int) -> void:
 func _run() -> void:
 	if menus_only:
 		await _menu_shots()
+		get_tree().quit()
+		return
+	if build_only:
+		await _build_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -237,3 +244,90 @@ func _menu_shots() -> void:
 	await _wait(5)
 	await _shot("17_pause_sound.png")
 
+
+
+## Phase 3: orders a Stonecutter's Yard, a Woodcutters' Lodge, a Granary and a
+## Farmstead beside the roads, shows them at different stages, finishes the
+## farm, then the Build panel and a placement preview.
+func _build_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 4.0 * 60.0  # late morning: crews at work
+	var st := Game.state
+	st.house.gold = 2000
+	for r: String in TerritorySystem.RESOURCES:
+		st.territory.stock[r] = 600.0
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	var plan := [["quarry", 0.05], ["workshop", 0.4], ["storehouse", 0.75], ["farmhouse", 1.0]]
+	var sites: Array[ConstructionSite] = []
+	for entry: Array in plan:
+		var spot := TerritorySystem.find_spot(st, str(entry[0]), 18.0, 70.0)
+		if spot.is_empty():
+			print("no spot for ", entry[0])
+			continue
+		var res := world.place_building(str(entry[0]), spot["pos"], spot["rot"])
+		if res["ok"]:
+			var site: ConstructionSite = res["site"]
+			site.work_done = site.work_needed * float(entry[1]) - 0.001
+			sites.append(site)
+	world.builder.update_sites()
+	# Let the crews walk over to their sites.
+	world.set_speed(1)
+	for i in 240:
+		world._process(0.1)
+	world.set_speed(0)
+	world.paused = true
+	for site in sites.duplicate():
+		if not st.territory.sites.has(site):
+			sites.erase(site)
+		elif site.progress() >= 0.99:
+			site.work_done = site.work_needed
+			world._finish_site(site)
+			sites.erase(site)
+	world.builder.update_sites()
+	await _wait(5)
+	var center := Vector3.ZERO
+	for site in sites:
+		center += site.building.position
+	if not sites.is_empty():
+		center /= sites.size()
+	world.camera_rig.set_yaw(0.4, true)
+	world.camera_rig.look_at_point(center, 95.0, true)
+	await _wait(20)
+	await _shot("20_build_overview.png")
+	for i in sites.size():
+		var b := sites[i].building
+		world.camera_rig.set_yaw(b.rotation + 0.6, true)
+		world.camera_rig.look_at_point(b.position, 24.0, true)
+		await _wait(20)
+		await _shot("21_site_%d_%s.png" % [roundi(sites[i].progress() * 100.0), b.type])
+	for id in st.territory.built:
+		var b := st.get_building(id)
+		if b and b.type == "farmhouse":
+			world.camera_rig.set_yaw(b.rotation + 0.7, true)
+			world.camera_rig.look_at_point(b.position, 42.0, true)
+			await _wait(20)
+			await _shot("22_new_farmstead.png")
+	world.camera_rig.set_yaw(0.4, true)
+	world.camera_rig.look_at_point(center, 70.0, true)
+	world.ui.toggle_build()
+	await _wait(10)
+	await _shot("23_build_panel.png")
+	world.ui.toggle_build()
+	# Placement preview: a valid spot, then a blocked one.
+	var spot := TerritorySystem.find_spot(st, "bakery", 20.0, 80.0)
+	if not spot.is_empty():
+		world.set_process(false)
+		world.start_placing("bakery")
+		world.preview_at(spot["pos"])
+		world.camera_rig.set_yaw(0.3, true)
+		world.camera_rig.look_at_point(spot["pos"], 30.0, true)
+		await _wait(20)
+		await _shot("24_place_ok.png")
+		var smithy := st.layout.buildings_of_type("smithy")[0]
+		world.preview_at(smithy.position)
+		world.camera_rig.look_at_point(smithy.position, 30.0, true)
+		await _wait(20)
+		await _shot("25_place_blocked.png")
+		world.cancel_placing()

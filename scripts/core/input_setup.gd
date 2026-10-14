@@ -18,6 +18,8 @@ const BINDINGS := {
 	"focus_selected": [KEY_C],
 	"toggle_ledger": [KEY_L],
 	"toggle_court": [KEY_K],
+	"toggle_build": [KEY_B],
+	"turn_building": [KEY_T],
 	"toggle_help": [KEY_H],
 	"toggle_pause": [KEY_SPACE],
 	"speed_1": [KEY_1],
