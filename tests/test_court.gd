@@ -77,6 +77,15 @@ func test_training_never_passes_potential() -> void:
 	check(float(c.training_progress.get("combat", 0.0)) < 1.0, "no unusable progress accumulates at the cap")
 
 
+func test_retainers_use_household_schedules() -> void:
+	var adult := CharacterData.new()
+	adult.age = 75
+	adult.retainer = true
+	check_eq(CourtSystem.schedule_for(adult), "noble", "adult retainers attend household work even if they were elders")
+	adult.age = 14
+	check_eq(CourtSystem.schedule_for(adult), "scion", "pages keep a lesson-and-training day")
+
+
 func test_unpaid_wages_and_low_loyalty_can_end_service() -> void:
 	var state := WorldGenerator.generate("court-wages")
 	var people := _adult_outsiders(state, 4)

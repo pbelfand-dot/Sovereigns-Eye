@@ -160,7 +160,7 @@ func refresh() -> void:
 		return
 	var c := character
 	var st := world.state
-	_name_label.text = c.display_name() + ("  (You)" if st.is_player(c) else "")
+	_name_label.text = c.display_name()
 	_sub_label.text = "%s  -  %s" % [CourtSystem.role_name(st, c) if st.house else c.occupation_name(), c.status_name()]
 	_age_label.text = "Age %d  -  %s" % [c.age, c.gender.capitalize()]
 	var fam := world.state.get_family(c.family_id)
@@ -303,6 +303,14 @@ func _build_court_recruit() -> void:
 		var decider := st.get_character(int(r["decider"]))
 		var who := decider.full_name() if decider and decider != c else "they"
 		_court_box.add_child(_wrap_label("At %d they would join as a page. %s decides." % [c.age, who.capitalize() if who == "they" else who], 14, UITheme.TEXT_DIM))
+	# Keep the primary action above the detailed odds so it is visible without
+	# scrolling on a 720p screen.
+	var b := UITheme.button("Offer a place in your household (%d gold)" % int(r["cost"]), _on_recruit)
+	b.disabled = not r["ok"]
+	b.tooltip_text = str(r["reason"]) if not r["ok"] else "They may refuse. A refusal lowers their opinion a little and you must wait before asking again."
+	_court_box.add_child(b)
+	if not r["ok"]:
+		_court_box.add_child(_wrap_label(str(r["reason"]), 14, UITheme.BAD))
 	for f: Dictionary in factors:
 		var line := HBoxContainer.new()
 		var name_l := UITheme.label("   " + str(f["label"]), 14, UITheme.TEXT_DIM)
@@ -311,12 +319,6 @@ func _build_court_recruit() -> void:
 		var v := float(f["value"]) * 100.0
 		line.add_child(UITheme.label("%+d%%" % roundi(v), 14, UITheme.value_color(v)))
 		_court_box.add_child(line)
-	var b := UITheme.button("Offer a place in your household (%d gold)" % int(r["cost"]), _on_recruit)
-	b.disabled = not r["ok"]
-	b.tooltip_text = str(r["reason"]) if not r["ok"] else "They may refuse. A refusal lowers their opinion a little and you must wait before asking again."
-	_court_box.add_child(b)
-	if not r["ok"]:
-		_court_box.add_child(_wrap_label(str(r["reason"]), 14, UITheme.BAD))
 	_court_box.add_child(_wrap_label("Household: %d / %d retainers  -  Gold: %d" % [CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st), st.house.gold], 13, UITheme.TEXT_DIM))
 
 
@@ -324,11 +326,24 @@ func _build_court_retainer() -> void:
 	var c := character
 	var st := world.state
 	_section(_court_box, "Service")
-	var since := ""
+	_court_box.add_child(_wrap_label("%s of %s  -  wage %d gold/day" % [CourtSystem.role_name(st, c), CourtSystem.house_name(st), CourtSystem.wage(c)], 15))
 	if c.joined_day >= 0:
-		since = "  -  sworn %s" % Calendar.format_date(c.joined_day * Calendar.MINUTES_PER_DAY)
-	_court_box.add_child(_wrap_label("%s of %s  -  wage %d gold/day%s" % [CourtSystem.role_name(st, c), CourtSystem.house_name(st), CourtSystem.wage(c), since], 15))
+		_court_box.add_child(_wrap_label("Sworn %s" % Calendar.format_date(c.joined_day * Calendar.MINUTES_PER_DAY), 13, UITheme.TEXT_DIM))
 	_court_bar(c.loyalty, 0.0, 100.0, "Loyalty %d  %s" % [roundi(c.loyalty), MoodSystem.loyalty_label(c.loyalty)], Color("#6fa8e6"))
+
+	# Consequential actions stay visible before the office and training detail.
+	var actions := HFlowContainer.new()
+	actions.add_theme_constant_override("h_separation", 8)
+	if not c.is_knight():
+		var k := CourtSystem.can_knight(st, c)
+		var kb := UITheme.button("Knight (%d gold)" % int(CourtSystem.section("knighthood").get("cost", 60)), _on_knight)
+		kb.disabled = not k["ok"]
+		kb.tooltip_text = str(k["reason"]) if not k["ok"] else "Raise them to knighthood: a big boost to loyalty, and renown for your house."
+		actions.add_child(kb)
+	var db := UITheme.button("Click again to dismiss" if _dismiss_armed else "Dismiss", _on_dismiss)
+	db.tooltip_text = "Release them from your service. They won't be pleased."
+	actions.add_child(db)
+	_court_box.add_child(actions)
 
 	# Office
 	var office_row := HBoxContainer.new()
@@ -367,21 +382,6 @@ func _build_court_retainer() -> void:
 	focus_row.add_child(_focus_picker(c))
 	_court_box.add_child(focus_row)
 	_training_lines(c)
-
-	# Knighthood & dismissal
-	var actions := HFlowContainer.new()
-	actions.add_theme_constant_override("h_separation", 8)
-	if not c.is_knight():
-		var k := CourtSystem.can_knight(st, c)
-		var kb := UITheme.button("Knight them (%d gold)" % int(CourtSystem.section("knighthood").get("cost", 60)), _on_knight)
-		kb.disabled = not k["ok"]
-		kb.tooltip_text = str(k["reason"]) if not k["ok"] else "Raise them to knighthood: a big boost to loyalty, and renown for your house."
-		actions.add_child(kb)
-	var db := UITheme.button("Click again to dismiss" if _dismiss_armed else "Dismiss", _on_dismiss)
-	db.tooltip_text = "Release them from your service. They won't be pleased."
-	actions.add_child(db)
-	_court_box.add_child(actions)
-
 
 func _build_court_player() -> void:
 	var c := character
@@ -431,10 +431,15 @@ func _training_lines(c: CharacterData) -> void:
 			text += "  (mentored by %s)" % (m["mentor"] as CharacterData).first_name
 		var name_l := UITheme.label(text, 14, UITheme.TEXT_DIM)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_l.clip_text = true
+		name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		line.add_child(name_l)
 		var rate := float(rates[a])
 		var rate_text := "+%.2f / day" % rate if c.get_current(a) < c.get_potential(a) else "at potential"
-		line.add_child(UITheme.label(rate_text, 14, UITheme.GOOD if rate > 0.0 else UITheme.TEXT_DIM))
+		var rate_l := UITheme.label(rate_text, 14, UITheme.GOOD if rate > 0.0 else UITheme.TEXT_DIM)
+		rate_l.custom_minimum_size.x = 92
+		rate_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		line.add_child(rate_l)
 		_court_box.add_child(line)
 
 

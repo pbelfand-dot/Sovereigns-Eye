@@ -4,7 +4,7 @@
   "house": {
     "start_gold": 150,
     "start_renown": 10,
-    "base_income": 12,
+    "base_income": 14,
     "_income": "Gold per day from rents and dues before the Steward's bonus.",
     "retainer_cap_base": 4,
     "renown_per_extra_retainer": 15

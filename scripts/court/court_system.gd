@@ -476,10 +476,11 @@ static func work_text(state: WorldState, c: CharacterData) -> String:
 	return "Training %s for %s" % [attr_name(focus_of(c)), house_name(state)]
 
 
-## Schedule override: pages keep a scion's day of lessons.
+## Schedule override: pages keep a scion's day of lessons; adult retainers use
+## the noble household routine so even former children or elders attend work.
 static func schedule_for(c: CharacterData) -> String:
-	if c.retainer and c.age < 16:
-		return "scion"
+	if c.retainer:
+		return "scion" if c.age < 16 else "noble"
 	return ""
 
 

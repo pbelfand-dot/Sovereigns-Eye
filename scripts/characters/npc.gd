@@ -22,6 +22,7 @@ var _face_target: Variant = null
 var hovered := false
 var selected := false
 var _crest: MeshInstance3D
+var _is_player := false
 
 
 func setup(c: CharacterData) -> void:
@@ -70,15 +71,20 @@ func _build_markers() -> void:
 
 ## A small gold crest floating over the player's own character.
 func set_player_marker(on: bool) -> void:
+	_is_player = on
 	if on and _crest == null:
 		_crest = MeshInstance3D.new()
-		var prism := PrismMesh.new()
-		prism.size = Vector3(0.28, 0.32, 0.08)
-		_crest.mesh = prism
-		_crest.rotation.z = PI
+		# A horizontal gold hexagon reads clearly from the strategy camera. The
+		# old vertical prism was almost invisible when viewed edge-on.
+		var medallion := CylinderMesh.new()
+		medallion.top_radius = 0.18
+		medallion.bottom_radius = 0.18
+		medallion.height = 0.055
+		medallion.radial_segments = 6
+		_crest.mesh = medallion
 		_crest.material_override = Mats.emissive(Color("#f0c24a"), 1.4)
 		_crest.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_crest.position.y = model.head_height() + 0.75 * model.body_height
+		_crest.position.y = model.head_height() + 0.28 * model.body_height
 		add_child(_crest)
 	if _crest:
 		_crest.visible = on
@@ -93,7 +99,9 @@ func refresh_markers() -> void:
 	_label.visible = hovered or selected
 	if _label.visible:
 		var role := character.occupation_name()
-		if character.retainer or not character.office.is_empty():
+		if _is_player:
+			role = "Heir (You)"
+		elif character.retainer or not character.office.is_empty():
 			role = CourtSystem.office_name(character.office) if not character.office.is_empty() else ("Page" if character.age < 16 else "Retainer")
 		_label.text = "%s\n%s" % [character.display_name(), role]
 

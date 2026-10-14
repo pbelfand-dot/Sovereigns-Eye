@@ -59,13 +59,13 @@ func _build_top_bar() -> void:
 	bar.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(bar)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
+	row.add_theme_constant_override("separation", 8)
 	bar.add_child(row)
 
-	_village_label = UITheme.label(world.state.village_name, 20, UITheme.ACCENT, true)
+	_village_label = UITheme.label(world.state.village_name, 18, UITheme.ACCENT, true)
 	row.add_child(_village_label)
 	_clock_label = UITheme.label("", 16)
-	_clock_label.custom_minimum_size.x = 240
+	_clock_label.custom_minimum_size.x = 205
 	row.add_child(_clock_label)
 
 	var spacer := Control.new()
@@ -91,10 +91,18 @@ func _build_top_bar() -> void:
 	row.add_child(_house_label)
 	_appraised_label = UITheme.label("", 15, UITheme.TEXT_DIM)
 	row.add_child(_appraised_label)
-	row.add_child(UITheme.button("Court (K)", toggle_court))
-	row.add_child(UITheme.button("Ledger (L)", toggle_ledger))
-	row.add_child(UITheme.button("Save (F5)", func() -> void: Game.save_game("quicksave")))
-	row.add_child(UITheme.button("Menu (Esc)", open_pause_menu))
+	var court_button := UITheme.button("Court", toggle_court)
+	court_button.tooltip_text = "Your court (K)"
+	row.add_child(court_button)
+	var ledger_button := UITheme.button("Ledger", toggle_ledger)
+	ledger_button.tooltip_text = "Village ledger (L)"
+	row.add_child(ledger_button)
+	var save_button := UITheme.button("Save", func() -> void: Game.save_game("quicksave"))
+	save_button.tooltip_text = "Quicksave (F5)"
+	row.add_child(save_button)
+	var menu_button := UITheme.button("Menu", open_pause_menu)
+	menu_button.tooltip_text = "Menu (Esc)"
+	row.add_child(menu_button)
 
 
 func _on_speed_button(index: int) -> void:
@@ -113,12 +121,15 @@ func _on_speed_changed(_scale: float) -> void:
 func _process(_delta: float) -> void:
 	if world == null:
 		return
-	_clock_label.text = Calendar.format_full(world.state.whole_minutes())
-	_appraised_label.text = "Appraised %d/%d" % [world.appraised_count(), world.state.characters.size()]
+	var minutes := world.state.whole_minutes()
+	var compact := get_viewport_rect().size.x < 1450.0
+	_clock_label.text = "%s %d, Y%d  %s" % [Calendar.season_name(minutes), Calendar.day_of_season(minutes), Calendar.year(minutes), Calendar.format_time(minutes)] if compact else Calendar.format_full(minutes)
+	_appraised_label.visible = not compact
+	_appraised_label.text = "Seen %d/%d" % [world.appraised_count(), world.state.characters.size()]
 	var st := world.state
 	if st.house:
 		var net := CourtSystem.daily_income(st) - CourtSystem.daily_wages(st)
-		_house_label.text = "%d gold (%+d)   Renown %d   Household %d/%d" % [st.house.gold, net, st.house.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)]
+		_house_label.text = "%dG (%+d)  R%d  %d/%d" % [st.house.gold, net, st.house.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)] if compact else "%d gold (%+d)   Renown %d   Household %d/%d" % [st.house.gold, net, st.house.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)]
 		_house_label.add_theme_color_override("font_color", UITheme.BAD if st.house.in_debt else UITheme.ACCENT)
 
 

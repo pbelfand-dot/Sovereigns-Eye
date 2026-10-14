@@ -70,7 +70,7 @@ func refresh() -> void:
 		row.add_child(name_l)
 		if holder:
 			var a := str(o.get("primary", ""))
-			var b := _person_button(holder, "%s  -  %s %d (%s)" % [holder.display_name(), CourtSystem.attr_name(a), holder.get_current(a), Appraisal.rank_id(holder.get_current(a))])
+			var b := _person_button(holder, "%s  -  %s now %d (%s)" % [holder.display_name(), CourtSystem.attr_name(a), holder.get_current(a), Appraisal.rank_id(holder.get_current(a))])
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(b)
 		else:
@@ -78,7 +78,7 @@ func refresh() -> void:
 			v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(v)
 		_body.add_child(row)
-		_body.add_child(_wrap("      " + _office_effect(st, o, holder), 13, UITheme.TEXT_DIM))
+		_body.add_child(_wrap("Effect: " + _office_effect(st, o, holder), 13, UITheme.TEXT_DIM))
 
 	_heading("Household")
 	var retainers := st.retainers()
@@ -89,7 +89,7 @@ func refresh() -> void:
 		var focus := CourtSystem.focus_of(c)
 		var cur := c.get_current(focus)
 		var pot := c.get_potential(focus)
-		var text := "%s, %d  -  %s  -  %s %d/%d (%s)  -  loyalty %d" % [
+		var text := "%s, %d  -  %s  -  %s %d/%d (%s potential)  -  loyalty %d" % [
 			c.display_name(), c.age, CourtSystem.role_name(st, c), CourtSystem.attr_name(focus), cur, pot, Appraisal.rank_id(pot), roundi(c.loyalty)]
 		var b := _person_button(c, text)
 		if c.loyalty < float(CourtSystem.section("loyalty").get("warning_below", 30)):
