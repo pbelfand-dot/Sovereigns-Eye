@@ -33,6 +33,11 @@ COLLECTIONS = {
         "license": "environments/quaternius-medieval-village-standard/LICENSE.txt",
         "preview_root": "environments/quaternius-medieval-village-standard/previews",
     },
+    "quaternius-stylized-nature-standard": {
+        "source": "https://quaternius.com/packs/stylizednaturemegakit.html",
+        "license": "environments/quaternius-stylized-nature-standard/LICENSE.txt",
+        "preview_root": "environments/quaternius-stylized-nature-standard/previews",
+    },
     "option-01-kaykit-adventurers": {
         "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
         "license": "alternatives/option-01-kaykit-adventurers/LICENSE.txt",
@@ -158,6 +163,14 @@ def medieval_village_category(stem: str) -> str:
     return "architecture"
 
 
+def stylized_nature_category(stem: str) -> str:
+    if stem.startswith(("CommonTree_", "DeadTree_", "Pine_", "TwistedTree_")):
+        return "trees"
+    if stem.startswith(("Pebble_", "RockPath_", "Rock_")):
+        return "rocks-paths"
+    return "plants-ground-cover"
+
+
 def collection_for(path: Path) -> tuple[str, str]:
     relative = path.relative_to(ASSET_ROOT)
     if relative.parts[0] == "alternatives" and relative.parts[2] == "models":
@@ -185,6 +198,13 @@ def collection_for(path: Path) -> tuple[str, str]:
         "quaternius-medieval-village-standard",
     ):
         return "quaternius-medieval-village-standard", medieval_village_category(
+            path.stem
+        )
+    if relative.parts[:2] == (
+        "environments",
+        "quaternius-stylized-nature-standard",
+    ):
+        return "quaternius-stylized-nature-standard", stylized_nature_category(
             path.stem
         )
     raise ValueError(f"unrecognized asset location: {relative}")

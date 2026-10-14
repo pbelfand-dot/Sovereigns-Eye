@@ -20,6 +20,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `environments/fantasy-town-kit/terrain/` | Roads, rocks, trees, and hedges | 21 |
 | `environments/fantasy-town-kit/water/` | Modular fountain parts | 10 |
 | `environments/quaternius-medieval-village-standard/` | Textured modular village architecture and props | 176 |
+| `environments/quaternius-stylized-nature-standard/` | Trees, plants, grass, flowers, rocks, and stone path pieces | 68 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
 | `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |
@@ -33,7 +34,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,242 glTF 2.0 model files** (1,042 GLB + 200 JSON glTF).
+Total: **1,310 glTF 2.0 model files** (1,042 GLB + 268 JSON glTF).
 
 The original blocky set and three Kenney alternatives remain available for comparison,
 but the five KayKit collections in [`alternatives/`](alternatives/) are the recommended
@@ -49,6 +50,9 @@ Both matching Universal Animation Library Standard editions are in
 [`animations/`](animations/), including in-place and root-motion exports.
 The matching environment direction is documented in
 [`research/ARCHITECTURE_SHORTLIST.md`](research/ARCHITECTURE_SHORTLIST.md).
+The free Stylized Nature Standard collection in
+[`environments/quaternius-stylized-nature-standard/`](environments/quaternius-stylized-nature-standard/)
+adds 68 matching trees, plants, rocks, and path pieces.
 
 ## Finding the right model
 
