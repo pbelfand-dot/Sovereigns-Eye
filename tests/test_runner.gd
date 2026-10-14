@@ -1,0 +1,48 @@
+extends Node
+## Headless test runner.
+##
+##   godot --headless --path . res://tests/test_runner.tscn
+##
+## Exits with code 0 when every test passes, 1 otherwise (CI friendly).
+## See tools/run_tests.sh.
+
+const SUITES := [
+	"res://tests/test_appraisal.gd",
+	"res://tests/test_generation.gd",
+	"res://tests/test_save_load.gd",
+	"res://tests/test_world_smoke.gd",
+]
+
+
+func _ready() -> void:
+	# Defer so the runner is fully inside the tree before suites add children.
+	_run.call_deferred()
+
+
+func _run() -> void:
+	var total := 0
+	var failed: Array[String] = []
+	var started := Time.get_ticks_msec()
+	for path in SUITES:
+		var script: GDScript = load(path)
+		if script == null:
+			failed.append("%s: could not load" % path)
+			continue
+		var suite: TestCase = script.new()
+		suite.runner = self
+		for m in suite.get_method_list():
+			var method_name: String = m["name"]
+			if not method_name.begins_with("test_"):
+				continue
+			total += 1
+			suite.current_test = "%s::%s" % [path.get_file().get_basename(), method_name]
+			var before := suite.failures.size()
+			await suite.call(method_name)
+			var status := "ok" if suite.failures.size() == before else "FAIL"
+			print("  [%s] %s" % [status, suite.current_test])
+		failed.append_array(suite.failures)
+	print("")
+	for f in failed:
+		printerr("FAIL  " + f)
+	print("%d tests, %d failure(s) in %.1fs" % [total, failed.size(), (Time.get_ticks_msec() - started) / 1000.0])
+	get_tree().quit(1 if failed.size() > 0 else 0)

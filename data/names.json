@@ -1,0 +1,36 @@
+{
+  "male": [
+    "Aldric", "Alaric", "Ambrose", "Anselm", "Arnaud", "Baldwin", "Bartholomew", "Bertram", "Benedict", "Brannoc",
+    "Cedric", "Conrad", "Cuthbert", "Darian", "Dunstan", "Edmund", "Edric", "Elias", "Emeric", "Everard",
+    "Faramond", "Gareth", "Gawain", "Geoffrey", "Gerard", "Gilbert", "Godric", "Gregor", "Hamon", "Harold",
+    "Hugh", "Ivo", "Jasper", "Jocelin", "Kenric", "Lambert", "Leofric", "Lionel", "Lucan", "Matthias",
+    "Merrick", "Milo", "Nicodemus", "Odo", "Osric", "Oswin", "Percival", "Piers", "Quentin", "Ralf",
+    "Randolf", "Reginald", "Robin", "Roderick", "Roland", "Rowan", "Simon", "Stellan", "Tancred", "Theobald",
+    "Thorne", "Tobias", "Tristan", "Ulric", "Valen", "Walter", "Warin", "Wendel", "Wystan", "Yorick"
+  ],
+  "female": [
+    "Adela", "Adelina", "Agnes", "Alys", "Amice", "Annora", "Aveline", "Beatrix", "Benedetta", "Brielle",
+    "Cecily", "Clarice", "Constance", "Cressida", "Dameris", "Edith", "Eleanor", "Elfrida", "Elowen", "Emma",
+    "Ermengard", "Estrid", "Felice", "Gisela", "Godiva", "Greta", "Gwendolyn", "Hawise", "Helena", "Hilde",
+    "Ida", "Imelda", "Isolde", "Joan", "Juliana", "Katla", "Leofrun", "Linnea", "Lora", "Mabel",
+    "Margery", "Marian", "Matilda", "Maude", "Melisande", "Mirela", "Muriel", "Nesta", "Odette", "Petronel",
+    "Philippa", "Rosamund", "Rowena", "Sabine", "Seren", "Sibyl", "Sigrid", "Tamsin", "Theda", "Ursula",
+    "Wenna", "Wilda", "Winifred", "Ysolde", "Ysabel", "Edda", "Aldith", "Brenna", "Ottilie", "Verena"
+  ],
+  "common": [
+    "Ashby", "Baker", "Barrow", "Bowyer", "Brewer", "Brook", "Carter", "Chandler", "Cooper", "Croft",
+    "Dyer", "Fairfax", "Fenwick", "Fletcher", "Fowler", "Fuller", "Gardener", "Glover", "Hale", "Harrow",
+    "Hayward", "Hollis", "Hunt", "Kemp", "Lark", "Ledger", "Marsh", "Mason", "Meade", "Miller",
+    "Moss", "Netherby", "Oakes", "Page", "Parrish", "Penrose", "Pike", "Quill", "Reeve", "Rook",
+    "Rowe", "Sawyer", "Shepherd", "Slade", "Smith", "Sparrow", "Stone", "Tanner", "Thatcher", "Thorn",
+    "Tillery", "Turner", "Underhill", "Vance", "Wainwright", "Ward", "Weaver", "Webb", "Wick", "Wilde",
+    "Woodward", "Wren", "Yardley", "Bramble", "Coldwell", "Dunmore", "Elmsworth", "Greaves", "Hawthorne", "Linden"
+  ],
+  "noble_houses": [
+    "Valcourt", "Ravenmoor", "Ashcombe", "Draycott", "Montrell", "Vere", "Halloran", "Westmarch", "Corwen", "Aubrecht",
+    "Varenne", "Stormhold", "Lindqvist", "Belmont", "Faircloth", "Grimsworth", "Hartwell", "Lorimer", "Merriden", "Sauveterre"
+  ],
+  "village_prefixes": ["Ash", "Bram", "Wil", "Thorn", "Elder", "Oak", "Raven", "Mill", "Stone", "Fern", "Hollow", "Brack", "Wester", "Gold", "Marrow", "Swan", "Heath", "Alder"],
+  "village_suffixes": ["ford", "wick", "by", "dale", "stead", "holm", "bury", "mere", "ton", "brook", "field", "combe", "hollow", "moor"],
+  "tavern_names": ["The Gilded Goose", "The Crooked Lantern", "The Sleeping Stag", "The Red Hart", "The Plough & Barrel", "The Merry Miller", "The Copper Kettle", "The Wayward Ox"]
+}

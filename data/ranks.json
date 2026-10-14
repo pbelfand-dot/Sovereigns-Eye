@@ -1,0 +1,23 @@
+{
+  "_comment": "Provisional potential ranks. 'weight' is the base chance (percent) that a freshly generated attribute's POTENTIAL lands in this rank. 'affinity_exponent' controls how strongly background/inheritance affinities shift weight toward this rank (weight * affinity ^ exponent). Tune freely: nothing in code hard-codes these numbers.",
+  "ranks": [
+    { "id": "F",  "min": 0,   "max": 19,  "weight": 14.0, "affinity_exponent": -1.0, "color": "#8c8c8c", "title": "Untalented" },
+    { "id": "D",  "min": 20,  "max": 49,  "weight": 48.85, "affinity_exponent": 0.0,  "color": "#b08a5c", "title": "Ordinary" },
+    { "id": "C",  "min": 50,  "max": 64,  "weight": 20.5, "affinity_exponent": 0.5,  "color": "#6fae5f", "title": "Capable" },
+    { "id": "B",  "min": 65,  "max": 79,  "weight": 11.0, "affinity_exponent": 1.0,  "color": "#4f93d6", "title": "Skilled" },
+    { "id": "A",  "min": 80,  "max": 99,  "weight": 4.45, "affinity_exponent": 1.5,  "color": "#a46be0", "title": "Gifted" },
+    { "id": "S",  "min": 100, "max": 119, "weight": 0.9,  "affinity_exponent": 2.0,  "color": "#e8b23a", "title": "Exceptional" },
+    { "id": "S+", "min": 120, "max": 149, "weight": 0.25, "affinity_exponent": 2.5,  "color": "#f5832a", "title": "Prodigy" },
+    { "id": "SS", "min": 150, "max": 180, "weight": 0.05, "affinity_exponent": 3.0,  "color": "#f04a42", "title": "Legendary" }
+  ],
+  "notable_threshold": 80,
+  "exceptional_threshold": 100,
+  "inheritance": {
+    "_comment": "A parent whose potential in an attribute reaches 'min_potential' multiplies the child's affinity for that attribute by 'affinity'. The best qualifying parent wins. This raises odds; it never guarantees.",
+    "tiers": [
+      { "min_potential": 120, "affinity": 1.35 },
+      { "min_potential": 100, "affinity": 1.25 },
+      { "min_potential": 80,  "affinity": 1.12 }
+    ]
+  }
+}

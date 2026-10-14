@@ -1,0 +1,95 @@
+extends Node
+## Renders a set of screenshots for review (main menu, village overview,
+## character card tabs, ledger, night). Needs a real display/GPU (not
+## --headless).
+##
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir>
+
+var out_dir := "user://captures"
+var seed_text := "12345"
+
+
+func _ready() -> void:
+	var args := OS.get_cmdline_user_args()
+	if args.size() > 0:
+		seed_text = args[0]
+	if args.size() > 1:
+		out_dir = args[1]
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	_run.call_deferred()
+
+
+func _shot(file_name: String) -> void:
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	img.save_png(out_dir.path_join(file_name))
+	print("saved ", out_dir.path_join(file_name))
+
+
+func _wait(n: int) -> void:
+	for i in n:
+		await get_tree().process_frame
+
+
+func _run() -> void:
+	var menu: Control = load("res://scenes/main/main.tscn").instantiate()
+	add_child(menu)
+	await _wait(10)
+	await _shot("01_main_menu.png")
+	menu.queue_free()
+
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 2.5 * 60.0  # mid-morning
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.set_speed(3)
+	for i in 300:
+		world._process(0.1)
+	world.set_speed(0)
+	world.camera_rig.set_yaw(0.5, true)
+	world.camera_rig.look_at_point(Vector3(0, 0, -8), 105.0, true)
+	await _wait(20)
+	await _shot("02_village_overview.png")
+
+	world.camera_rig.set_yaw(-0.4, true)
+	world.camera_rig.look_at_point(Vector3(2, 0, 4), 34.0, true)
+	await _wait(20)
+	await _shot("03_town_square.png")
+
+	# Pick the most talented villager who is outdoors, and appraise them.
+	var best: NPC = null
+	for npc: NPC in world.npcs.values():
+		if npc.visible and (best == null or npc.character.best_potential() > best.character.best_potential()):
+			best = npc
+	if best:
+		world.paused = true
+		world.select_character(best.character.id, true)
+		world.camera_rig.look_at_point(best.global_position, 16.0, true)
+		await _wait(30)
+		await _shot("04_card_appraisal.png")
+		var tabs := world.ui._card._tabs
+		for t in range(1, 4):
+			tabs.current_tab = t
+			await _wait(8)
+			await _shot("0%d_card_tab_%d.png" % [4 + t, t])
+		tabs.current_tab = 0
+
+	for c in world.state.characters:
+		if Seeds.derive(1, str(c.id)) % 3 == 0:
+			c.appraised = true
+	world.deselect()
+	world.ui.toggle_ledger()
+	await _wait(10)
+	await _shot("08_ledger.png")
+	world.ui.toggle_ledger()
+
+	world.state.minutes += 12.0 * 60.0
+	world.camera_rig.look_at_point(Vector3(0, 0, 0), 60.0, true)
+	await _wait(20)
+	await _shot("09_night.png")
+
+	world.ui.open_pause_menu()
+	await _wait(5)
+	await _shot("10_pause_menu.png")
+	get_tree().quit()

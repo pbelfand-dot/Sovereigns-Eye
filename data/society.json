@@ -1,0 +1,27 @@
+{
+  "_comment": "Social statuses from lowest to highest. 'training' is how much of their POTENTIAL a typical adult of this status has actually developed in each attribute (0..1). It models opportunity: a farmer's child may have S+ Leadership potential but almost no chance to use it. Occupations can override individual attributes.",
+  "statuses": [
+    { "id": "peasant",  "name": "Peasant",  "tier": 0, "happiness": -4, "loyalty": 0,
+      "training": { "leadership": 0.22, "combat": 0.30, "intelligence": 0.26, "politics": 0.15, "administration": 0.20, "ambition": 0.80 } },
+    { "id": "commoner", "name": "Commoner", "tier": 1, "happiness": 0,  "loyalty": 0,
+      "training": { "leadership": 0.28, "combat": 0.32, "intelligence": 0.35, "politics": 0.22, "administration": 0.30, "ambition": 0.80 } },
+    { "id": "burgher",  "name": "Burgher",  "tier": 2, "happiness": 4,  "loyalty": 2,
+      "training": { "leadership": 0.35, "combat": 0.25, "intelligence": 0.50, "politics": 0.45, "administration": 0.60, "ambition": 0.85 } },
+    { "id": "clergy",   "name": "Clergy",   "tier": 2, "happiness": 4,  "loyalty": 4,
+      "training": { "leadership": 0.35, "combat": 0.15, "intelligence": 0.70, "politics": 0.50, "administration": 0.55, "ambition": 0.70 } },
+    { "id": "retainer", "name": "Retainer", "tier": 3, "happiness": 6,  "loyalty": 10,
+      "training": { "leadership": 0.50, "combat": 0.40, "intelligence": 0.55, "politics": 0.55, "administration": 0.70, "ambition": 0.85 } },
+    { "id": "knight",   "name": "Knight",   "tier": 4, "happiness": 8,  "loyalty": 12,
+      "training": { "leadership": 0.60, "combat": 0.80, "intelligence": 0.45, "politics": 0.40, "administration": 0.40, "ambition": 0.90 } },
+    { "id": "noble",    "name": "Noble",    "tier": 5, "happiness": 10, "loyalty": 20,
+      "training": { "leadership": 0.60, "combat": 0.50, "intelligence": 0.65, "politics": 0.65, "administration": 0.60, "ambition": 0.90 } },
+    { "id": "royal",    "name": "Royalty",  "tier": 6, "happiness": 12, "loyalty": 0,
+      "training": { "leadership": 0.70, "combat": 0.55, "intelligence": 0.70, "politics": 0.75, "administration": 0.65, "ambition": 0.95 } }
+  ],
+  "calendar": {
+    "start_year": 1187,
+    "days_per_season": 30,
+    "seasons": ["Spring", "Summer", "Autumn", "Winter"],
+    "start_hour": 7
+  }
+}
