@@ -88,6 +88,11 @@ COLLECTIONS = {
         "license": "animations/quaternius-universal-animation-library-2/LICENSE.txt",
         "preview_root": "animations/quaternius-universal-animation-library-2/setup-guides",
     },
+    "quaternius-modular-outfits-fantasy-standard": {
+        "source": "https://quaternius.com/packs/modularcharacteroutfitsfantasy.html",
+        "license": "characters/quaternius-modular-outfits-fantasy-standard/LICENSE.txt",
+        "preview_root": "characters/quaternius-modular-outfits-fantasy-standard/previews",
+    },
 }
 
 
@@ -164,6 +169,11 @@ def collection_for(path: Path) -> tuple[str, str]:
         return "quaternius-universal-base-standard", relative.parts[3]
     if relative.parts[0] == "animations":
         return relative.parts[1], "animation-library"
+    if relative.parts[:2] == (
+        "characters",
+        "quaternius-modular-outfits-fantasy-standard",
+    ):
+        return "quaternius-modular-outfits-fantasy-standard", relative.parts[3]
     if relative.parts[:2] == ("characters", "blocky"):
         return "blocky-characters", "characters"
     if relative.parts[:2] == ("environments", "castle-kit"):

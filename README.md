@@ -149,7 +149,7 @@ docs/ART_PLAN.md       Art direction, assets used, missing models, scaling plan
 
 ## 5. The 3D asset library (`3D/`)
 
-The [`3D/`](3D/) folder holds the game's model library: 1,218 cataloged glTF 2.0
+The [`3D/`](3D/) folder holds the game's model library: 1,242 cataloged glTF 2.0
 files with previews, licenses, checksums and validation records (all CC0).
 
 **Chosen direction: Quaternius.** A sleek, textured, stylized fantasy look:
@@ -159,6 +159,9 @@ files with previews, licenses, checksums and validation records (all CC0).
   rigged base characters, hairstyles, beard and eyebrows (a technical test set)
 - [`3D/animations/`](3D/animations/): both Quaternius Universal Animation Libraries,
   86 clips, in-place and root-motion versions
+- [`3D/characters/quaternius-modular-outfits-fantasy-standard/`](3D/characters/quaternius-modular-outfits-fantasy-standard/):
+  the free Peasant/Ranger sampler with four complete outfits, 20 modular pieces,
+  and alternate color maps
 - [`3D/research/SCALABILITY_ROADMAP.md`](3D/research/SCALABILITY_ROADMAP.md): what is
   ready from hamlet to kingdom scale, and what is still missing
 
@@ -179,11 +182,12 @@ See [`3D/README.md`](3D/README.md) for the full catalog and
 * **Villagers** are Quaternius base characters: body, hair, beard, skin and
   outfit colors come from each character's data, and in-place animation clips
   follow their activity and job ([`data/animations.json`](data/animations.json)).
-  Clothing is painted on until the free Quaternius outfit pack is added.
+  Clothing remains painted on at runtime while the newly added Quaternius outfit
+  sampler is integrated and tested against the shared skeleton.
 * **Card portraits** show an AI painting when one exists for that villager, and
   a live 3D portrait otherwise. Paint them locally with ComfyUI +
   FLUX.2 [klein]: see [`ai-art/README.md`](ai-art/README.md).
-* Missing art (trees, props, outfits, windmill, kingdom and harbor pieces) is
+* Missing art (trees, props, additional outfits, windmill, kingdom and harbor pieces) is
   listed with sources and prices in [`docs/ART_PLAN.md`](docs/ART_PLAN.md).
 
 ![Villagers](docs/screenshots/villagers.jpg)
@@ -216,7 +220,7 @@ as readable JSON.
 
 ## 8. Known limitations (Phase 2 first playable)
 
-* Art gaps: clothing is painted on (outfit pack pending); trees, crops, market
+* Art gaps: clothing is painted on (outfit sampler acquired, integration pending); trees, crops, market
   stalls, the well and benches are still simple shapes; hats and hand tools
   aren't shown in 3D yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
 * NPCs walk along roads and can clip through each other or props; there is

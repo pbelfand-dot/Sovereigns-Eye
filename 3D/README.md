@@ -29,10 +29,11 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `alternatives/option-04-kenney-platformer/` | Rejected comparison pack retained for reference | 153 |
 | `alternatives/option-05-kenney-mini-characters/` | Rejected comparison pack retained for reference | 26 |
 | `character-tests/quaternius-universal-base-standard/` | Sleek rigged base bodies plus modular hair test pieces | 10 |
+| `characters/quaternius-modular-outfits-fantasy-standard/` | Peasant/Ranger complete outfits and separate modular clothing pieces | 24 |
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,218 glTF 2.0 model files** (1,042 GLB + 176 JSON glTF).
+Total: **1,242 glTF 2.0 model files** (1,042 GLB + 200 JSON glTF).
 
 The original blocky set and three Kenney alternatives remain available for comparison,
 but the five KayKit collections in [`alternatives/`](alternatives/) are the recommended
@@ -41,6 +42,9 @@ preview gallery, source, license, and decision notes.
 
 The current sleek-character test is the free Quaternius Standard pack in
 [`character-tests/quaternius-universal-base-standard/`](character-tests/quaternius-universal-base-standard/).
+Its matching free outfit sampler is in
+[`characters/quaternius-modular-outfits-fantasy-standard/`](characters/quaternius-modular-outfits-fantasy-standard/),
+with four complete Peasant/Ranger outfits, 20 modular pieces, and alternate colors.
 Both matching Universal Animation Library Standard editions are in
 [`animations/`](animations/), including in-place and root-motion exports.
 The matching environment direction is documented in

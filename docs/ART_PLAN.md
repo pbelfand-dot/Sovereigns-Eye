@@ -4,8 +4,8 @@
 Kenney, the blocky set and the KayKit alternatives stay in `3D/` as **reference only**. They are hidden from Godot with `.gdignore` and are never shipped.
 
 This plan was written after inspecting:
-- `3D/ASSET_MANIFEST.csv`: 1,218 models; 191 of them Quaternius.
-- `3D/VALIDATION.json`: 1,218 / 1,218 valid, no missing dependencies.
+- `3D/ASSET_MANIFEST.csv`: 1,242 models; 215 of them Quaternius.
+- `3D/VALIDATION.json`: 1,242 / 1,242 valid, no missing dependencies.
 - The Quaternius folder READMEs.
 - `3D/research/SCALABILITY_ROADMAP.md`.
 
@@ -87,7 +87,7 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 
 | Stage | Readiness | What carries it | What it still needs |
 |---|---|---|---|
-| **Tiny town** (Phase 1, now) | **Playable** | Village kit prefabs, 2 bodies + hair, 84 clips | Real clothing, trees, props |
+| **Tiny town** (Phase 1, now) | **Playable** | Village kit prefabs, 2 bodies + hair, 84 clips; Peasant/Ranger outfit sampler acquired | Integrate real clothing; trees and props |
 | **Large village** | Mostly | Larger recipes (2–3 stories, overhangs, balconies); more variants per type | Markets, workshops, furniture, crops, vegetation, population variety |
 | **Town / city districts** | Partial | Dense multi-story blocks from the same modules. Prefabs + MultiMesh instancing for repeated houses | Civic landmarks, wealth tiers, signage, plazas; district streaming (§4) |
 | **Kingdom / capital** | Missing | Residential/commercial districts only | Palace/keep, monumental walls and gates, towers, barracks, temples, throne room, bridges |
@@ -103,7 +103,7 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 
 | Gap (what you see in game today) | Fix | Edition / price | Priority |
 |---|---|---|---|
-| **Clothing.** Painted-on clothes over athletic underwear bodies | **Modular Character Outfits – Fantasy**: 12 outfits from 62 modular parts, made for the Universal Base Characters | **Standard: free** (name your price); Source $20 | **1 — download the free Standard** |
+| **Clothing.** Painted-on clothes over athletic underwear bodies | **Modular Character Outfits – Fantasy**: free sampler now acquired (4 Peasant/Ranger outfits + 20 modular pieces); full Source has 12 outfits and 62 parts | **Standard: acquired**; Source $20 | **1 — integrate sampler; Source only if its extra variety is needed** |
 | **Body variety.** Only "Superhero" proportions, so children look like small adults | **Universal Base Characters Source**: 6 bodies (Superhero, Regular, Teen × male/female), 20 hairstyles, eye and skin color shaders | $19.99 (we have the free Standard) | 2 |
 | **Trees, bushes, rocks, grass, crops.** Still primitive placeholders | **Stylized Nature MegaKit**: 116 models, 7 leaf types | **Standard: free** (68 models); Pro $9.99; Source $14.99 | 3 — free Standard first |
 | **Market stalls, well, benches, barrels, forge, anvil, bread oven, tavern sign, hand tools.** Primitives or missing | **Fantasy Props MegaKit**: 211 props | **Standard: free** (94 models); Pro $9.99; Source $14.99 | 4 — free Standard first |
@@ -120,14 +120,15 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 - Every Source edition above: about **$85** one-time.
 - Alternatively, Quaternius's Patreon is $10/month for one Source key per month.
 
-**What I need from you.** Download the four **free Standard** packs below into `3D/`, keeping the same folder style as the existing kits:
+**Remaining free downloads.** The outfit sampler is now in `3D/characters/`. The other free Standard packs still to acquire are:
 
-1. Outfits.
-2. Nature.
-3. Props.
-4. Optionally, the Source bodies.
+1. Nature.
+2. Props.
+3. Optionally, the Source bodies.
 
-I'll then wire them in: outfits replace the painted clothes, nature replaces the primitive trees, props fill the square and workshops. My cloud workspace can't reach itch.io, so the downloads have to come from you.
+Next, wire in the acquired outfit sampler to replace painted clothes; nature will
+replace the primitive trees, and props will fill the square and workshops after those
+packs are acquired.
 
 ---
 
