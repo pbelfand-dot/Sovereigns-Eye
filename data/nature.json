@@ -1,0 +1,339 @@
+{
+  "_comment": "Trees, ground cover and rocks from the Quaternius Stylized Nature MegaKit (free Standard: 68 models), drawn with shaders/foliage.gdshader. Tree kinds come from the village layout (0 broadleaf, 1 conifer, 2 birch). Leaf materials listed in 'white_leaves' use the kit's white leaf maps and are tinted per tree from 'tints', so no two trees match. Scatter is placed deterministically from the terrain seed and kept off trodden ground (the meadow wear mask). Heights in meters; 'visible_to' is the camera distance at which a layer fades out.",
+  "root": "res://3D/environments/quaternius-stylized-nature-standard/",
+  "white_leaves": {
+    "Leaves_NormalTree": "textures/Leaves_NormalTree.png",
+    "Leaves_TwistedTree": "textures/Leaves_TwistedTree.png",
+    "Leaves_Pine": "textures/Leaf_Pine.png"
+  },
+  "_tinted": "Other materials that take the per-instance tint (near-white tints give grass subtle variety). Everything else keeps its texture colors.",
+  "tinted": [
+    "Grass"
+  ],
+  "_material_overrides": "Per source material foliage-shader values: vertex_ao (how much the baked vertex shading darkens), brightness.",
+  "material_overrides": {
+    "Grass": {
+      "vertex_ao": 0.35,
+      "brightness": 1.3
+    },
+    "Leaves_NormalTree": {
+      "brightness": 1.15
+    },
+    "Leaves_Pine": {
+      "brightness": 1.1
+    }
+  },
+  "_canopy_normals": "0..1: how much leaf cards in white_leaves materials light like a rounded crown (softer, brighter canopies from the strategy camera).",
+  "canopy_normals": 0.7,
+  "wind": {
+    "tree": {
+      "strength": 0.18,
+      "height": 8.0,
+      "speed": 0.9
+    },
+    "plant": {
+      "strength": 0.08,
+      "height": 1.4,
+      "speed": 1.7
+    },
+    "none": {
+      "strength": 0.0,
+      "height": 1.0,
+      "speed": 0.0
+    }
+  },
+  "trees": {
+    "0": {
+      "name": "broadleaf",
+      "models": [
+        "CommonTree_1",
+        "CommonTree_2",
+        "CommonTree_3",
+        "CommonTree_4",
+        "CommonTree_5"
+      ],
+      "scale": 0.75,
+      "tints": [
+        "#6a9a35",
+        "#5d8f2e",
+        "#78a83c",
+        "#55852c",
+        "#86b244"
+      ]
+    },
+    "1": {
+      "name": "conifer",
+      "models": [
+        "Pine_1",
+        "Pine_2",
+        "Pine_3",
+        "Pine_4",
+        "Pine_5"
+      ],
+      "scale": 0.8,
+      "tints": [
+        "#3e7034",
+        "#33652f",
+        "#4a7b3a",
+        "#2e5c2c"
+      ]
+    },
+    "2": {
+      "name": "birch",
+      "models": [
+        "CommonTree_3",
+        "CommonTree_4",
+        "CommonTree_5"
+      ],
+      "scale": 0.7,
+      "tints": [
+        "#9cc657",
+        "#a9cf63",
+        "#8fbd4c",
+        "#b5d36a"
+      ]
+    }
+  },
+  "_accents": "Out past accent_min_dist, a few broadleaves become a great twisted oak or a dead tree.",
+  "accents": [
+    {
+      "models": [
+        "TwistedTree_2",
+        "TwistedTree_3",
+        "TwistedTree_4",
+        "TwistedTree_5"
+      ],
+      "chance": 0.05,
+      "scale": 0.42,
+      "tints": [
+        "#5f8f2e",
+        "#6d9a36",
+        "#7aa23c"
+      ]
+    },
+    {
+      "models": [
+        "DeadTree_1",
+        "DeadTree_2",
+        "DeadTree_4"
+      ],
+      "chance": 0.03,
+      "scale": 0.5,
+      "tints": [
+        "#ffffff"
+      ]
+    }
+  ],
+  "accent_min_dist": 75.0,
+  "rocks": {
+    "models": [
+      "Rock_Medium_1",
+      "Rock_Medium_2",
+      "Rock_Medium_3"
+    ],
+    "scale": 0.55
+  },
+  "scatter": [
+    {
+      "name": "grass",
+      "models": [
+        "Grass_Common_Short",
+        "Grass_Common_Short",
+        "Grass_Wispy_Short",
+        "Grass_Common_Tall",
+        "Grass_Wispy_Tall"
+      ],
+      "count": 1600,
+      "dist": [
+        11.0,
+        125.0
+      ],
+      "max_wear": 0.06,
+      "patchiness": 0.85,
+      "scale": [
+        0.45,
+        0.85
+      ],
+      "wind": "plant",
+      "tints": [
+        "#ffffff",
+        "#eef5d8",
+        "#f5f0c8",
+        "#dfeccc"
+      ],
+      "visible_to": 95.0,
+      "shadows": false
+    },
+    {
+      "name": "grass_edges",
+      "models": [
+        "Grass_Common_Tall",
+        "Grass_Wispy_Tall",
+        "Grass_Common_Short",
+        "Grass_Wispy_Short"
+      ],
+      "count": 1800,
+      "dist": [
+        6.0,
+        125.0
+      ],
+      "wear": [
+        0.04,
+        0.3
+      ],
+      "scale": [
+        0.45,
+        0.8
+      ],
+      "wind": "plant",
+      "tints": [
+        "#ffffff",
+        "#eef5d8",
+        "#f5f0c8",
+        "#dfeccc"
+      ],
+      "visible_to": 95.0,
+      "shadows": false
+    },
+    {
+      "name": "grass_trees",
+      "models": [
+        "Grass_Common_Tall",
+        "Grass_Wispy_Tall",
+        "Grass_Common_Short"
+      ],
+      "count": 900,
+      "near_trees": 2.4,
+      "max_wear": 0.05,
+      "scale": [
+        0.5,
+        0.9
+      ],
+      "wind": "plant",
+      "tints": [
+        "#ffffff",
+        "#eef5d8",
+        "#dfeccc"
+      ],
+      "visible_to": 95.0,
+      "shadows": false
+    },
+    {
+      "name": "flowers",
+      "models": [
+        "Flower_3_Group",
+        "Flower_4_Group",
+        "Flower_3_Single",
+        "Flower_4_Single",
+        "Clover_1",
+        "Clover_2"
+      ],
+      "count": 520,
+      "dist": [
+        14.0,
+        120.0
+      ],
+      "max_wear": 0.04,
+      "patchiness": 0.7,
+      "scale": [
+        0.35,
+        0.6
+      ],
+      "wind": "plant",
+      "tints": [
+        "#ffffff"
+      ],
+      "visible_to": 85.0,
+      "shadows": false
+    },
+    {
+      "name": "bushes",
+      "models": [
+        "Bush_Common",
+        "Bush_Common_Flowers",
+        "Fern_1",
+        "Plant_1",
+        "Plant_1_Big",
+        "Plant_7_Big"
+      ],
+      "count": 190,
+      "dist": [
+        20.0,
+        135.0
+      ],
+      "max_wear": 0.03,
+      "patchiness": 0.45,
+      "scale": [
+        0.5,
+        0.95
+      ],
+      "wind": "plant",
+      "tints": [
+        "#5f8f2e",
+        "#6e9c38",
+        "#558a30",
+        "#7aa640"
+      ],
+      "visible_to": 150.0,
+      "shadows": true
+    },
+    {
+      "name": "pebbles",
+      "models": [
+        "Pebble_Round_1",
+        "Pebble_Round_2",
+        "Pebble_Round_3",
+        "Pebble_Square_1",
+        "Pebble_Square_3",
+        "Pebble_Square_5"
+      ],
+      "count": 420,
+      "dist": [
+        6.0,
+        120.0
+      ],
+      "wear": [
+        0.3,
+        0.75
+      ],
+      "scale": [
+        0.6,
+        1.2
+      ],
+      "wind": "none",
+      "tints": [
+        "#ffffff"
+      ],
+      "visible_to": 70.0,
+      "shadows": false
+    },
+    {
+      "name": "mushrooms",
+      "models": [
+        "Mushroom_Common",
+        "Mushroom_Laetiporus"
+      ],
+      "count": 90,
+      "near_trees": 2.2,
+      "max_wear": 0.05,
+      "scale": [
+        0.5,
+        0.9
+      ],
+      "wind": "none",
+      "tints": [
+        "#ffffff"
+      ],
+      "visible_to": 60.0,
+      "shadows": false
+    }
+  ],
+  "chunk": 64.0,
+  "_mobile": "Phones and tablets draw this fraction of the ground cover and skip the 'mobile_skip' layers entirely (fewer draw calls). Trees and rocks are unchanged.",
+  "mobile_density": 0.5,
+  "mobile_skip": [
+    "pebbles",
+    "mushrooms",
+    "grass_trees"
+  ]
+}

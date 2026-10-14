@@ -1,0 +1,10 @@
+{
+  "attributes": [
+    { "id": "leadership",     "name": "Leadership",     "short": "LDR", "description": "Inspiring and commanding others, from a work crew to an army." },
+    { "id": "combat",         "name": "Combat",         "short": "CMB", "description": "Personal skill at arms: swordplay, archery, endurance in battle." },
+    { "id": "intelligence",   "name": "Intelligence",   "short": "INT", "description": "Learning, reasoning, invention and scholarship." },
+    { "id": "politics",       "name": "Politics",       "short": "POL", "description": "Persuasion, diplomacy, intrigue and reading people." },
+    { "id": "administration", "name": "Administration", "short": "ADM", "description": "Managing coin, grain, records and the running of a domain." },
+    { "id": "ambition",       "name": "Ambition",       "short": "AMB", "description": "Drive to rise. Ambitious people grow faster but expect reward." }
+  ]
+}

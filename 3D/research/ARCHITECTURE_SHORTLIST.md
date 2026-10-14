@@ -55,6 +55,10 @@ rather than define the entire visual style.
 **Best use:** filling homes, workshops, taverns, markets, and quest locations so
 the modular town does not feel empty or repetitive.
 
+**Status:** The free Standard edition is now included in
+`props/quaternius-fantasy-props-standard/` with 94 JSON glTF models and all
+shared texture dependencies.
+
 ## Recommended stack
 
 Use **Medieval Village MegaKit** as the architecture base, **Stylized Nature

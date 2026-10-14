@@ -1,0 +1,174 @@
+# Builds Sovereign's Eye for every platform on each push and publishes the
+# apps as downloadable files on the repository's Releases page.
+#
+#   push to main            -> release "latest"   (stable download links)
+#   push to any other branch -> release "preview" (try changes before merging)
+#
+# Optional: add a repository secret ANDROID_KEYSTORE_BASE64 (plus
+# ANDROID_KEYSTORE_PASSWORD) to sign the Android app with a permanent key.
+# Without it a key is generated once and cached.
+
+name: Build game
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore: ["**.md", "3D/alternatives/**", "3D/characters/**", "3D/previews/**", "3D/research/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.7.2"
+  APP: SovereignsEye
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and export templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-v1
+
+      - name: Install Godot and export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip "$BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          mv /tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          T=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$T"
+          curl -fsSL -o /tmp/templates.tpz "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          cd /tmp && unzip -q templates.tpz
+          # Keep only the templates we export with (keeps the cache small).
+          for f in version.txt icudt_godot.dat macos.zip \
+                   windows_release_x86_64.exe windows_release_arm64.exe \
+                   linux_release.x86_64 linux_release.arm64 \
+                   android_release.apk android_debug.apk; do
+            mv "templates/$f" "$T/"
+          done
+          rm -rf /tmp/templates /tmp/templates.tpz /tmp/godot /tmp/godot.zip
+
+      - name: Configure Android signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          mkdir -p ~/.config/godot ~/.android-signing
+          JAVA_DIR="${JAVA_HOME_17_X64:-$JAVA_HOME}"
+          SDK_DIR="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          cat > ~/.config/godot/editor_settings-4.7.tres <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$SDK_DIR"
+          export/android/java_sdk_path = "$JAVA_DIR"
+          EOF
+          if [ -n "${KEYSTORE_B64}" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > ~/.android-signing/release.keystore
+            PASS="$KEYSTORE_PASSWORD"
+            echo "USE_SECRET_KEY=1" >> "$GITHUB_ENV"
+          else
+            PASS="sovereigns-eye"
+          fi
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$HOME/.android-signing/release.keystore" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER=sovereign" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=$PASS" >> "$GITHUB_ENV"
+
+      - name: Restore cached Android key
+        if: env.USE_SECRET_KEY != '1'
+        uses: actions/cache@v4
+        with:
+          path: ~/.android-signing
+          key: android-signing-v1
+
+      - name: Create Android key if missing
+        run: |
+          if [ ! -f ~/.android-signing/release.keystore ]; then
+            "${JAVA_HOME_17_X64:-$JAVA_HOME}/bin/keytool" -genkeypair -keystore ~/.android-signing/release.keystore \
+              -alias sovereign -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD" -keypass "$GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD" \
+              -dname "CN=Sovereign's Eye"
+          fi
+
+      - name: Import project
+        run: godot --headless --path . --import || true
+
+      - name: Run tests
+        run: GODOT=godot tools/run_tests.sh
+
+      - name: Export all platforms
+        run: |
+          set -euo pipefail
+          export_one() {
+            mkdir -p "$(dirname "$2")"
+            godot --headless --path . --export-release "$1" "$2"
+            test -s "$2"
+          }
+          export_one "Windows"       build/windows/${APP}.exe
+          export_one "Windows ARM64" build/windows-arm64/${APP}.exe
+          export_one "macOS"         build/macos/${APP}.zip
+          export_one "Linux"         build/linux/${APP}.x86_64
+          export_one "Linux ARM64"   build/linux-arm64/${APP}.arm64
+          export_one "Android"       build/android/${APP}.apk
+
+      - name: Smoke-test the Linux build
+        run: |
+          ./build/linux/${APP}.x86_64 --headless --quit-after 300 -- --new-game=ci 2>&1 | tee smoke.log
+          grep -q "World ready" smoke.log
+
+      - name: Package downloads
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          (cd build/windows && zip -q -9 ../../dist/${APP}-Windows.zip ${APP}.exe)
+          (cd build/windows-arm64 && zip -q -9 ../../dist/${APP}-Windows-ARM64.zip ${APP}.exe)
+          cp build/macos/${APP}.zip dist/${APP}-Mac.zip
+          (cd build/linux && chmod +x ${APP}.x86_64 && zip -q -9 ../../dist/${APP}-Linux.zip ${APP}.x86_64)
+          (cd build/linux-arm64 && chmod +x ${APP}.arm64 && zip -q -9 ../../dist/${APP}-Linux-ARM64.zip ${APP}.arm64)
+          cp build/android/${APP}.apk dist/${APP}-Android.apk
+          ls -la dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            TAG=latest; TITLE="Sovereign's Eye - latest build"; EXTRA=""
+          else
+            TAG=preview; TITLE="Sovereign's Eye - preview (${GITHUB_REF_NAME})"; EXTRA="--prerelease"
+          fi
+          NOTES="Built from \`${GITHUB_REF_NAME}\` at ${GITHUB_SHA::7} on $(date -u '+%Y-%m-%d %H:%M UTC').
+
+          | Device | Download |
+          |---|---|
+          | Windows (most PCs) | ${APP}-Windows.zip |
+          | Windows on ARM (Snapdragon laptops) | ${APP}-Windows-ARM64.zip |
+          | Mac (Apple Silicon and Intel) | ${APP}-Mac.zip |
+          | Linux, Chromebook Linux mode (Intel/AMD) | ${APP}-Linux.zip |
+          | Linux, Chromebook Linux mode (ARM) | ${APP}-Linux-ARM64.zip |
+          | Android, Chromebook Play Store devices | ${APP}-Android.apk |
+
+          First launch: on Mac open System Settings > Privacy & Security > Open Anyway; on Windows click More info > Run anyway (the app isn't code-signed yet)."
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TITLE" --notes "$NOTES" $EXTRA

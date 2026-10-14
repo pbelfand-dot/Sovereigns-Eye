@@ -1,0 +1,21 @@
+{
+  "_comment": "Building types. Buildings are assembled from the Quaternius village kit (data/building_kit.json) when it is present; otherwise drawn from primitives (see scripts/world/building_factory.gd) unless 'model' points to an existing scene (.tscn/.glb/.gltf). To swap in real art: drop e.g. assets/buildings/cottage.glb into the project and set \"model\": \"res://assets/buildings/cottage.glb\". 'model_scale' and 'model_offset' let you fit it to the footprint. footprint = [width, depth] in meters; the door is always on the +Z (front) side.",
+  "types": {
+    "manor":      { "name": "Manor House",    "footprint": [16, 10], "wall_height": 6.0, "style": "manor",     "roof": "gable",   "walls": ["#bdb5a6"], "roofs": ["#4b5a6b"], "trim": "#4a3a2c", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "chapel":     { "name": "Chapel",         "footprint": [6, 13],  "wall_height": 6.0, "style": "chapel",    "roof": "gable",   "walls": ["#d2c9b5"], "roofs": ["#5d4c40"], "trim": "#5a4636", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "tavern":     { "name": "Tavern",         "footprint": [10, 6],  "wall_height": 6.0, "style": "timber",    "roof": "gable",   "walls": ["#ecdfc2"], "roofs": ["#8f4e31"], "trim": "#5a3d2b", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "smithy":     { "name": "Smithy",         "footprint": [8, 6],   "wall_height": 3.0, "style": "smithy",    "roof": "gable",   "walls": ["#948a7b"], "roofs": ["#6b5040"], "trim": "#3f3127", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "bakery":     { "name": "Bakery",         "footprint": [6, 6],   "wall_height": 3.0, "style": "bakery",    "roof": "gable",   "walls": ["#f1e3c5"], "roofs": ["#a5623b"], "trim": "#6b4a33", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "mill":       { "name": "Windmill",       "footprint": [6, 6],   "wall_height": 9.0, "style": "windmill",  "roof": "cone",    "walls": ["#e2d6bb"], "roofs": ["#7a5236"], "trim": "#5a3d2b", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "barracks":   { "name": "Barracks",       "footprint": [12, 6],  "wall_height": 3.0, "style": "barracks",  "roof": "gable",   "walls": ["#a59c8c"], "roofs": ["#5a4a3a"], "trim": "#3f3127", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "workshop":   { "name": "Carpenter's Workshop", "footprint": [8, 6], "wall_height": 3.0, "style": "workshop", "roof": "gable", "walls": ["#c9a77a"], "roofs": ["#7a5236"], "trim": "#5a3d2b", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "storehouse": { "name": "Granary",        "footprint": [10, 8],  "wall_height": 3.0, "style": "barn",      "roof": "gable",   "walls": ["#9c7a52"], "roofs": ["#6a4a32"], "trim": "#4a3424", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "farmhouse":  { "name": "Farmhouse",      "footprint": [8, 6],   "wall_height": 3.0, "style": "timber",    "roof": "gable",   "walls": ["#e6d6b0", "#efe4c8", "#dccaa2"], "roofs": ["#c9a45c", "#b8924c"], "trim": "#5a3d2b", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "cottage":    { "name": "Cottage",        "footprint": [6, 4], "wall_height": 3.0, "style": "timber",  "roof": "gable",   "walls": ["#ecdfc2", "#e3d3ae", "#f2e8d2", "#d8c49c"], "roofs": ["#c9a45c", "#a5623b", "#8f4e31", "#b8924c"], "trim": "#5a3d2b", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] }
+  },
+  "village_plan": {
+    "_comment": "How many of each building the Phase 1 village contains (15-20 buildings).",
+    "manor": 1, "chapel": 1, "tavern": 1, "smithy": 1, "bakery": 1, "mill": 1, "barracks": 1,
+    "workshop": 1, "storehouse": 1, "farmhouse": 3, "cottage": 7
+  }
+}

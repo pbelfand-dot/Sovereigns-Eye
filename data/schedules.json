@@ -1,0 +1,15 @@
+{
+  "_comment": "Daily routines. Each block is [start_hour, end_hour, activity]. Activities: sleep (home, indoors), home (at/around home), work (occupation work_style), leisure (traits decide: tavern, chapel, square, visit, stroll, home), play (children). Hours run 0-24.",
+  "schedules": {
+    "worker":  [[0, 6, "sleep"], [6, 7, "home"], [7, 12, "work"], [12, 13, "leisure"], [13, 18, "work"], [18, 21, "leisure"], [21, 24, "sleep"]],
+    "farmer":  [[0, 5, "sleep"], [5, 6, "home"], [6, 12, "work"], [12, 13, "home"], [13, 19, "work"], [19, 21, "leisure"], [21, 24, "sleep"]],
+    "baker":   [[0, 4, "sleep"], [4, 13, "work"], [13, 16, "leisure"], [16, 20, "home"], [20, 24, "sleep"]],
+    "tavern":  [[0, 1, "work"], [1, 9, "sleep"], [9, 11, "home"], [11, 24, "work"]],
+    "soldier": [[0, 6, "sleep"], [6, 14, "work"], [14, 16, "leisure"], [16, 20, "work"], [20, 22, "leisure"], [22, 24, "sleep"]],
+    "priest":  [[0, 5, "sleep"], [5, 12, "work"], [12, 14, "leisure"], [14, 19, "work"], [19, 21, "home"], [21, 24, "sleep"]],
+    "noble":   [[0, 7, "sleep"], [7, 9, "home"], [9, 12, "work"], [12, 14, "leisure"], [14, 17, "work"], [17, 22, "home"], [22, 24, "sleep"]],
+    "scion":   [[0, 7, "sleep"], [7, 8, "home"], [8, 12, "work"], [12, 13, "home"], [13, 17, "play"], [17, 21, "home"], [21, 24, "sleep"]],
+    "child":   [[0, 7, "sleep"], [7, 8, "home"], [8, 12, "play"], [12, 13, "home"], [13, 18, "play"], [18, 20, "home"], [20, 24, "sleep"]],
+    "elder":   [[0, 7, "sleep"], [7, 9, "home"], [9, 12, "leisure"], [12, 14, "home"], [14, 18, "leisure"], [18, 21, "home"], [21, 24, "sleep"]]
+  }
+}

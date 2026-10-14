@@ -1,3 +1,20 @@
+# Godot 4 generated folders
+.godot/
+.import/
+/android/
+
+# Exports
+/build/
+/export/
+*.dmg
+*.zip
+
+# OS / editor noise
 .DS_Store
+Thumbs.db
+.vscode/
+*.tmp
+
+# Python (asset tooling)
 __pycache__/
 *.py[cod]

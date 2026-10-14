@@ -1,0 +1,28 @@
+# Sovereign's Eye — notes for coding assistants
+
+Godot 4.7, GDScript only. Medieval dynasty sim built around an "Appraisal"
+skill (current vs. hidden potential). Read `docs/ARCHITECTURE.md` first.
+
+## Commands
+- Tests: `tools/run_tests.sh` (or `godot --headless --path . res://tests/test_runner.tscn`).
+  On a fresh clone run `godot --headless --path . --import` once so `class_name`s resolve.
+- Village census for a seed: `godot --headless --path . --script res://tools/print_village.gd -- <seed>`
+- Screenshots (needs a display): `godot --path . res://tools/capture.tscn -- <seed> <out_dir>`
+
+## Rules
+- Keep data and presentation separate: game state lives in `CharacterData`,
+  `FamilyData`, `BuildingData`, `VillageLayout`, `WorldState` (all `RefCounted`
+  with `to_dict`/`from_dict`). Nodes read/write them; nodes never own game data.
+- Tunable numbers belong in `data/*.json`, read through `GameData`.
+- Generation must be deterministic: use `Seeds.rng(world_seed, "<stream>")`,
+  `Seeds.pick/shuffle/chance`; never global `randf()`, `randi()`,
+  `Array.shuffle()` or `pick_random()` in generation code.
+- JSON stores numbers as floats: cast with `int()` in `from_dict`.
+- Current ability must never exceed potential: always go through
+  `CharacterData.set_attribute()` / `train()`.
+- New save fields: bump `WorldState.SAVE_VERSION` and handle old saves in
+  `SaveManager.migrate()`.
+- Godot front faces are clockwise; procedural meshes here are viewed from above.
+- Vertex/instance colors are sRGB: use `Mats.vertex_colored()`.
+- Add a test in `tests/` for new systems; keep all tests green.
+- Implement only the current phase; don't build future systems early.

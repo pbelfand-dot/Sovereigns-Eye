@@ -1,0 +1,432 @@
+class_name VillageLayoutGenerator
+extends RefCounted
+## Deterministically lays out a small medieval village from a seed.
+##
+## Structure: a round town square, four roads leaving it (the north road leads
+## up to the manor), farms with lanes and fields on the outskirts, buildings
+## facing the roads, and forest growing thicker away from the center.
+## The output is a VillageLayout (pure data).
+
+const SQUARE_BUILDINGS := ["tavern", "chapel", "bakery", "smithy"]
+const CROPS := ["wheat", "barley", "cabbage", "flax", "turnip"]
+
+var rng: RandomNumberGenerator
+var layout: VillageLayout
+var _next_id := 1
+## Occupied rectangles: [{ "center": Vector3, "rot": float, "half": Vector2 }]
+var _occupied: Array[Dictionary] = []
+var _road_ends: Dictionary = {}
+
+
+func generate(world_seed: int) -> VillageLayout:
+	rng = Seeds.rng(world_seed, "layout")
+	layout = VillageLayout.new()
+	layout.terrain_seed = Seeds.derive(world_seed, "terrain")
+	layout.square_radius = rng.randf_range(12.5, 14.5)
+	TerrainHeight.configure(layout.terrain_seed, layout.flat_radius)
+
+	_build_main_roads()
+	_place_square_props()
+	_place_square_buildings()
+	_place_manor()
+	_place_farms()
+	_place_roadside("barracks", ["north"], 14.0, 60.0)
+	_place_roadside("mill", ["east", "west"], 58.0, 88.0)
+	_place_roadside("workshop", ["east", "west", "south"], 26.0, 70.0)
+	_place_roadside("storehouse", ["east", "west", "south"], 30.0, 75.0)
+	var plan := GameData.village_plan()
+	for i in int(plan.get("cottage", 7)):
+		_place_roadside("cottage", ["east", "west", "south", "north"], 20.0, 80.0)
+	_place_building_props()
+	_place_trees()
+	_place_rocks()
+	return layout
+
+
+# --- Roads -------------------------------------------------------------------
+
+func _build_main_roads() -> void:
+	var r := layout.square_radius
+	var e := layout.extent - 3.0
+	var north_end := Vector3(rng.randf_range(-6, 6), 0, -66)
+	_add_road("west", Vector3(-r, 0, 0), Vector3(-e, 0, rng.randf_range(-10, 10)), 5.0, 2.2)
+	_add_road("east", Vector3(r, 0, 0), Vector3(e, 0, rng.randf_range(-10, 10)), 5.0, 2.2)
+	_add_road("north", Vector3(0, 0, -r), north_end, 4.5, 1.6)
+	_add_road("south", Vector3(0, 0, r), Vector3(rng.randf_range(-10, 10), 0, e), 4.5, 2.2)
+
+
+func _add_road(road_name: String, start: Vector3, end: Vector3, width: float, wobble: float, step: float = 14.0) -> int:
+	var pts := PackedVector3Array()
+	var dist := start.distance_to(end)
+	var n := maxi(2, ceili(dist / step))
+	var dir := (end - start).normalized()
+	var normal := Vector3(-dir.z, 0, dir.x)
+	var offset := 0.0
+	for i in n + 1:
+		var t := float(i) / n
+		var p := start.lerp(end, t)
+		if i > 0 and i < n:
+			offset = clampf(offset + rng.randf_range(-wobble, wobble), -wobble * 2.5, wobble * 2.5)
+			var fade := clampf(minf(t, 1.0 - t) * 5.0, 0.0, 1.0)
+			p += normal * offset * fade
+		pts.append(p)
+	layout.roads.append({"points": pts, "width": width, "name": road_name})
+	_road_ends[road_name] = end
+	return layout.roads.size() - 1
+
+
+func _road_by_name(road_name: String) -> Dictionary:
+	for r in layout.roads:
+		if r.get("name", "") == road_name:
+			return r
+	return {}
+
+
+## Distance from p to the nearest road edge (negative = on a road).
+func _road_clearance(p: Vector3) -> float:
+	var best := INF
+	var p2 := Vector2(p.x, p.z)
+	for r in layout.roads:
+		var pts: PackedVector3Array = r["points"]
+		var half: float = float(r["width"]) * 0.5
+		for i in range(1, pts.size()):
+			var a := Vector2(pts[i - 1].x, pts[i - 1].z)
+			var b := Vector2(pts[i].x, pts[i].z)
+			var c := Geometry2D.get_closest_point_to_segment(p2, a, b)
+			best = minf(best, p2.distance_to(c) - half)
+	return best
+
+
+## Closest point on any road (excluding lanes when main_only).
+func _closest_road_point(p: Vector3, main_only: bool) -> Vector3:
+	var best := Vector3.ZERO
+	var best_d := INF
+	var p2 := Vector2(p.x, p.z)
+	for r in layout.roads:
+		if main_only and str(r.get("name", "")).begins_with("lane"):
+			continue
+		var pts: PackedVector3Array = r["points"]
+		for i in range(1, pts.size()):
+			var c := Geometry2D.get_closest_point_to_segment(p2, Vector2(pts[i - 1].x, pts[i - 1].z), Vector2(pts[i].x, pts[i].z))
+			var d := p2.distance_to(c)
+			if d < best_d:
+				best_d = d
+				best = Vector3(c.x, 0, c.y)
+	return best
+
+
+# --- Occupancy ------------------------------------------------------------------
+
+func _rect_samples(center: Vector3, rot: float, half: Vector2) -> Array[Vector3]:
+	var basis := Basis(Vector3.UP, rot)
+	var out: Array[Vector3] = [center]
+	for sx: float in [-1.0, 0.0, 1.0]:
+		for sz: float in [-1.0, 0.0, 1.0]:
+			if sx == 0.0 and sz == 0.0:
+				continue
+			out.append(center + basis * Vector3(half.x * sx, 0, half.y * sz))
+	return out
+
+
+func _point_in_rect(p: Vector3, rect: Dictionary, margin: float) -> bool:
+	var local: Vector3 = Basis(Vector3.UP, float(rect["rot"])).inverse() * (p - rect["center"])
+	var half: Vector2 = rect["half"]
+	return absf(local.x) < half.x + margin and absf(local.z) < half.y + margin
+
+
+func _rect_is_free(center: Vector3, rot: float, half: Vector2, margin: float, road_margin: float) -> bool:
+	if center.length() + half.length() > layout.flat_radius - 2.0:
+		return false
+	var mine := {"center": center, "rot": rot, "half": half}
+	var samples := _rect_samples(center, rot, half)
+	for s in samples:
+		if s.distance_to(layout.square_center) < layout.square_radius + 1.5:
+			return false
+		if _road_clearance(s) < road_margin:
+			return false
+	for other in _occupied:
+		for s in samples:
+			if _point_in_rect(s, other, margin):
+				return false
+		for s in _rect_samples(other["center"], other["rot"], other["half"]):
+			if _point_in_rect(s, mine, margin):
+				return false
+	return true
+
+
+func _occupy(center: Vector3, rot: float, half: Vector2) -> void:
+	_occupied.append({"center": center, "rot": rot, "half": half})
+
+
+# --- Buildings -------------------------------------------------------------------
+
+func _new_building(type: String, center: Vector3, rot: float) -> BuildingData:
+	var def := GameData.building_type(type)
+	var fp: Array = def.get("footprint", [6, 5])
+	var b := BuildingData.new()
+	b.id = _next_id
+	_next_id += 1
+	b.type = type
+	b.name = str(def.get("name", type.capitalize()))
+	b.position = center
+	b.rotation = rot
+	b.footprint = Vector2(float(fp[0]), float(fp[1]))
+	b.variant = rng.randi_range(0, 7)
+	layout.add_building(b)
+	_occupy(center, rot, b.footprint * 0.5)
+	return b
+
+
+func _footprint(type: String) -> Vector2:
+	var fp: Array = GameData.building_type(type).get("footprint", [6, 5])
+	return Vector2(float(fp[0]), float(fp[1]))
+
+
+## Rotation that makes a building's front (+Z) face `forward`.
+static func _yaw_facing(forward: Vector3) -> float:
+	return atan2(forward.x, forward.z)
+
+
+func _place_square_buildings() -> void:
+	var types: Array = SQUARE_BUILDINGS.duplicate()
+	Seeds.shuffle(rng, types)
+	var angles := [PI * 0.25, PI * 0.75, PI * 1.25, PI * 1.75]
+	for i in types.size():
+		var type: String = types[i]
+		var fp := _footprint(type)
+		var dir := Vector3(cos(angles[i]), 0, sin(angles[i]))
+		var placed := false
+		for push in range(0, 14):
+			var center := layout.square_center + dir * (layout.square_radius + fp.y * 0.5 + 3.0 + push)
+			var rot := _yaw_facing(-dir)
+			if _rect_is_free(center, rot, fp * 0.5, 1.0, 0.8):
+				_new_building(type, center, rot)
+				placed = true
+				break
+		if not placed:
+			_place_roadside(type, ["east", "west", "south"], 16.0, 70.0)
+
+
+func _place_manor() -> void:
+	var fp := _footprint("manor")
+	var end: Vector3 = _road_ends["north"]
+	var center := end + Vector3(0, 0, -(fp.y * 0.5 + 2.0))
+	_new_building("manor", center, 0.0)
+	# Gardens / courtyard in front are kept clear.
+	_occupy(end + Vector3(0, 0, 4), 0.0, Vector2(9, 3))
+
+
+func _place_farms() -> void:
+	var sites := [Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, -1)]
+	Seeds.shuffle(rng, sites)
+	var wanted := int(GameData.village_plan().get("farmhouse", 3))
+	var placed := 0
+	for site: Vector3 in sites:
+		if placed >= wanted:
+			break
+		if _place_farm(site.normalized()):
+			placed += 1
+	# Fallback: any free roadside slot.
+	while placed < wanted:
+		if _place_roadside("farmhouse", ["east", "west", "south"], 30.0, 85.0) == null:
+			break
+		placed += 1
+
+
+func _place_farm(dir: Vector3) -> bool:
+	var fp := _footprint("farmhouse")
+	for attempt in 12:
+		var dist := rng.randf_range(52.0, 66.0)
+		var ang := atan2(dir.z, dir.x) + rng.randf_range(-0.3, 0.3)
+		var center := Vector3(cos(ang), 0, sin(ang)) * dist
+		var road_pt := _closest_road_point(center, true)
+		var to_road := (road_pt - center)
+		to_road.y = 0
+		if to_road.length() < 10.0:
+			continue
+		var rot := _yaw_facing(to_road.normalized()) + rng.randf_range(-0.1, 0.1)
+		if not _rect_is_free(center, rot, fp * 0.5, 2.0, 1.5):
+			continue
+		var farm := _new_building("farmhouse", center, rot)
+		# Lane from the main road to the farmhouse door.
+		var door := farm.door_position()
+		var lane_start := road_pt
+		_add_road("lane_%d" % farm.id, lane_start, door + farm.forward() * 0.5, 3.0, 0.8, 8.0)
+		_place_fields(farm)
+		return true
+	return false
+
+
+func _place_fields(farm: BuildingData) -> void:
+	var basis := farm.basis()
+	var fp := farm.footprint
+	# Fields go behind and beside the farmhouse; several random tries each.
+	var directions := [Vector3(0, 0, -1), Vector3(-1, 0, 0), Vector3(1, 0, 0), Vector3(-1, 0, -1), Vector3(1, 0, -1), Vector3(0, 0, -2)]
+	var count := 0
+	var target := rng.randi_range(2, 4)
+	for attempt in 40:
+		if count >= target:
+			break
+		var dir: Vector3 = directions[attempt % directions.size()]
+		var size := Vector2(rng.randf_range(11, 18), rng.randf_range(9, 14))
+		var reach := Vector3(
+			dir.x * (fp.x * 0.5 + size.x * 0.5 + rng.randf_range(2.0, 6.0)),
+			0,
+			dir.z * (fp.y * 0.5 + size.y * 0.5 + rng.randf_range(2.0, 5.0)) + rng.randf_range(-4.0, 4.0) * (1.0 - absf(dir.z)))
+		var center := farm.position + basis * reach
+		if not _rect_is_free(center, farm.rotation, size * 0.5, 0.8, 1.0):
+			continue
+		_occupy(center, farm.rotation, size * 0.5)
+		layout.fields.append({"center": center, "size": size, "rot": farm.rotation, "crop": Seeds.pick(rng, CROPS), "building": farm.id})
+		count += 1
+
+
+## Places a building of `type` beside one of the named roads, between
+## min_dist and max_dist from the village center. Closer slots are preferred.
+func _place_roadside(type: String, road_names: Array, min_dist: float, max_dist: float) -> BuildingData:
+	var fp := _footprint(type)
+	var candidates: Array[Dictionary] = []
+	for road_name: String in road_names:
+		var road := _road_by_name(road_name)
+		if road.is_empty():
+			continue
+		var pts: PackedVector3Array = road["points"]
+		var width: float = road["width"]
+		for i in range(1, pts.size()):
+			var a := pts[i - 1]
+			var b := pts[i]
+			var seg_len := a.distance_to(b)
+			var dir := (b - a).normalized()
+			var normal := Vector3(-dir.z, 0, dir.x)
+			var s := 0.0
+			while s < seg_len:
+				var p := a + dir * s
+				var d := p.length()
+				if d >= min_dist and d <= max_dist:
+					for side: float in [-1.0, 1.0]:
+						candidates.append({"p": p, "normal": normal * side, "width": width, "score": d + rng.randf_range(0, 18.0)})
+				s += 3.0
+	candidates.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return x["score"] < y["score"])
+	for c in candidates:
+		var normal: Vector3 = c["normal"]
+		var setback: float = float(c["width"]) * 0.5 + fp.y * 0.5 + rng.randf_range(2.2, 3.6)
+		var center: Vector3 = c["p"] + normal * setback
+		var rot := _yaw_facing(-normal) + rng.randf_range(-0.07, 0.07)
+		if _rect_is_free(center, rot, fp * 0.5, 2.0, 1.2):
+			return _new_building(type, center, rot)
+	push_warning("VillageLayoutGenerator: no room for a %s" % type)
+	return null
+
+
+# --- Props ----------------------------------------------------------------------
+
+func _add_prop(type: String, pos: Vector3, rot: float, half: Vector2 = Vector2.ZERO) -> void:
+	layout.props.append({"type": type, "pos": pos, "rot": rot})
+	if half != Vector2.ZERO:
+		_occupy(pos, rot, half)
+
+
+func _place_square_props() -> void:
+	var r := layout.square_radius
+	_add_prop("well", layout.square_center, 0.0)
+	# Market stalls around the edge of the square, away from the road mouths.
+	var angles := [0.45, 1.1, 2.05, 2.7, 3.6, 4.25, 5.15, 5.8]
+	Seeds.shuffle(rng, angles)
+	for i in 3:
+		var a: float = angles[i]
+		var dir := Vector3(cos(a), 0, sin(a))
+		var pos := layout.square_center + dir * (r - 2.6)
+		_add_prop("stall", pos, _yaw_facing(-dir))
+	for i in range(3, 5):
+		var a: float = angles[i]
+		var dir := Vector3(cos(a), 0, sin(a))
+		_add_prop("bench", layout.square_center + dir * (r - 1.6), _yaw_facing(-dir))
+
+
+func _place_building_props() -> void:
+	for b in layout.buildings:
+		var basis := b.basis()
+		var fp := b.footprint
+		match b.type:
+			"tavern", "smithy", "bakery", "storehouse":
+				for i in rng.randi_range(2, 4):
+					var local := Vector3((fp.x * 0.5 + 0.8) * (1 if i % 2 == 0 else -1), 0, rng.randf_range(-fp.y * 0.4, fp.y * 0.3))
+					_add_prop("barrel" if rng.randf() < 0.6 else "crate", b.position + basis * local, rng.randf() * TAU)
+			"farmhouse":
+				for i in rng.randi_range(1, 3):
+					var local := Vector3(rng.randf_range(-1, 1) * (fp.x * 0.5 + 2.5), 0, -fp.y * 0.5 + rng.randf_range(-1.0, 2.0))
+					_add_prop("haystack", b.position + basis * local, rng.randf() * TAU)
+			"barracks":
+				for i in 3:
+					var local := Vector3((i - 1) * 3.0, 0, fp.y * 0.5 + 5.0)
+					_add_prop("dummy", b.position + basis * local, b.rotation)
+				_add_prop("banner", b.position + basis * Vector3(fp.x * 0.5 + 1.2, 0, fp.y * 0.5), b.rotation)
+			"workshop":
+				_add_prop("lumber", b.position + basis * Vector3(fp.x * 0.5 + 1.6, 0, 0.5), b.rotation + PI * 0.5)
+				_add_prop("cart", b.position + basis * Vector3(-fp.x * 0.5 - 2.0, 0, 1.0), b.rotation + 0.4)
+			"manor":
+				_add_prop("banner", b.position + basis * Vector3(-fp.x * 0.5 - 1.0, 0, fp.y * 0.5 + 1.0), b.rotation)
+				_add_prop("banner", b.position + basis * Vector3(fp.x * 0.5 + 1.0, 0, fp.y * 0.5 + 1.0), b.rotation)
+	# Signposts where roads leave the square.
+	for road_name: String in ["west", "east", "south"]:
+		var road := _road_by_name(road_name)
+		var pts: PackedVector3Array = road["points"]
+		var dir := (pts[1] - pts[0]).normalized()
+		var normal := Vector3(-dir.z, 0, dir.x)
+		_add_prop("signpost", pts[0] + dir * 3.0 + normal * 3.4, _yaw_facing(dir))
+
+
+func _place_trees() -> void:
+	var cell := 2.8
+	var grid := {}
+	var target := 520
+	var attempts := 0
+	var e := layout.extent - 2.0
+	while layout.trees.size() < target and attempts < 9000:
+		attempts += 1
+		var x := rng.randf_range(-e, e)
+		var z := rng.randf_range(-e, e)
+		var p := Vector3(x, 0, z)
+		var d := p.length()
+		var density := smoothstep(48.0, 105.0, d) * (0.35 + 0.65 * TerrainHeight.grass_variation(x * 1.7, z * 1.7))
+		if d < 48.0:
+			density = 0.03
+		if rng.randf() > density:
+			continue
+		if d < layout.square_radius + 4.0 or _road_clearance(p) < 2.2:
+			continue
+		var blocked := false
+		for rect in _occupied:
+			if _point_in_rect(p, rect, 2.2):
+				blocked = true
+				break
+		if blocked:
+			continue
+		var key := Vector2i(floori(x / cell), floori(z / cell))
+		var crowded := false
+		for gx in range(key.x - 1, key.x + 2):
+			for gz in range(key.y - 1, key.y + 2):
+				var other: Variant = grid.get(Vector2i(gx, gz))
+				if other != null and Vector2(other.x, other.y).distance_to(Vector2(x, z)) < cell:
+					crowded = true
+		if crowded:
+			continue
+		grid[key] = Vector2(x, z)
+		var variant := 1 if rng.randf() < 0.35 + 0.3 * smoothstep(70.0, 120.0, d) else (0 if rng.randf() < 0.8 else 2)
+		layout.trees.append(Vector4(x, z, rng.randf_range(0.8, 1.35), variant))
+
+
+func _place_rocks() -> void:
+	for i in 40:
+		var a := rng.randf() * TAU
+		var d := rng.randf_range(40.0, layout.extent - 5.0)
+		var p := Vector3(cos(a), 0, sin(a)) * d
+		if _road_clearance(p) < 1.5:
+			continue
+		var blocked := false
+		for rect in _occupied:
+			if _point_in_rect(p, rect, 1.0):
+				blocked = true
+				break
+		if not blocked:
+			_add_prop("rock", p, rng.randf() * TAU)

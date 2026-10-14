@@ -33,6 +33,16 @@ COLLECTIONS = {
         "license": "environments/quaternius-medieval-village-standard/LICENSE.txt",
         "preview_root": "environments/quaternius-medieval-village-standard/previews",
     },
+    "quaternius-stylized-nature-standard": {
+        "source": "https://quaternius.com/packs/stylizednaturemegakit.html",
+        "license": "environments/quaternius-stylized-nature-standard/LICENSE.txt",
+        "preview_root": "environments/quaternius-stylized-nature-standard/previews",
+    },
+    "quaternius-fantasy-props-standard": {
+        "source": "https://quaternius.com/packs/fantasypropsmegakit.html",
+        "license": "props/quaternius-fantasy-props-standard/LICENSE.txt",
+        "preview_root": "props/quaternius-fantasy-props-standard/previews",
+    },
     "option-01-kaykit-adventurers": {
         "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
         "license": "alternatives/option-01-kaykit-adventurers/LICENSE.txt",
@@ -87,6 +97,11 @@ COLLECTIONS = {
         "source": "https://quaternius.com/packs/universalanimationlibrary2.html",
         "license": "animations/quaternius-universal-animation-library-2/LICENSE.txt",
         "preview_root": "animations/quaternius-universal-animation-library-2/setup-guides",
+    },
+    "quaternius-modular-outfits-fantasy-standard": {
+        "source": "https://quaternius.com/packs/modularcharacteroutfitsfantasy.html",
+        "license": "characters/quaternius-modular-outfits-fantasy-standard/LICENSE.txt",
+        "preview_root": "characters/quaternius-modular-outfits-fantasy-standard/previews",
     },
 }
 
@@ -153,6 +168,32 @@ def medieval_village_category(stem: str) -> str:
     return "architecture"
 
 
+def stylized_nature_category(stem: str) -> str:
+    if stem.startswith(("CommonTree_", "DeadTree_", "Pine_", "TwistedTree_")):
+        return "trees"
+    if stem.startswith(("Pebble_", "RockPath_", "Rock_")):
+        return "rocks-paths"
+    return "plants-ground-cover"
+
+
+def fantasy_props_category(stem: str) -> str:
+    if stem.startswith(("Book", "Bottle", "Potion", "Scroll", "SmallBottle", "Cauldron")):
+        return "books-alchemy"
+    if stem.startswith(("Bed", "Bench", "Bookcase", "Cabinet", "Chair", "Nightstand", "Peg_Rack", "Shelf", "Stool", "Table_Large")):
+        return "furniture"
+    if stem.startswith(("Anvil", "Axe", "Dummy", "Pickaxe", "Shield", "Sword", "WeaponStand", "Whetstone", "Workbench")):
+        return "workshop-weapons"
+    if stem.startswith(("Banner", "Candle", "Chalice", "Chandelier", "Lantern", "Torch", "Vase")):
+        return "lighting-decor"
+    if stem.startswith(("Carrot", "FarmCrate", "Stall", "Coin")) or stem == "Barrel_Apples":
+        return "market-goods"
+    if stem.startswith(("Mug", "Pot_", "Table_Fork", "Table_Knife", "Table_Plate", "Table_Spoon")):
+        return "tableware"
+    if stem.startswith(("Bag", "Barrel", "Bucket", "Cage", "Chain", "Chest", "Crate", "Pouch", "Rope")):
+        return "storage-utility"
+    return "small-utility"
+
+
 def collection_for(path: Path) -> tuple[str, str]:
     relative = path.relative_to(ASSET_ROOT)
     if relative.parts[0] == "alternatives" and relative.parts[2] == "models":
@@ -164,6 +205,11 @@ def collection_for(path: Path) -> tuple[str, str]:
         return "quaternius-universal-base-standard", relative.parts[3]
     if relative.parts[0] == "animations":
         return relative.parts[1], "animation-library"
+    if relative.parts[:2] == (
+        "characters",
+        "quaternius-modular-outfits-fantasy-standard",
+    ):
+        return "quaternius-modular-outfits-fantasy-standard", relative.parts[3]
     if relative.parts[:2] == ("characters", "blocky"):
         return "blocky-characters", "characters"
     if relative.parts[:2] == ("environments", "castle-kit"):
@@ -175,6 +221,17 @@ def collection_for(path: Path) -> tuple[str, str]:
         "quaternius-medieval-village-standard",
     ):
         return "quaternius-medieval-village-standard", medieval_village_category(
+            path.stem
+        )
+    if relative.parts[:2] == (
+        "environments",
+        "quaternius-stylized-nature-standard",
+    ):
+        return "quaternius-stylized-nature-standard", stylized_nature_category(
+            path.stem
+        )
+    if relative.parts[:2] == ("props", "quaternius-fantasy-props-standard"):
+        return "quaternius-fantasy-props-standard", fantasy_props_category(
             path.stem
         )
     raise ValueError(f"unrecognized asset location: {relative}")

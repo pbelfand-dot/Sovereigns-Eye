@@ -1,0 +1,146 @@
+{
+  "_comment": "Phase 2 - Noble Society. The player is the heir of the ruling house. They recruit villagers as retainers, appoint them to offices, choose what each one trains, pay wages and keep them loyal. All tuning lives here.",
+
+  "house": {
+    "start_gold": 150,
+    "start_renown": 10,
+    "base_income": 14,
+    "_income": "Gold per day from rents and dues before the Steward's bonus.",
+    "retainer_cap_base": 4,
+    "renown_per_extra_retainer": 15
+  },
+
+  "player": {
+    "_comment": "Who the player is: the ruling family's scion closest to preferred_age; falls back to the lord.",
+    "preferred_age": 16,
+    "self_training_rate": 0.7
+  },
+
+  "opinion": {
+    "_comment": "Opinion of the player (-100..100), rolled once per villager.",
+    "base": 5,
+    "spread": 15,
+    "ruling_family": 55,
+    "manor_staff": 15,
+    "traits": { "kind": 6, "loyal": 8, "gregarious": 4, "humble": 4, "cheerful": 4, "honest": 2, "cruel": -6, "arrogant": -6, "fickle": -4, "cynical": -5, "greedy": -2, "shy": -2 }
+  },
+
+  "talk": {
+    "base": 3.0,
+    "politics_divisor": 30.0,
+    "spread": 2.0,
+    "cap": 60,
+    "traits": { "gregarious": 1.4, "shy": 0.6, "cheerful": 1.2, "melancholic": 0.8, "arrogant": 0.7, "cynical": 0.7 }
+  },
+
+  "gift": {
+    "cost_by_tier": [10, 15, 25, 25, 40, 60, 100],
+    "opinion": 10.0,
+    "traits": { "greedy": 1.6, "generous": 0.8, "humble": 0.7, "arrogant": 1.2 }
+  },
+
+  "recruit": {
+    "min_age": 10,
+    "ward_max_age": 15,
+    "_ward": "10-15 year olds join as pages/wards; their parents decide, using the parents' opinion of you.",
+    "base_chance": 0.25,
+    "opinion_divisor": 150.0,
+    "loyalty_divisor": 250.0,
+    "overlooked_bonus": 0.18,
+    "renown_divisor": 500.0,
+    "leadership_divisor": 400.0,
+    "politics_divisor": 500.0,
+    "status_penalty_per_tier": 0.08,
+    "elder_age": 60,
+    "elder_penalty": 0.2,
+    "min_chance": 0.03,
+    "max_chance": 0.95,
+    "retry_days": 5,
+    "refusal_opinion": -3,
+    "signing_wages": 3,
+    "traits": { "ambitious": 0.1, "content": -0.1, "loyal": 0.05, "fickle": -0.05, "humble": 0.05, "arrogant": -0.05, "curious": 0.05 }
+  },
+
+  "wages": {
+    "_comment": "Gold per day. Kin of the ruling house serve for free.",
+    "retainer": 2,
+    "ward": 1,
+    "office": 3,
+    "knight": 4,
+    "unpaid_loyalty": -4,
+    "unpaid_opinion": -2
+  },
+
+  "training": {
+    "_comment": "Points per day toward potential: rate * (gap / potential) * learning * age factor * mentor. Current never passes potential.",
+    "focus_rate": 1.2,
+    "office_primary_rate": 1.1,
+    "office_secondary_rate": 0.5,
+    "learning_base": 0.6,
+    "learning_per_intelligence": 0.005,
+    "traits": { "diligent": 1.2, "lazy": 0.8, "curious": 1.1, "patient": 1.05 },
+    "age_factors": [[0, 1.25], [12, 1.45], [21, 1.0], [31, 0.7], [46, 0.4], [61, 0.2]],
+    "mentor_divisor": 150.0,
+    "mentor_cap": 1.6
+  },
+
+  "loyalty": {
+    "sworn": 15,
+    "opinion_factor": 0.2,
+    "wants_post": -6,
+    "holds_post": 6,
+    "nurtured": 4,
+    "unpaid": -15,
+    "rival_outranks": -5,
+    "knighted": 10,
+    "warning_below": 30,
+    "leave_below": 18,
+    "leave_chance": 0.12
+  },
+
+  "knighthood": {
+    "min_age": 16,
+    "min_combat": 50,
+    "min_leadership": 50,
+    "cost": 60,
+    "renown": 5,
+    "loyalty": 15,
+    "opinion": 20
+  },
+
+  "renown": {
+    "rank_up": { "B": 1, "A": 3, "S": 6, "S+": 10, "SS": 15 },
+    "full_potential": 4
+  },
+
+  "offices": [
+    {
+      "id": "steward", "name": "Steward",
+      "description": "Runs the estate's rents and ledgers. Raises daily income.",
+      "primary": "administration", "secondary": "intelligence",
+      "work": "manor", "work_style": "estate", "activity": "Keeping the house accounts",
+      "effect": "income", "effect_divisor": 200.0
+    },
+    {
+      "id": "marshal", "name": "Marshal",
+      "description": "Commands the household guard and trains fighters. Mentors Combat and Leadership.",
+      "primary": "leadership", "secondary": "combat",
+      "work": "barracks", "work_style": "drill", "activity": "Drilling the household guard",
+      "effect": "mentor", "mentors": ["combat", "leadership"]
+    },
+    {
+      "id": "chancellor", "name": "Chancellor",
+      "description": "Speaks for the house. Earns renown each day and makes recruiting easier.",
+      "primary": "politics", "secondary": "intelligence",
+      "work": "manor", "work_style": "estate", "activity": "Corresponding with neighbouring houses",
+      "effect": "renown", "effect_divisor": 40.0
+    },
+    {
+      "id": "scholar", "name": "Court Scholar",
+      "description": "Tutors the household. Mentors Intelligence, Politics and Administration.",
+      "primary": "intelligence", "secondary": "politics",
+      "work": "manor", "work_style": "estate", "activity": "Tutoring the household",
+      "effect": "mentor", "mentors": ["intelligence", "politics", "administration"]
+    }
+  ]
+}
