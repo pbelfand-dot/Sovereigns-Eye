@@ -3,10 +3,15 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir>
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court]
+##
+## "court" skips the village tour and only renders the Phase 2 screens
+## (recruit view, retainer view, court panel, player card, a month later),
+## which is much faster on software renderers.
 
 var out_dir := "user://captures"
 var seed_text := "12345"
+var court_only := false
 
 
 func _ready() -> void:
@@ -15,6 +20,7 @@ func _ready() -> void:
 		seed_text = args[0]
 	if args.size() > 1:
 		out_dir = args[1]
+	court_only = args.has("court")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -32,6 +38,16 @@ func _wait(n: int) -> void:
 
 
 func _run() -> void:
+	if court_only:
+		Game.state = WorldGenerator.generate(seed_text)
+		Game.state.minutes += 6.0 * 60.0  # early afternoon: people at work
+		var court_world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+		add_child(court_world)
+		await _wait(5)
+		court_world.paused = true
+		await _court_shots(court_world)
+		get_tree().quit()
+		return
 	var menu: Control = load("res://scenes/main/main.tscn").instantiate()
 	add_child(menu)
 	await _wait(10)
@@ -142,6 +158,15 @@ func _court_shots(world: VillageWorld) -> void:
 		world.ui._card._tabs.current_tab = 1
 		await _wait(20)
 		await _shot("14_player_card.png")
+		# The crest over your own character, from the normal strategy distance.
+		world.deselect()
+		var you := world.npc_of(st.player_id)
+		if you and you.visible:
+			world.camera_rig.look_at_point(you.global_position, 45.0, true)
+			# Park the mouse in a corner so the hover label doesn't cover the crest.
+			get_viewport().warp_mouse(Vector2(4, get_viewport().get_visible_rect().size.y - 4))
+			await _wait(20)
+			await _shot("14b_player_crest.png")
 	# A month passes: retainers train toward their potential.
 	for i in 30:
 		st.minutes += Calendar.MINUTES_PER_DAY

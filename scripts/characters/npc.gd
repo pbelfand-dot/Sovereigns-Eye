@@ -21,7 +21,7 @@ var _speed_factor := 1.0
 var _face_target: Variant = null
 var hovered := false
 var selected := false
-var _crest: MeshInstance3D
+var _crest: Node3D
 var _is_player := false
 
 
@@ -73,21 +73,40 @@ func _build_markers() -> void:
 func set_player_marker(on: bool) -> void:
 	_is_player = on
 	if on and _crest == null:
-		_crest = MeshInstance3D.new()
-		# A horizontal gold hexagon reads clearly from the strategy camera. The
-		# old vertical prism was almost invisible when viewed edge-on.
-		var medallion := CylinderMesh.new()
-		medallion.top_radius = 0.18
-		medallion.bottom_radius = 0.18
-		medallion.height = 0.055
-		medallion.radial_segments = 6
-		_crest.mesh = medallion
-		_crest.material_override = Mats.emissive(Color("#f0c24a"), 1.4)
-		_crest.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_crest.position.y = model.head_height() + 0.28 * model.body_height
+		# A gold pointer over your own character. It is billboarded and
+		# fixed-size, so it stays the same few pixels at any zoom, and it shows
+		# through roofs so you can always find yourself.
+		_crest = Node3D.new()
+		_crest.name = "PlayerCrest"
+		_crest.position.y = model.head_height() + 0.2 * model.body_height
 		add_child(_crest)
+		_crest.add_child(_marker_triangle(0.046, 0.04, Color("#3a2410"), 0))
+		_crest.add_child(_marker_triangle(0.034, 0.029, Color("#f4c84e"), 1))
 	if _crest:
-		_crest.visible = on
+		_crest.visible = on and not _label.visible
+
+
+## Downward-pointing triangle for the player crest (screen-space units).
+static func _marker_triangle(width: float, height: float, color: Color, priority: int) -> MeshInstance3D:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var lift := 0.006
+	st.add_vertex(Vector3(-width * 0.5, lift + height, 0))
+	st.add_vertex(Vector3(width * 0.5, lift + height, 0))
+	st.add_vertex(Vector3(0, lift, 0))
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.fixed_size = true
+	m.no_depth_test = true
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.albedo_color = color
+	m.render_priority = priority
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
 
 
 func refresh_markers() -> void:
@@ -97,6 +116,9 @@ func refresh_markers() -> void:
 	else:
 		_ring.material_override = Mats.emissive(Color("#f4ead2"), 0.8)
 	_label.visible = hovered or selected
+	if _crest:
+		# The hover label already says "Heir (You)"; don't stack the crest on it.
+		_crest.visible = _is_player and not _label.visible
 	if _label.visible:
 		var role := character.occupation_name()
 		if _is_player:

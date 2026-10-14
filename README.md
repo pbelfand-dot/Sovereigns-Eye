@@ -73,6 +73,10 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 
 The same seed always creates the same village and the same people.
 
+![Recruiting from the Court tab](docs/screenshots/court_recruit.jpg)
+![A retainer's office and training](docs/screenshots/court_retainer.jpg)
+![The Court panel (K)](docs/screenshots/court_panel.jpg)
+
 ### Controls
 
 | Action | Mouse / trackpad | Keys |

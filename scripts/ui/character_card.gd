@@ -192,8 +192,9 @@ func _refresh_banner() -> void:
 	var p := c.get_potential(best)
 	var color := Appraisal.rank_color(p)
 	var attr_name := str(GameData.attribute_def(best).get("name", best))
+	_banner.tooltip_text = "Greatest potential: %s %d (%s, %s)" % [attr_name, p, Appraisal.rank_id(p), Appraisal.rank_title(p)]
 	if Appraisal.is_exceptional(c):
-		_banner_label.text = "EXCEPTIONAL TALENT  -  %s %s (%s)" % [attr_name, Appraisal.rank_id(p), Appraisal.rank_title(p)]
+		_banner_label.text = "EXCEPTIONAL TALENT  -  %s %s" % [attr_name, Appraisal.rank_id(p)]
 	elif Appraisal.is_notable(c):
 		_banner_label.text = "Notable talent  -  %s %s" % [attr_name, Appraisal.rank_id(p)]
 	else:
@@ -265,11 +266,20 @@ func _build_court() -> void:
 	if st.is_player(c):
 		_build_court_player()
 		return
-	_section(_court_box, "Their opinion of you")
-	_court_bar(c.player_opinion, -100.0, 100.0, "%+d  %s" % [roundi(c.player_opinion), CourtSystem.opinion_label(c.player_opinion)], UITheme.opinion_color(roundi(c.player_opinion)))
+	# One row: what they think of you, and the two ways to change it.
 	var row := HFlowContainer.new()
 	row.add_theme_constant_override("h_separation", 8)
 	row.add_theme_constant_override("v_separation", 6)
+	var op := roundi(c.player_opinion)
+	var op_box := HBoxContainer.new()
+	op_box.add_theme_constant_override("separation", 6)
+	op_box.tooltip_text = "Their opinion of you (-100 to +100)"
+	op_box.mouse_filter = Control.MOUSE_FILTER_PASS
+	op_box.add_child(_mini_bar(c.player_opinion, -100.0, 100.0, UITheme.opinion_color(op), 96.0))
+	var op_l := UITheme.label("%+d %s" % [op, CourtSystem.opinion_label(c.player_opinion)], 14, UITheme.opinion_color(op))
+	op_l.mouse_filter = Control.MOUSE_FILTER_PASS
+	op_box.add_child(op_l)
+	row.add_child(op_box)
 	var talk := CourtSystem.can_talk(st, c)
 	var tb := UITheme.button("Talk", _on_talk)
 	tb.disabled = not talk["ok"]
@@ -326,9 +336,14 @@ func _build_court_retainer() -> void:
 	var c := character
 	var st := world.state
 	_section(_court_box, "Service")
-	_court_box.add_child(_wrap_label("%s of %s  -  wage %d gold/day" % [CourtSystem.role_name(st, c), CourtSystem.house_name(st), CourtSystem.wage(c)], 15))
+	var service := "%s  -  %d gold/day" % [CourtSystem.role_name(st, c), CourtSystem.wage(c)]
 	if c.joined_day >= 0:
-		_court_box.add_child(_wrap_label("Sworn %s" % Calendar.format_date(c.joined_day * Calendar.MINUTES_PER_DAY), 13, UITheme.TEXT_DIM))
+		var sworn := c.joined_day * Calendar.MINUTES_PER_DAY
+		service += "  -  sworn %s %d, %d" % [Calendar.season_name(sworn).left(3), Calendar.day_of_season(sworn), Calendar.year(sworn)]
+	var service_l := _wrap_label(service, 14)
+	service_l.tooltip_text = "%s of %s" % [CourtSystem.role_name(st, c), CourtSystem.house_name(st)]
+	service_l.mouse_filter = Control.MOUSE_FILTER_PASS
+	_court_box.add_child(service_l)
 	_court_bar(c.loyalty, 0.0, 100.0, "Loyalty %d  %s" % [roundi(c.loyalty), MoodSystem.loyalty_label(c.loyalty)], Color("#6fa8e6"))
 
 	# Consequential actions stay visible before the office and training detail.
@@ -462,6 +477,21 @@ func _court_bar(value: float, lo: float, hi: float, text: String, color: Color) 
 	l.custom_minimum_size.x = 170
 	line.add_child(l)
 	_court_box.add_child(line)
+
+
+func _mini_bar(value: float, lo: float, hi: float, color: Color, width: float) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.min_value = lo
+	bar.max_value = hi
+	bar.value = value
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(width, 12)
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fill := UITheme.box(color, Color(0, 0, 0, 0), 0, 3, 0)
+	fill.shadow_size = 0
+	bar.add_theme_stylebox_override("fill", fill)
+	return bar
 
 
 func _wrap_label(text: String, size: int, color: Color = UITheme.TEXT) -> Label:

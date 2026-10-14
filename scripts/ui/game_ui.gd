@@ -10,6 +10,8 @@ var _village_label: Label
 var _clock_label: Label
 var _appraised_label: Label
 var _house_label: Label
+var _bar_row: HBoxContainer
+var _bar_key := ""
 var _speed_buttons: Array[Button] = []
 var _card: CharacterCard
 var _ledger: LedgerPanel
@@ -61,11 +63,11 @@ func _build_top_bar() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	bar.add_child(row)
+	_bar_row = row
 
 	_village_label = UITheme.label(world.state.village_name, 18, UITheme.ACCENT, true)
 	row.add_child(_village_label)
 	_clock_label = UITheme.label("", 16)
-	_clock_label.custom_minimum_size.x = 205
 	row.add_child(_clock_label)
 
 	var spacer := Control.new()
@@ -87,7 +89,7 @@ func _build_top_bar() -> void:
 
 	_house_label = UITheme.label("", 15, UITheme.ACCENT)
 	_house_label.mouse_filter = Control.MOUSE_FILTER_PASS
-	_house_label.tooltip_text = "Gold (net per day)  -  Renown  -  Household size"
+	_house_label.tooltip_text = "Gold (change per day)  -  Renown  -  Retainers / household size"
 	row.add_child(_house_label)
 	_appraised_label = UITheme.label("", 15, UITheme.TEXT_DIM)
 	row.add_child(_appraised_label)
@@ -121,16 +123,60 @@ func _on_speed_changed(_scale: float) -> void:
 func _process(_delta: float) -> void:
 	if world == null:
 		return
-	var minutes := world.state.whole_minutes()
-	var compact: bool = get_viewport().get_visible_rect().size.x < 1450.0
-	_clock_label.text = "%s %d, Y%d  %s" % [Calendar.season_name(minutes), Calendar.day_of_season(minutes), Calendar.year(minutes), Calendar.format_time(minutes)] if compact else Calendar.format_full(minutes)
-	_appraised_label.visible = not compact
-	_appraised_label.text = "Seen %d/%d" % [world.appraised_count(), world.state.characters.size()]
+	_layout_top_bar()
+
+
+## Fills the top bar, dropping detail step by step (the "Appraised" count,
+## then the long date, then shorter house wording) until everything fits the
+## window, so the Court/Ledger/Save/Menu buttons are never pushed off screen.
+func _layout_top_bar() -> void:
 	var st := world.state
+	var minutes := st.whole_minutes()
+	var full_clock := Calendar.format_full(minutes)
+	var short_clock := "%s %d, %d  %s" % [Calendar.season_name(minutes).left(3), Calendar.day_of_season(minutes), Calendar.year(minutes), Calendar.format_time(minutes)]
+	var appraised := "Appraised %d/%d" % [world.appraised_count(), st.characters.size()]
+	var house: Array[String] = [""]
 	if st.house:
 		var net := CourtSystem.daily_income(st) - CourtSystem.daily_wages(st)
-		_house_label.text = "%dG (%+d)  R%d  %d/%d" % [st.house.gold, net, st.house.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)] if compact else "%d gold (%+d)   Renown %d   Household %d/%d" % [st.house.gold, net, st.house.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)]
+		var g := st.house.gold
+		var r := st.house.renown
+		var n := CourtSystem.retainer_count(st)
+		var cap := CourtSystem.retainer_cap(st)
+		house = [
+			"%d gold (%+d)   Renown %d   Household %d/%d" % [g, net, r, n, cap],
+			"%d gold (%+d)  Renown %d  Retainers %d/%d" % [g, net, r, n, cap],
+			"%d gold (%+d)  Renown %d  %d/%d" % [g, net, r, n, cap],
+			"%dg (%+d)  R%d  %d/%d" % [g, net, r, n, cap],
+		]
 		_house_label.add_theme_color_override("font_color", UITheme.BAD if st.house.in_debt else UITheme.ACCENT)
+	var width := _bar_row.size.x if _bar_row.size.x > 0.0 else get_viewport().get_visible_rect().size.x - 16.0
+	var key := "%s|%s|%s|%d" % [full_clock, appraised, house[0], roundi(width)]
+	if key == _bar_key:
+		return
+	_bar_key = key
+	# [long date?, show "Appraised"?, house wording index]
+	var plans := [[true, true, 0], [true, false, 0], [false, false, 0], [false, false, 1], [false, false, 2], [false, false, 3]]
+	for plan: Array in plans:
+		_clock_label.text = full_clock if plan[0] else short_clock
+		# Fixed widths so the bar doesn't jiggle as the minutes tick.
+		_clock_label.custom_minimum_size.x = 250.0 if plan[0] else 150.0
+		_appraised_label.text = appraised
+		_appraised_label.visible = plan[1]
+		_house_label.text = house[mini(int(plan[2]), house.size() - 1)]
+		if _bar_min_width() <= width:
+			break
+
+
+func _bar_min_width() -> float:
+	var total := 0.0
+	var count := 0
+	for child in _bar_row.get_children():
+		var ctl := child as Control
+		if ctl == null or not ctl.visible:
+			continue
+		total += ctl.get_combined_minimum_size().x
+		count += 1
+	return total + _bar_row.get_theme_constant("separation") * maxi(count - 1, 0)
 
 
 # --- Card & ledger ------------------------------------------------------------------------

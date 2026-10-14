@@ -4,6 +4,9 @@ extends VBoxContainer
 ## discovered!"). Listens to Game.notify.
 
 const LIFETIME := 4.5
+## Long messages wrap at this width so they never run under the character
+## card on the right (GameUI keeps the stack left of it).
+const MAX_TEXT_WIDTH := 600.0
 
 
 func _ready() -> void:
@@ -25,6 +28,10 @@ func show_toast(text: String, color: Color = UITheme.TEXT) -> void:
 	panel.add_theme_stylebox_override("panel", UITheme.box(Color("#1c1510ee"), color.darkened(0.2), 2, 6, 10))
 	var l := UITheme.label(text, 17, color, true)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var font := UITheme.heading_font()
+	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x > MAX_TEXT_WIDTH:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = MAX_TEXT_WIDTH
 	panel.add_child(l)
 	add_child(panel)
 	while get_child_count() > 4:
