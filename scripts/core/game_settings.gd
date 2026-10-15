@@ -9,6 +9,8 @@ const DEFAULTS := {
 	"accessibility/reduced_motion": false,
 	"accessibility/reduce_flashes": false,
 	"accessibility/captions": false,
+	"controls/click_to_move": false,
+	"controls/touch_controls": false,
 }
 
 static var _cache: Dictionary = {}
@@ -58,6 +60,17 @@ static func reduce_flashes() -> bool:
 
 static func captions() -> bool:
 	return get_bool("accessibility/captions")
+
+
+## Right-click the ground (or a person) to walk the heir there.
+static func click_to_move() -> bool:
+	return get_bool("controls/click_to_move")
+
+
+## The on-screen joystick and big buttons: always on phones and tablets,
+## optional elsewhere (touch-screen laptops).
+static func touch_controls() -> bool:
+	return OS.has_feature("mobile") or get_bool("controls/touch_controls")
 
 
 ## Has the player watched this tier's full reveal before? (Then it may be skipped.)

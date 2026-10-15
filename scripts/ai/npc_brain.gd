@@ -23,12 +23,9 @@ var _stay_left := 0.0
 ## Personal clock offset (hours) so the village doesn't move in lockstep.
 var _offset := 0.0
 ## An order that overrides the daily routine:
-##   {type: "talk", target: id}  walk to someone and speak with them (heir)
-##   {type: "walk", pos: Vector3} walk somewhere and wait there a while (heir)
-##   {type: "hold", face: Vector3} stand still, e.g. while being spoken to
+##   {type: "hold", face: Vector3} stand still, e.g. while the heir speaks
+##   with them
 var errand: Dictionary = {}
-var _repath := 0.0
-var _hold_left := 0.0
 
 
 func _init(body: NPC, owner_world: VillageWorld) -> void:
@@ -74,63 +71,23 @@ func activity_at(hour: float) -> String:
 ## Gives the brain an order (see `errand`); {} returns to the routine.
 func set_errand(e: Dictionary) -> void:
 	errand = e
-	_repath = 0.0
-	_hold_left = float(e.get("minutes", 60.0))
 	_steps.clear()
 	_current = {}
-	npc.hurry = 1.6 if str(e.get("type", "")) in ["talk", "walk"] else 1.0
 	if e.is_empty():
 		block_activity = ""
-		npc.hurry = 1.0
 
 
-func _errand_update(game_minutes: float) -> void:
+func _errand_update(_game_minutes: float) -> void:
 	match str(errand.get("type", "")):
-		"talk":
-			var target := world.npc_of(int(errand.get("target", -1)))
-			if target == null:
-				set_errand({})
-				return
-			if c.inside_building_id >= 0:
-				_leave_building()
-			var goal := target.global_position
-			if not target.visible:
-				var b := world.state.get_building(target.character.inside_building_id)
-				goal = b.door_position() if b else goal
-			var flat := Vector2(goal.x - npc.global_position.x, goal.z - npc.global_position.z)
-			if flat.length() <= world.TALK_RANGE:
-				npc.stop()
-				npc.set_anim("talk")
-				npc.face_point(goal)
-				c.activity_text = "Speaking with %s" % target.character.first_name
-				world.heir_arrived(target.character.id)
-				return
-			_repath -= game_minutes
-			if not npc.is_moving() or _repath <= 0.0:
-				_repath = 6.0
-				var stand := goal - Vector3(flat.x, 0, flat.y).normalized() * (world.TALK_RANGE * 0.6)
-				npc.walk_path(world.graph.find_path(npc.global_position, TerrainHeight.on_ground(stand)))
-				npc.set_anim("idle")
-				c.activity_text = "On the way to speak with %s" % target.character.first_name
-		"walk":
-			if c.inside_building_id >= 0:
-				_leave_building()
-			var pos: Vector3 = errand["pos"]
-			if not bool(errand.get("started", false)):
-				errand["started"] = true
-				npc.walk_path(world.graph.find_path(npc.global_position, TerrainHeight.on_ground(pos)))
-				c.activity_text = "Walking where you sent them"
-			elif not npc.is_moving():
-				npc.set_anim("idle")
-				c.activity_text = "Looking around"
-				_hold_left -= game_minutes
-				if _hold_left <= 0.0:
-					set_errand({})
 		"hold":
+			if c.inside_building_id >= 0:
+				_leave_building()
 			npc.stop()
 			npc.set_anim("talk")
 			if errand.has("face"):
 				npc.face_point(errand["face"])
+		_:
+			set_errand({})
 
 
 ## Called every frame with the in-game minutes that passed.

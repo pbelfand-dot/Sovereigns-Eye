@@ -8,6 +8,9 @@ skill (current vs. hidden potential). Read `docs/ARCHITECTURE.md` first.
   On a fresh clone run `godot --headless --path . --import` once so `class_name`s resolve.
 - Village census for a seed: `godot --headless --path . --script res://tools/print_village.gd -- <seed>`
 - Screenshots (needs a display): `godot --path . res://tools/capture.tscn -- <seed> <out_dir>`
+- One test suite: `TEST_FILTER=recruitment tools/run_tests.sh`
+- Who'd join for what (tuning `data/recruitment.json`): `godot --headless --path . --script res://tools/recruit_report.gd -- <seed>`
+- Gameplay video (needs a display): `godot --path . --resolution 1280x720 --write-movie out.avi --fixed-fps 30 res://tools/gameplay_demo.tscn -- <seed>`
 
 ## Rules
 - Keep data and presentation separate: game state lives in `CharacterData`,

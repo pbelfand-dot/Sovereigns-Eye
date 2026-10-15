@@ -98,6 +98,13 @@ static func migrate(data: Dictionary) -> Dictionary:
 		# Anyone already appraised counts as met (CharacterData.from_dict);
 		# the ruling family knows each other (CourtSystem.initialize_meetings).
 		data["save_version"] = 5
+		version = 5
+	if version == 5:
+		# v6 (motive-based recruitment) adds the terms people joined on, the
+		# motives they've told you, titles, and the house's standing and open
+		# promises. Retainers who joined before keep the standard wage
+		# (agreed_wage -1) and empty terms; standing starts at fair (50).
+		data["save_version"] = 6
 	return data
 
 

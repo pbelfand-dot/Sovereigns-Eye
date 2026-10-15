@@ -12,7 +12,7 @@ extends CanvasLayer
 ## for important sounds. A tier's full sequence can be skipped once the
 ## player has seen it.
 ##
-## Ends with choices (recruit, appoint, follow, remember, close) and emits
+## Ends with choices (talk, appoint, remember, card, close) and emits
 ## `finished(action)`.
 
 signal finished(action: String)
@@ -466,11 +466,12 @@ func _show_final() -> void:
 func _show_actions() -> void:
 	var st := world.state if world else null
 	if st:
-		if not character.retainer and not CourtSystem.is_kin(st, character) and character.age >= int(CourtSystem.section("recruit").get("min_age", 10)):
-			_action("Recruit...", "recruit", "Offer them a place in your household (Court tab)")
+		if world.talking_to == character.id:
+			_action("Back to the conversation", "talk", "Learn what they want and make them an offer")
+		elif not character.retainer and not CourtSystem.is_kin(st, character) and character.age >= int(CourtSystem.section("recruit").get("min_age", 10)):
+			_action("Talk to them", "talk", "Walk up and speak with them: learn what they want, then make an offer")
 		if character.retainer and character.age >= 16:
 			_action("Appoint...", "appoint", "Give them an office or a training focus (Court tab)")
-	_action("Follow", "follow", "Keep the camera on them")
 	var remember := _action("Forget" if character.remembered else "Remember", "remember", "Mark them in the ledger so you can find them again")
 	remember.pressed.connect(func() -> void:
 		character.remembered = not character.remembered
@@ -503,7 +504,8 @@ func _finish(action: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	var press := (event is InputEventMouseButton and (event as InputEventMouseButton).pressed) or (event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo)
+	var press := (event is InputEventMouseButton and (event as InputEventMouseButton).pressed) or (event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo) \
+		or (event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed)
 	if not press:
 		return
 	if not done:

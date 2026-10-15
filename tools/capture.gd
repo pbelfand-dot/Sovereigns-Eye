@@ -72,6 +72,7 @@ func _run() -> void:
 		var court_world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
 		add_child(court_world)
 		await _wait(5)
+		court_world.set_view_mode("overview", true)
 		court_world.paused = true
 		await _court_shots(court_world)
 		get_tree().quit()
@@ -88,6 +89,7 @@ func _run() -> void:
 	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
 	add_child(world)
 	await _wait(5)
+	world.set_view_mode("overview", true)
 	world.set_speed(3)
 	for i in 300:
 		world._process(0.1)
@@ -184,10 +186,10 @@ func _court_shots(world: VillageWorld) -> void:
 	for c: CharacterData in people:
 		if recruited.size() >= 3:
 			break
-		if not CourtSystem.recruit_check(st, c)["ok"]:
+		if not Recruitment.eligible(st, c)["ok"]:
 			continue
 		c.appraised = true
-		CourtSystem.try_recruit(st, c, 0.0)
+		Recruitment.accept(st, c, {"wage": 3, "position": "household"})
 		var office := str(office_for.get(CourtSystem.focus_of(c), "steward"))
 		if c.age >= 16 and st.house.holder_of(office) < 0:
 			CourtSystem.appoint(st, office, c)
@@ -195,7 +197,7 @@ func _court_shots(world: VillageWorld) -> void:
 		recruited.append(c)
 	# A prospect who hasn't joined yet: the recruit view with its odds.
 	for c: CharacterData in people:
-		if not c.retainer and CourtSystem.recruit_check(st, c)["ok"]:
+		if not c.retainer and Recruitment.eligible(st, c)["ok"]:
 			c.appraised = true
 			world.select_character(c.id, true)
 			world.ui._card._tabs.current_tab = 1
@@ -370,6 +372,7 @@ func _boot_world() -> VillageWorld:
 	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
 	add_child(world)
 	await _wait(5)
+	world.set_view_mode("overview", true)
 	world.set_speed(1)
 	for i in 120:
 		world._process(0.1)

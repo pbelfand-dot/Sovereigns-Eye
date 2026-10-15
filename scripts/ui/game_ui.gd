@@ -18,7 +18,15 @@ var _ledger: LedgerPanel
 var _court: CourtPanel
 var _build: BuildPanel
 var _building_card: BuildingCard
-var _conversation: ConversationPanel
+var _conversation: NegotiationPanel
+var _prompt: PanelContainer
+var _prompt_name: Label
+var _prompt_keys: Label
+var _map_banner: PanelContainer
+var _map_button: Button
+var _touch: TouchControls
+## The last input came from a controller (prompts show its buttons).
+var _pad := false
 var _stores_row: HBoxContainer
 var _stores_key := ""
 var _place_hint: PanelContainer
@@ -47,8 +55,13 @@ func setup(owner_world: VillageWorld) -> void:
 	_build_conversation()
 	_build_stores_bar()
 	_build_place_hint()
+	_build_prompt()
+	_build_map_banner()
 	_build_toasts()
 	_build_help()
+	_touch = TouchControls.new()
+	_touch.world = world
+	_root.add_child(_touch)
 	_build_pause_menu()
 	world.selection_changed.connect(_on_selection_changed)
 	world.speed_changed.connect(_on_speed_changed)
@@ -58,12 +71,14 @@ func setup(owner_world: VillageWorld) -> void:
 	world.building_selected.connect(_on_building_selected)
 	world.conversation_started.connect(_on_conversation_started)
 	world.conversation_ended.connect(func() -> void: _conversation.visible = false)
+	world.mode_changed.connect(_on_mode_changed)
 	_on_speed_changed(world.time_scale())
+	_on_mode_changed(world.mode)
 	var p := world.state.player()
 	if p:
-		Game.notify.emit("You are %s, heir of %s (gold crest). Walk among your people and talk to them; then use the Sovereign's Eye to see who they could become." % [p.full_name(), CourtSystem.house_name(world.state)], UITheme.TEXT)
+		Game.notify.emit("You are %s, heir of %s. Walk among your people (WASD). Look at someone nearby and press Q for the Sovereign's Eye; walk up and press E to talk." % [p.full_name(), CourtSystem.house_name(world.state)], UITheme.TEXT)
 	else:
-		Game.notify.emit("Welcome to %s. Talk to villagers, then use the Sovereign's Eye on them." % world.state.village_name, UITheme.TEXT)
+		Game.notify.emit("Welcome to %s." % world.state.village_name, UITheme.TEXT)
 
 
 # --- Top bar -------------------------------------------------------------------------
@@ -112,6 +127,9 @@ func _build_top_bar() -> void:
 	row.add_child(_house_label)
 	_appraised_label = UITheme.label("", 15, UITheme.TEXT_DIM)
 	row.add_child(_appraised_label)
+	_map_button = UITheme.button("Map", world.toggle_overview)
+	_map_button.tooltip_text = "The map table: plan your lands from above (Tab or M). Press again to walk as your heir."
+	row.add_child(_map_button)
 	var build_button := UITheme.button("Build", toggle_build)
 	build_button.tooltip_text = "Order new buildings, see the stores (B)"
 	row.add_child(build_button)
@@ -145,6 +163,8 @@ func _on_speed_changed(_scale: float) -> void:
 func _process(_delta: float) -> void:
 	if world == null:
 		return
+	_conversation.visible = world.talking_to >= 0 and not world.is_revealing() and _conversation.character != null
+	_update_prompt()
 	_layout_top_bar()
 	_update_stores_bar()
 	if _place_hint.visible:
@@ -324,7 +344,7 @@ func refresh() -> void:
 # --- Building (Phase 3) -------------------------------------------------------------------
 
 func _build_conversation() -> void:
-	_conversation = ConversationPanel.new()
+	_conversation = NegotiationPanel.new()
 	_conversation.anchor_left = 0.5
 	_conversation.anchor_right = 0.5
 	_conversation.anchor_top = 1.0
@@ -342,7 +362,93 @@ func _on_conversation_started(character_id: int, result: Dictionary) -> void:
 	var c := world.state.get_character(character_id)
 	if c:
 		_help.visible = false
-		_conversation.open(c, result, c.appraised)
+		_conversation.open(world, c, result)
+
+
+func conversation_panel() -> NegotiationPanel:
+	return _conversation
+
+
+# --- Walking: who you're looking at, and the map table -----------------------------------------
+
+func _build_prompt() -> void:
+	_prompt = PanelContainer.new()
+	_prompt.anchor_left = 0.5
+	_prompt.anchor_right = 0.5
+	_prompt.anchor_top = 1.0
+	_prompt.anchor_bottom = 1.0
+	_prompt.offset_bottom = -26
+	_prompt.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_prompt.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prompt.add_theme_stylebox_override("panel", UITheme.box(Color("#1c1510d8"), UITheme.GOLD_DIM, 1, 8, 10))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prompt.add_child(col)
+	_prompt_name = UITheme.label("", 17, UITheme.TEXT, true)
+	_prompt_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(_prompt_name)
+	_prompt_keys = UITheme.label("", 15, UITheme.ACCENT)
+	_prompt_keys.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(_prompt_keys)
+	_prompt.visible = false
+	_root.add_child(_prompt)
+
+
+## "Aldric Hunt, carpenter / [Q] Sovereign's Eye   [E] Talk": public things
+## only (name and trade), and what you can do from where you stand.
+func _update_prompt() -> void:
+	var f := world.focus
+	var show := world.mode == "walk" and f != null and world.talking_to < 0 and not world.is_revealing() and not is_menu_open()
+	_prompt.visible = show
+	if not show:
+		return
+	var c := f.character
+	_prompt_name.text = "%s, %s" % [c.display_name(), c.occupation_name().to_lower()]
+	if _touch.visible:
+		_prompt_keys.text = ""
+		_prompt_keys.visible = false
+		return
+	_prompt_keys.visible = true
+	var eye_key := InputSetup.key_name("sovereign_eye", _pad)
+	var talk_key := InputSetup.key_name("interact", _pad)
+	var eye := "[%s] %s" % [eye_key, "Look again" if c.appraised else "Sovereign's Eye"]
+	var talk := "[%s] Talk" % talk_key if world.talk_check(c.id)["ok"] else "(walk closer to talk)"
+	_prompt_keys.text = "%s     %s" % [eye, talk]
+
+
+func _build_map_banner() -> void:
+	_map_banner = PanelContainer.new()
+	_map_banner.anchor_left = 0.5
+	_map_banner.anchor_right = 0.5
+	_map_banner.offset_top = 58
+	_map_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_map_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_banner.add_theme_stylebox_override("panel", UITheme.box(Color("#2a1f14e8"), UITheme.GOLD, 1, 6, 8))
+	var l := UITheme.label("The Map Table  -  plan from above.  Tab or M to walk as your heir again.", 15, UITheme.ACCENT)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_banner.add_child(l)
+	_map_banner.visible = false
+	_root.add_child(_map_banner)
+
+
+func _on_mode_changed(mode: String) -> void:
+	_map_banner.visible = mode == "overview" and world.heir_ctl != null
+	_map_button.text = "Walk" if mode == "overview" else "Map"
+	_map_button.tooltip_text = "Back to walking as your heir (Tab or M)" if mode == "overview" else "The map table: plan your lands from above (Tab or M)"
+
+
+## The last input came from a controller (for button names in prompts).
+func using_pad() -> bool:
+	return _pad
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf((event as InputEventJoypadMotion).axis_value) > 0.5):
+		_pad = true
+	elif event is InputEventKey or (event is InputEventMouseButton and event.device != InputEvent.DEVICE_ID_EMULATION):
+		_pad = false
 
 
 func is_conversation_open() -> bool:
@@ -538,13 +644,16 @@ func _build_help() -> void:
 	_help.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_help.add_theme_stylebox_override("panel", UITheme.box(Color("#1c1510d0"), UITheme.GOLD_DIM, 1, 6, 10))
-	var text := UITheme.label(
-		"Click a villager - their card    Talk, then use the Sovereign's Eye\n" +
-		"Select your heir, right-click the ground - walk there\n" +
-		"Card > Court tab - talk, give gifts, recruit, appoint, train\n" +
-		"Drag (left/right mouse) or WASD - move camera\n" +
-		"Wheel / pinch / R,F - zoom    Q,E or middle-drag - rotate\n" +
-		"Space - pause    1-4 - game speed    C - follow selected\n" +
+	var touch_help := "Stick - walk    Drag - turn the camera    Pinch - zoom\n" + \
+		"Eye - the Sovereign's Eye on the person you face (be near, in sight)\n" + \
+		"Talk - speak with them when you're beside them\n" + \
+		"Map - the map table (build, plan)    Tap a villager - their card"
+	var text := UITheme.label(touch_help if GameSettings.touch_controls() else
+		"WASD / left stick - walk    Shift - run    Drag / right stick / arrows - turn the camera\n" +
+		"Q / (Y) - Sovereign's Eye on the person you look at (be near, in sight)\n" +
+		"E / (A) - talk: ask what they want, make an offer\n" +
+		"Tab or M - the map table (build, plan)    Click a villager - their card\n" +
+		"Wheel / pinch / R,F - zoom    Space - pause    1-4 - game speed\n" +
 		"B - build    K - your court    L - village ledger    F5 / F9 - quicksave / quickload\n" +
 		"Esc - close / menu    H - hide this help", 14, UITheme.TEXT_DIM)
 	_help.add_child(text)

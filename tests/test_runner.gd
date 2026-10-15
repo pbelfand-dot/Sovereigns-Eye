@@ -12,6 +12,7 @@ const SUITES := [
 	"res://tests/test_generation.gd",
 	"res://tests/test_save_load.gd",
 	"res://tests/test_court.gd",
+	"res://tests/test_recruitment.gd",
 	"res://tests/test_territory.gd",
 	"res://tests/test_growth.gd",
 	"res://tests/test_art_pipeline.gd",
@@ -29,7 +30,11 @@ func _run() -> void:
 	var total := 0
 	var failed: Array[String] = []
 	var started := Time.get_ticks_msec()
+	# TEST_FILTER=recruitment runs only the suites whose path contains it.
+	var only := OS.get_environment("TEST_FILTER")
 	for path in SUITES:
+		if not only.is_empty() and not path.contains(only):
+			continue
 		var script: GDScript = load(path)
 		if script == null:
 			failed.append("%s: could not load" % path)

@@ -61,17 +61,19 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | # | Goal | How |
 |---|---|---|
 | 1-2 | Launch & start a new game | Main menu → **New Game** → leave the seed blank (random) or type one → **Begin** |
-| 3 | Explore the village | Drag with the mouse, WASD, pinch/scroll to zoom, Q/E to rotate |
+| 3 | Walk the village as your heir | **WASD** (or the left stick) to walk, **Shift** to run; drag with the mouse (or the right stick, or the arrow keys) to turn the camera, scroll to zoom. Buildings block your way and your view |
 | 4 | NPCs walking around | Speed up time with **2**, **3**, **4**: people go to work, the tavern, the chapel and home to bed |
-| 5-7 | Meet people | Click anyone to open their card. It shows only what anyone could see. Choose **Go and talk** (or **Talk**): your heir walks over and you hear what they have to say |
-| 8 | Use the Sovereign's Eye | After a first talk, **Use the Sovereign's Eye**. The reveal grows grander the rarer the person (Ordinary → Skilled → Exceptional → Legendary). Talk and gossip are clues, never proof. See [docs/ROADMAP.md](docs/ROADMAP.md) |
-| 9 | Happiness, loyalty, personality | Card → **Personality** tab, including *why* they feel that way |
-| 10 | Build your household | Card → **Court**: talk, give gifts, and recruit willing villagers. Children aged 10–15 can join as pages with a parent's approval |
+| 5 | Look at someone with the Sovereign's Eye | Get near someone and face them: their name shows at the bottom. Press **Q** (controller **Y**). No talk needed, but they must be close (about 10 paces) and in plain sight, so you can't read a whole town from a menu. The reveal grows grander the rarer the person (Ordinary → Skilled → Exceptional → Legendary). See [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 6 | Talk to the promising ones | Walk up and press **E** (controller **A**). Their talk may hint at a gift. **Ask about their life** to learn what they want, in their own words |
+| 7 | Win them over | **Make an offer**: a daily wage, a home (a free one, rooms at the manor, or a promise), a place (household, training, an office, a workplace with tools, a squire's place) and an appeal to their duty. They accept, name their terms, or refuse, and say why. Different people want different things |
+| 8 | Keep your word | Wages are paid from the treasury every day, families really move into the homes you give, jobs need a real workplace, and a broken promise costs trust, your house's standing, and sometimes the person |
+| 9 | Happiness, loyalty, personality | Click anyone for their card → **Personality** tab, including *why* they feel that way |
+| 10 | Your household | Card → **Court**: what you've learned they want, gifts, offices and training. Children aged 10–15 can join as pages; a parent decides |
 | 11 | Develop retainers | Choose a training focus, appoint a Steward, Marshal, Chancellor, or Court Scholar, and knight proven servants |
 | 12 | Run your court | Press **K** to see gold, daily income and wages, renown, offices, retainers, loyalty, and the house chronicle |
 | 13 | Save / load | **F5** quicksave, **F9** quickload, or **Esc → Save Game / Load Game**. Quit, relaunch, **Continue** |
 | 14 | Watch the stores | The bar under the top bar shows **food, wood and stone** and their change per day. Farmers grow food, woodcutters fell timber, everyone eats and burns firewood. Winter fields yield less |
-| 15 | Order a building | Press **B** → pick a building → click beside a road. It turns to face the road, a lane is laid to its door, and trees in the way are felled for wood. **T** turns it, **Shift+click** places another, **Esc** cancels |
+| 15 | Order a building | Press **Tab** (or **M**) for the map table, then **B** → pick a building → click beside a road (choosing a building takes you to the map table on its own). It turns to face the road, a lane is laid to its door, and trees in the way are felled for wood. **T** turns it, **Shift+click** places another, **Esc** cancels |
 | 16 | Watch it go up | A crew (carpenters first) stakes out the ground, then the walls rise inside a scaffold and the roof goes on. When it's finished, villagers take the new jobs |
 | 17 | Build faster | Appraise villagers for a hidden **Administration** talent, recruit them and appoint them **Master of Works** (Court tab). Every site speeds up with their Administration |
 | 18 | Watch it grow | Keep food in store and people happy. The **settler bar** (Build panel) fills, and new families walk in from the edge of the map. Appraise them: newcomers can hide great talent too |
@@ -132,14 +134,28 @@ new floors rise inside scaffolding.
 
 ### Controls
 
+**On foot (as the heir)**
+
+| Action | Keyboard & mouse | Controller | Touch |
+|---|---|---|---|
+| Walk / run | WASD / Shift | Left stick / left trigger | Stick (bottom left) |
+| Turn the camera | Drag with any mouse button · ← → | Right stick | Drag with a second finger (or anywhere off the controls) |
+| Zoom | Scroll wheel · pinch · R / F · ↑ ↓ | Bumpers | Pinch |
+| Sovereign's Eye on the person you face | Q | Y | **Eye** button |
+| Talk (when beside them) | E | A | **Talk** button |
+| The map table (build, plan) and back | Tab or M | View | **Map** button |
+| Select a villager (their card) | Left-click | — | Tap |
+| Click to move (optional: Esc menu → Accessibility) | Right-click the ground or a person | — | — |
+
+**On the map table**
+
 | Action | Mouse / trackpad | Keys |
 |---|---|---|
 | Select a villager (their card) | Left-click | — |
-| Walk your heir somewhere | Select your heir, then right-click the ground | — |
 | Pan | Left-drag or right-drag · two-finger scroll | WASD / arrows (Shift = fast) |
 | Zoom | Scroll wheel · pinch | R / F, + / − |
 | Rotate | Middle-drag · Option + left-drag | Q / E |
-| Follow selected | — | C |
+| Find selected | — | C |
 | Pause / speed | Top bar buttons | Space · 1 2 3 4 |
 | Village ledger | Top bar | L |
 | Your court | Top bar | K |

@@ -1,0 +1,95 @@
+{
+  "_comment": "Motive-based recruitment. Each person weighs their own motives (0..1 weights from who they are); an offer satisfies some of them. They accept when the weighted total reaches 'threshold'; one strong motive met in full can be enough on its own. Close calls get a counteroffer; refusals say why in plain words. Offers are real: wages come from the treasury every day, homes are moved into, jobs need a workplace, and promises are checked.",
+
+  "threshold": 1.0,
+  "counter_from": 0.7,
+  "insult_below": 0.0,
+  "retry_days": 3,
+  "_strong_motive": "A motive whose weight x satisfaction reaches 'weight' counts 'bonus' times over: one strong reason can be enough.",
+  "strong_motive": { "weight": 0.65, "bonus": 1.35 },
+
+  "motives": {
+    "bond":     { "name": "Fondness for you",          "_": "satisfied by their opinion of you; loyal and kind people weigh it more" },
+    "money":    { "name": "Money and security",        "_": "satisfied by a daily wage against what they need" },
+    "home":     { "name": "A home for their family",   "_": "satisfied by a better home (or a promise of one)" },
+    "career":   { "name": "Advancement",               "_": "training, an office, a workplace with tools, or a squire's path" },
+    "standing": { "name": "Respect, duty and prestige", "_": "an appeal to duty, an office or a title" },
+    "ties":     { "name": "Ties to their life here",   "_": "a cost: their business, friends and family keep them" },
+    "risk":     { "name": "Caution",                   "_": "a cost: craven or content people dislike change" }
+  },
+
+  "weights": {
+    "bond":  { "base": 0.55, "traits": { "loyal": 0.35, "kind": 0.15, "cynical": -0.25, "fickle": -0.15 } },
+    "money": { "base": 0.2, "status": { "peasant": 0.4, "commoner": 0.25, "burgher": -0.1, "clergy": -0.1, "retainer": 0.15, "knight": 0.05 },
+               "per_dependent": 0.04, "hungry": 0.2, "traits": { "greedy": 0.3, "generous": -0.15 } },
+    "home":  { "base": 0.0, "parent": 0.15, "per_child": 0.18, "crowded_from": 5, "crowded": 0.25, "not_household_head": 0.2, "homeless": 0.6,
+               "owner_status": { "burgher": -0.3 } },
+    "career":{ "base": 0.15, "ambition_divisor": 140.0, "wasted_talent": 0.3, "young": 0.1, "traits": { "ambitious": 0.3, "curious": 0.1, "content": -0.3, "lazy": -0.2 }, "elder": -0.3 },
+    "standing": { "base": 0.05, "status": { "burgher": 0.55, "clergy": 0.45, "knight": 0.4, "retainer": 0.3 }, "traits": { "devout": 0.3, "loyal": 0.15, "honest": 0.15, "brave": 0.1, "arrogant": 0.3, "humble": -0.15 } },
+    "ties":  { "business_head": 0.3, "per_friend": 0.05, "max_friends": 3, "spouse_works_here": 0.08 },
+    "risk":  { "traits": { "craven": 0.25, "content": 0.2, "patient": 0.05, "brave": -0.1 }, "elder": 0.25 }
+  },
+
+  "business_heads": ["innkeeper", "blacksmith", "baker", "miller", "merchant", "farmer"],
+  "_trade": "Skilled trades: joining your house means giving up the trade, unless you offer a workplace where they can keep it.",
+  "trade_jobs": ["carpenter", "blacksmith", "stonecutter", "baker", "miller", "apprentice"],
+  "trade_cost": 0.45,
+  "fighter_attrs": ["combat", "leadership"],
+
+  "_wage_need": "Gold a day they need; a gifted hand knows their worth (best current ability at or above each step adds 1).",
+  "wage_need": { "peasant": 2, "commoner": 2, "retainer": 3, "clergy": 3, "burgher": 4, "knight": 4 },
+  "skill_wage": [55, 80],
+  "_livelihood": "People who live by their work give up their living to join: no wage at all counts against the offer.",
+  "livelihood_statuses": ["peasant", "commoner", "retainer"],
+  "no_wage": -0.5,
+  "_heir_ties": "Their own bond with the heir: friends and lovers count for more, rivals for less.",
+  "heir_ties": { "friend": 0.4, "lover": 0.5, "rival": -0.4 },
+  "max_wage": 8,
+  "reputation": { "weight": 0.5, "start": 50.0 },
+
+  "career_offers": {
+    "household":  { "value": 0.25, "name": "A place in your household" },
+    "training":   { "value": 0.6,  "best_match": 0.25, "name": "Training in a skill of their choosing" },
+    "office":     { "value": 0.75, "best_match": 0.2, "name": "An office in your house" },
+    "workplace":  { "value": 0.75, "craft_match": 0.25, "name": "Their own workplace, with tools" },
+    "squire":     { "value": 0.85, "fighter_match": 0.25, "non_fighter": -0.4, "name": "A squire's place, on the road to knighthood" }
+  },
+  "appeal": { "duty_traits": ["devout", "loyal", "honest", "brave"], "value": 0.8, "other": 0.2 },
+  "home_offer": { "value": 1.0, "better_tier": 0.25, "promise": 0.6, "manor_rooms": 0.55, "manor_capacity": 10 },
+
+  "promises": { "home_days": 6, "broken_loyalty": -25, "broken_opinion": -20, "broken_standing": -8, "kept_standing": 2, "kept_loyalty": 6 },
+  "standing": { "daily_paid": 0.3, "unpaid": -2.0, "hungry": -1.0, "min": 0.0, "max": 100.0 },
+
+  "ask_lines": {
+    "bond":     ["\"Your family has always been fair to mine, {lord}.\"", "\"I'd follow you, {lord}. I've said so before.\""],
+    "money":    ["\"Truth be told, {lord}, we owe the miller more than we can pay.\"", "\"A steady wage... that would change everything for us.\""],
+    "home":     ["\"Five of us under one roof, and the roof leaks.\"", "\"If my children had a proper home, I'd go anywhere.\""],
+    "career":   ["\"I'm wasted here. I could do so much more, if someone gave me the chance.\"", "\"Teach me, {lord}, and you won't regret it.\""],
+    "standing": ["\"My family has served this village for generations. That should count for something.\"", "\"Money is nothing. A man's name, his duty, that is something.\""],
+    "ties":     ["\"My whole life is here, {lord}. My work, my friends.\"", "\"Who would keep the business going if I left?\""],
+    "risk":     ["\"I don't like changes, {lord}. Things are fine as they are.\"", "\"Safer to stay put, I think.\""]
+  },
+  "nothing_more": "\"That's all there is to tell, {lord}.\"",
+
+  "reason_lines": {
+    "bond_pos": "They are fond of you and want to serve.",
+    "bond_neg": "They don't trust you yet.",
+    "money_pos": "Steady pay of {wage} gold a day would keep their family secure.",
+    "money_low": "{wage} gold a day isn't enough: they need {need}.",
+    "money_none": "They can't give up their living for no wage.",
+    "home_pos": "A home for their family is what they wanted most.",
+    "home_promise": "Your promise of a home within {days} days gives them hope.",
+    "home_none": "They want a proper home for their family.",
+    "career_pos": "{career} is the chance they've been waiting for.",
+    "career_none": "They want to get ahead: training, a post or a title.",
+    "career_mismatch": "{career} isn't what they want.",
+    "standing_pos": "You spoke to their sense of duty and standing.",
+    "standing_none": "They want respect, not coin.",
+    "ties_neg": "Their life here holds them: work, friends and family.",
+    "trade_neg": "They'd have to give up their trade.",
+    "trade_pos": "With a workplace of their own they can keep their trade.",
+    "risk_neg": "They are wary of change.",
+    "rep_pos": "Your house treats common folk well.",
+    "rep_neg": "Word is your house doesn't keep faith with common folk."
+  }
+}

@@ -1,7 +1,8 @@
 extends TestCase
-## The Sovereign's Eye: talent stays hidden until the heir has talked to
-## someone and used the Eye; talk gives clues, never proof; the reveal is
-## data-driven, scales with talent and respects accessibility settings.
+## The Sovereign's Eye: talent stays hidden until the heir looks at someone
+## with the Eye, which needs them near and in plain sight (no talk needed);
+## talk gives clues, never proof; the reveal is data-driven, scales with
+## talent and respects accessibility settings.
 
 
 func _people(seeds: Array) -> Array[CharacterData]:
@@ -25,10 +26,9 @@ func test_nobody_is_revealed_at_the_start() -> void:
 			check(c.met, "the heir's own family has met them")
 		else:
 			check(not c.met, "%s hasn't met the heir" % c.full_name())
-			check(not Discovery.can_use_eye(st, c)["ok"], "the Eye needs a first meeting")
 
 
-func test_meeting_unlocks_the_eye() -> void:
+func test_talking_reveals_nothing() -> void:
 	var st := WorldGenerator.generate("eye-meet")
 	var c: CharacterData = null
 	for p in st.characters:
@@ -41,11 +41,62 @@ func test_meeting_unlocks_the_eye() -> void:
 	check(bool(res["first"]), "it was the first meeting")
 	check((res["lines"] as Array).size() >= 2, "they say something")
 	check(c.player_opinion > opinion, "a talk warms them a little")
-	check(Discovery.can_use_eye(st, c)["ok"], "now the Eye may be used")
 	check(not c.appraised, "talking alone reveals nothing")
 	var again := Discovery.meet(st, c)
 	check(not bool(again["first"]), "later talks are different")
 	check(str(again["lines"][0]).to_lower().contains("again") or str(again["lines"][0]).contains("Twice"), "they remember you")
+
+
+## Scan first: no meeting needed, but the heir must be near and see them.
+func test_the_eye_needs_reach_and_sight_not_talk() -> void:
+	var st := WorldGenerator.generate("eye-reach")
+	var c: CharacterData = null
+	for p in st.characters:
+		if not p.met and p.age >= 16:
+			c = p
+			break
+	c.inside_building_id = -1
+	var reach := float(Discovery.scan_config()["range"])
+	var open := _open_spot(st, reach + 2.0)
+	check(open != Vector3.INF, "found open ground")
+	var at := open
+	var near := at + Vector3(reach * 0.6, 0, 0)
+	check(Discovery.scan_check(st, near, c, at)["ok"], "a stranger can be looked at from nearby, without talking first")
+	check(not c.met, "no meeting was needed")
+	var far := Discovery.scan_check(st, at + Vector3(reach * 1.5, 0, 0), c, at)
+	check(not far["ok"] and str(far["reason"]).contains("closer"), "too far away: %s" % far["reason"])
+	# A building in between hides them.
+	var b: BuildingData = null
+	for bd in st.layout.buildings:
+		if bd.footprint.y + 2.0 <= reach and bd.footprint.x >= 4.0:
+			b = bd
+			break
+	var across := b.basis() * Vector3(0, 0, b.footprint.y * 0.5 + 1.0)
+	var behind := Discovery.scan_check(st, b.position + across, c, b.position - across)
+	check((b.position + across).distance_to(b.position - across) <= reach, "both sides are within reach")
+	check(not behind["ok"] and str(behind["reason"]).contains("see"), "a building blocks the view: %s" % behind["reason"])
+	c.inside_building_id = b.id
+	check(not Discovery.scan_check(st, near, c, at)["ok"], "people indoors can't be seen")
+	c.inside_building_id = -1
+	check(not Discovery.scan_check(st, near, st.player(), at)["ok"], "the heir doesn't look at themselves")
+	var talk := float(Discovery.scan_config()["talk_range"])
+	check(Discovery.talk_check(st, at + Vector3(talk * 0.7, 0, 0), c, at)["ok"], "close enough to talk")
+	check(not Discovery.talk_check(st, near, c, at)["ok"], "a few paces off is too far to talk")
+
+
+## A spot at least `clear` meters from every building.
+func _open_spot(st: WorldState, clear: float) -> Vector3:
+	for x in range(-60, 61, 4):
+		for z in range(-60, 61, 4):
+			var p := Vector3(x, 0, z)
+			var ok := true
+			for b in st.layout.buildings:
+				if b.position.distance_to(p) < clear + b.footprint.length() * 0.5:
+					ok = false
+					break
+			if ok:
+				return p
+	return Vector3.INF
 
 
 func test_talk_never_names_ranks_or_numbers() -> void:

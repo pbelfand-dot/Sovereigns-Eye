@@ -6,6 +6,7 @@
   ],
   "modes": {
     "walk": { "default": ["Walk"], "child": ["Jog_Fwd"], "noble": ["Walk_Formal"], "speed": 1.1 },
+    "run": { "default": ["Jog_Fwd"], "speed": 1.0 },
     "idle": { "default": ["Idle", "Idle", "Idle_FoldArms"], "child": ["Idle"], "speed": 1.0 },
     "talk": { "default": ["Idle_Talking", "Idle_Talking", "Yes", "Idle_FoldArms"], "child": ["Dance", "Idle_Talking", "Yes"], "speed": 1.0 },
     "work": { "default": ["Interact", "PickUp_Table"], "child": ["Idle"], "speed": 0.9 }

@@ -6,6 +6,8 @@ const OPTIONS := [
 	["accessibility/reduced_motion", "Reduce motion", "No camera moves, shakes, spins or card flips; shorter reveals."],
 	["accessibility/reduce_flashes", "Reduce flashes", "No bright flashes or strong light sweeps."],
 	["accessibility/captions", "Captions for sound cues", "Short text for important sounds, like the Eye's bells."],
+	["controls/click_to_move", "Click to move", "Right-click the ground, or a person, and your heir walks there."],
+	["controls/touch_controls", "On-screen controls", "A joystick and big buttons for touch screens (always on for phones and tablets)."],
 ]
 
 

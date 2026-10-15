@@ -65,6 +65,15 @@ var recruit_retry_day: int = -1
 var former_status: String = ""
 var former_work: int = -1
 var joined_day: int = -1
+## Motives they've told the heir about (Recruitment.SPEAKING_MOTIVES ids).
+var known_motives: Array[String] = []
+## The terms they joined on: {wage, home, position, focus, office,
+## workplace, appeal} (see Recruitment). {} for none.
+var terms: Dictionary = {}
+## Daily wage agreed when they joined (-1 = the standard wage).
+var agreed_wage: int = -1
+## A title granted by the house ("squire"), "" for none.
+var title: String = ""
 
 # --- Live world state (saved so the village resumes exactly) ---------------
 var position: Vector3 = Vector3.ZERO
@@ -93,6 +102,8 @@ func is_knight() -> bool:
 func display_name() -> String:
 	if is_knight():
 		return "%s %s" % ["Dame" if gender == "female" else "Sir", full_name()]
+	if title == "squire":
+		return "Squire %s" % full_name()
 	return full_name()
 
 
@@ -278,6 +289,10 @@ func to_dict() -> Dictionary:
 		"former_status": former_status,
 		"former_work": former_work,
 		"joined_day": joined_day,
+		"known_motives": Array(known_motives),
+		"terms": terms.duplicate(true),
+		"agreed_wage": agreed_wage,
+		"title": title,
 	}
 
 
@@ -337,7 +352,21 @@ static func from_dict(d: Dictionary) -> CharacterData:
 	c.former_status = str(d.get("former_status", ""))
 	c.former_work = int(d.get("former_work", -1))
 	c.joined_day = int(d.get("joined_day", -1))
+	for m: Variant in d.get("known_motives", []):
+		c.known_motives.append(str(m))
+	c.terms = _clean_terms(d.get("terms", {}))
+	c.agreed_wage = int(d.get("agreed_wage", -1))
+	c.title = str(d.get("title", ""))
 	return c
+
+
+## Terms come back from JSON with float numbers.
+static func _clean_terms(src: Dictionary) -> Dictionary:
+	var out := {}
+	for k: String in src:
+		var v: Variant = src[k]
+		out[k] = int(v) if v is float else v
+	return out
 
 
 static func _clean_appearance(src: Dictionary) -> Dictionary:

@@ -40,25 +40,10 @@
   },
 
   "recruit": {
+    "_comment": "Who can be asked. Whether they say yes is in data/recruitment.json (motives, offers, promises).",
     "min_age": 10,
     "ward_max_age": 15,
-    "_ward": "10-15 year olds join as pages/wards; their parents decide, using the parents' opinion of you.",
-    "base_chance": 0.25,
-    "opinion_divisor": 150.0,
-    "loyalty_divisor": 250.0,
-    "overlooked_bonus": 0.18,
-    "renown_divisor": 500.0,
-    "leadership_divisor": 400.0,
-    "politics_divisor": 500.0,
-    "status_penalty_per_tier": 0.08,
-    "elder_age": 60,
-    "elder_penalty": 0.2,
-    "min_chance": 0.03,
-    "max_chance": 0.95,
-    "retry_days": 5,
-    "refusal_opinion": -3,
-    "signing_wages": 3,
-    "traits": { "ambitious": 0.1, "content": -0.1, "loyal": 0.05, "fickle": -0.05, "humble": 0.05, "arrogant": -0.05, "curious": 0.05 }
+    "_ward": "10-15 year olds join as pages/wards; a parent decides, weighing the family's motives and their own opinion of you."
   },
 
   "wages": {

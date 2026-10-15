@@ -3,8 +3,15 @@ extends Node3D
 ## Root of the playable world scene.
 ##
 ## Builds the village from Game.state, spawns an NPC body for every
-## character, runs the clock and routes input: picking NPCs, appraising them,
-## game speed, saving/loading hotkeys.
+## character, runs the clock and routes input.
+##
+## Two ways of being in the world:
+##   "walk"     you are the heir, on foot (HeirController + a following
+##              camera): look at someone nearby and use the Sovereign's Eye
+##              (Q), walk up and talk (E) to learn what they want and make
+##              an offer (Recruitment).
+##   "overview" the map table (Tab / M): the old overhead view for building
+##              and planning. Leaving it puts you back in the heir's boots.
 
 signal selection_changed(character: CharacterData)
 signal speed_changed(time_scale: float)
@@ -15,12 +22,13 @@ signal territory_changed
 signal placing_changed(type: String)
 ## A building (or building site) was clicked; -1 = none.
 signal building_selected(building_id: int)
-## The heir reached someone and they talk: {lines, first, opinion}.
+## The heir speaks with someone: {lines, first, opinion}.
 signal conversation_started(character_id: int, result: Dictionary)
 signal conversation_ended
-
-## How close the heir must be to speak with someone (meters).
-const TALK_RANGE := 2.6
+## "walk" or "overview" (the map table).
+signal mode_changed(mode: String)
+## Who the heir is looking at changed (-1 = no one).
+signal focus_changed(character_id: int)
 
 ## In-game minutes per real second at 1x speed (1 hour = 40 s, 1 day = 16 min).
 const GAME_MINUTES_PER_SECOND := 1.5
@@ -49,10 +57,18 @@ var _npc_root: Node3D
 ## quarter-turns away from facing the road.
 var placing_type := ""
 var selected_building := -1
-## Who the heir is speaking with (-1 = no one) / walking over to.
+## Who the heir is speaking with (-1 = no one).
 var talking_to := -1
-var _pending_talk := -1
 var _reveal: EyeReveal
+## "walk" (as the heir) or "overview" (the map table).
+var mode := "overview"
+var heir_ctl: HeirController
+## The person the heir is looking at: the Eye and a word go to them.
+var focus: NPC
+var _preferred_focus := -1
+## Buildings faded because they stand between the camera and the heir.
+var _faded: Dictionary = {}
+var _paused_hint_at := -100.0
 var _over_building := false
 var _hand_cursor := false
 var _selection_frame: Node3D
@@ -92,6 +108,8 @@ func _ready() -> void:
 	camera_rig.look_at_point(state.layout.square_center + Vector3(0, 0, 6), 62.0, true)
 	camera_rig.clicked.connect(_on_clicked)
 	camera_rig.right_clicked.connect(_on_right_clicked)
+	camera_rig.obstruction = view_blocked_at
+	_setup_heir()
 
 	ui = GameUI.new()
 	ui.name = "UI"
@@ -186,14 +204,24 @@ func _process(delta: float) -> void:
 		state.minutes += game_minutes
 		_check_new_day()
 		_advance_construction(game_minutes)
+	var heir := player_npc()
+	if heir_ctl:
+		heir_ctl.enabled = mode == "walk" and talking_to < 0 and not is_revealing() and not (ui and ui.is_menu_open())
+		heir_ctl.update(delta)
+		if heir_ctl.enabled and paused and heir_ctl.move_input().length() > 0.5:
+			_hint_paused()
 	for npc: NPC in npcs.values():
-		npc.brain.update(game_minutes)
+		if npc != heir:
+			npc.brain.update(game_minutes)
 		npc.tick(delta, scale_now)
 	sky.set_time(state.minutes)
 	if not placing_type.is_empty():
 		_update_ghost()
 	elif not is_revealing():
 		_update_hover()
+		if mode == "walk" and talking_to < 0:
+			_update_focus()
+	_update_fades()
 
 
 func _check_new_day() -> void:
@@ -207,7 +235,9 @@ func _check_new_day() -> void:
 	var court_rng := Seeds.rng(state.world_seed, "court_day_%d" % day)
 	for e: Dictionary in CourtSystem.daily_update(state, court_rng):
 		_announce(e)
-		if str(e.get("kind", "")) == "bad" and e.has("character"):
+		if e.has("moved"):
+			recruited(int(e["character"]))
+		elif str(e.get("kind", "")) == "bad" and e.has("character"):
 			court_changed(int(e["character"]))
 	var crews_before := _crews()
 	for e: Dictionary in TerritorySystem.daily_update(state):
@@ -342,6 +372,7 @@ func is_placing() -> bool:
 ## Enters placement mode for a building type from the Build menu.
 func start_placing(type: String) -> void:
 	cancel_placing()
+	set_view_mode("overview")
 	var allowed := TerritorySystem.can_build(state, type)
 	if not allowed["ok"]:
 		Audio.play("ui_error")
@@ -460,6 +491,7 @@ func cancel_site(building_id: int) -> void:
 func focus_site(building_id: int) -> void:
 	var site := state.territory.get_site(building_id)
 	if site:
+		set_view_mode("overview")
 		camera_rig.follow_target = null
 		camera_rig.look_at_point(site.building.position, 38.0)
 
@@ -511,6 +543,8 @@ func _update_hover() -> void:
 	var target: NPC = null
 	if not over_ui:
 		target = pick_npc(vp.get_mouse_position())
+	if target != null and mode == "walk" and target == player_npc():
+		target = null
 	if target != hovered:
 		if hovered:
 			hovered.set_hovered(false)
@@ -526,18 +560,20 @@ func _update_hover() -> void:
 		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if hand else Input.CURSOR_ARROW)
 
 
-## Right click with the heir selected: walk there.
+## Right click (with "Click to move" on in the settings): the heir walks
+## there along the roads, or up to the person clicked.
 func _on_right_clicked(screen_pos: Vector2) -> void:
-	if is_placing() or selected == null or not state.is_player(selected.character):
+	if mode != "walk" or heir_ctl == null or is_placing() or talking_to >= 0 or not GameSettings.click_to_move():
+		return
+	var npc := pick_npc(screen_pos)
+	if npc and npc != player_npc():
+		heir_ctl.walk_to(npc.global_position, float(Discovery.scan_config().get("talk_range", 3.0)) * 0.6)
+		Audio.play("ui_tick")
 		return
 	var g: Variant = camera_rig.ground_point(screen_pos)
-	if g == null:
-		return
-	if talking_to >= 0 or _pending_talk >= 0:
-		end_conversation()
-	selected.brain.set_errand({"type": "walk", "pos": g, "minutes": 90.0})
-	Audio.play("ui_tick")
-	Game.notify.emit("%s walks over there." % selected.character.first_name, Game.COLOR_INFO)
+	if g != null:
+		heir_ctl.walk_to(g)
+		Audio.play("ui_tick")
 
 
 func _on_clicked(screen_pos: Vector2) -> void:
@@ -584,6 +620,66 @@ func pick_building(screen_pos: Vector2) -> int:
 	return best
 
 
+## Buildings between the camera and the heir fade so the heir is never
+## hidden (on foot only; the map table looks from high above).
+func _update_fades() -> void:
+	var want := {}
+	if mode == "walk" and camera_rig.camera:
+		var to := camera_rig.camera.global_position
+		var from := camera_rig.focus_point()
+		for b in state.layout.buildings:
+			if _segment_hits_building(b, from, to) < 1.0:
+				want[b.id] = true
+	var alpha := float(StrategyCamera.cfg().get("fade_alpha", 0.72))
+	for id: int in want:
+		if not _faded.has(id):
+			_fade_building(id, alpha)
+	for id: int in _faded.keys():
+		if not want.has(id):
+			_fade_building(id, 0.0)
+	_faded = want
+
+
+func _fade_building(building_id: int, amount: float) -> void:
+	var node: Node3D = builder.building_nodes.get(building_id, null)
+	if node == null:
+		return
+	for g in node.find_children("*", "GeometryInstance3D", true, false):
+		var gi := g as GeometryInstance3D
+		var tw := gi.create_tween()
+		tw.tween_property(gi, "transparency", amount, 0.25)
+
+
+func is_faded(building_id: int) -> bool:
+	return _faded.has(building_id)
+
+
+## How far along from-to (0..1) a building's box is hit (1.0 = missed).
+func _segment_hits_building(b: BuildingData, from: Vector3, to: Vector3) -> float:
+	var length := from.distance_to(to)
+	if length < 0.01:
+		return 1.0
+	var mid := (from + to) * 0.5
+	if Vector2(b.position.x - mid.x, b.position.z - mid.z).length() > b.footprint.length() * 0.5 + 1.0 + length * 0.5:
+		return 1.0
+	var inv := b.basis().inverse()
+	var base := TerrainHeight.on_ground(b.position)
+	var a := inv * (from - base)
+	var z := inv * (to - base)
+	var box := AABB(Vector3(-b.footprint.x * 0.5 - 0.3, -1.0, -b.footprint.y * 0.5 - 0.3), Vector3(b.footprint.x + 0.6, building_height(b) + 1.5, b.footprint.y + 0.6))
+	var hit: Variant = box.intersects_segment(a, z)
+	return 1.0 if hit == null else a.distance_to(hit) / length
+
+
+## How far along the line from `from` to `to` (0..1) the first building
+## stands in the way, or 1.0 when the view is clear (the follow camera).
+func view_blocked_at(from: Vector3, to: Vector3) -> float:
+	var best := 1.0
+	for b in WorldGeometry.solid_buildings(state):
+		best = minf(best, _segment_hits_building(b, from, to))
+	return best
+
+
 ## Roughly how tall a building looks (for picking).
 func building_height(b: BuildingData) -> float:
 	if VillageKit.has_prefab(b.type):
@@ -595,7 +691,8 @@ func select_building(building_id: int) -> void:
 	if selected:
 		selected.set_selected(false)
 		selected = null
-		camera_rig.follow_target = null
+		if mode == "overview":
+			camera_rig.follow_target = null
 		selection_changed.emit(null)
 	selected_building = building_id
 	_show_selection_frame()
@@ -653,7 +750,8 @@ func deselect() -> void:
 	if selected:
 		selected.set_selected(false)
 	selected = null
-	camera_rig.follow_target = null
+	if mode == "overview":
+		camera_rig.follow_target = null
 	selection_changed.emit(null)
 	if selected_building >= 0:
 		selected_building = -1
@@ -662,10 +760,16 @@ func deselect() -> void:
 
 
 ## Moves the camera to a character (following them if they are outdoors).
+## Finding someone far away is done on the map table; your own heir is
+## found by stepping back into their boots.
 func focus_on(character_id: int) -> void:
 	var npc := npc_of(character_id)
 	if npc == null:
 		return
+	if character_id == state.player_id and heir_ctl:
+		set_view_mode("walk")
+		return
+	set_view_mode("overview")
 	if npc.visible:
 		camera_rig.follow_target = npc
 		camera_rig.look_at_point(npc.global_position, minf(camera_rig._target_distance, 28.0))
@@ -675,70 +779,204 @@ func focus_on(character_id: int) -> void:
 		camera_rig.look_at_point(b.position if b else npc.global_position, 32.0)
 
 
-# --- Meeting people & the Sovereign's Eye ----------------------------------------------------
+# --- Walking as the heir ---------------------------------------------------------------------
 
 func player_npc() -> NPC:
 	return npc_of(state.player_id)
 
 
-## Sends the heir to speak with someone. They walk over; the conversation
-## opens when they arrive (at once if they're already standing together).
-func request_talk(character_id: int) -> void:
+func _setup_heir() -> void:
+	var heir := player_npc()
+	if heir == null:
+		set_view_mode("overview", true)
+		return
+	heir.brain.set_errand({})
+	heir_ctl = HeirController.new(self, heir)
+	set_view_mode("walk", true)
+
+
+## "walk" (as the heir) or "overview" (the map table). Leaving the map
+## table always puts you back in the heir's boots.
+func set_view_mode(new_mode: String, force: bool = false) -> void:
+	if new_mode == "walk" and heir_ctl == null:
+		new_mode = "overview"
+	if new_mode == mode and not force:
+		return
+	var heir := player_npc()
+	if new_mode == "overview":
+		end_conversation()
+		_set_focus(null)
+		if heir_ctl:
+			heir_ctl.cancel_auto_walk()
+		camera_rig.set_mode("strategy")
+		if heir:
+			camera_rig.look_at_point(heir.global_position, -1.0, force)
+	else:
+		cancel_placing()
+		camera_rig.set_mode("follow", heir)
+		camera_rig.look_at_point(heir.global_position, -1.0, true)
+	mode = new_mode
+	if heir:
+		# On foot the camera finds you; the crest is for the map table.
+		heir.show_crest(mode == "overview")
+	mode_changed.emit(mode)
+
+
+## Trying to walk while the game is paused: say why nothing happens.
+func _hint_paused() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _paused_hint_at > 6.0:
+		_paused_hint_at = now
+		Game.notify.emit("The game is paused. Press %s to walk on." % ("Space" if not (ui and ui.using_pad()) else "the D-pad down"), Game.COLOR_INFO)
+
+
+## How to press an action on the device in use ("E", "A"...).
+func key_hint(action: String) -> String:
+	return InputSetup.key_name(action, ui != null and ui.using_pad())
+
+
+func toggle_overview() -> void:
+	set_view_mode("walk" if mode == "overview" else "overview")
+	Audio.play("ui_select")
+
+
+## Who the heir is looking at: someone in reach and in sight, in front of
+## them. The person under the mouse wins; the one in focus, and someone you
+## just looked at with the Eye, are kept a little longer so focus doesn't
+## flicker between neighbours.
+func _update_focus() -> void:
+	var heir := player_npc()
+	if heir == null:
+		return
+	var sc := Discovery.scan_config()
+	var reach := float(sc.get("range", 10.0))
+	var cone := deg_to_rad(float(sc.get("focus_cone", 75.0)))
+	var keep := float(sc.get("keep_bonus", 1.5))
+	var from := heir.global_position
+	if hovered and hovered != heir and _in_sight(from, hovered, reach):
+		_set_focus(hovered)
+		return
+	var preferred := npc_of(_preferred_focus)
+	if preferred and from.distance_to(preferred.global_position) > reach * 2.0:
+		_preferred_focus = -1
+	var facing := Vector3(-sin(heir.rotation.y), 0, -cos(heir.rotation.y))
+	var ranked: Array = []
+	for npc: NPC in npcs.values():
+		if npc == heir or not npc.visible:
+			continue
+		var to := npc.global_position - from
+		to.y = 0.0
+		var d := to.length()
+		if d > reach or d < 0.01:
+			continue
+		var ang := facing.angle_to(to / d)
+		var kept := npc == focus or npc.character.id == _preferred_focus
+		if ang > (cone * 1.5 if kept else cone):
+			continue
+		var score := d + ang * 3.0 - (keep if kept else 0.0)
+		ranked.append([score, npc])
+	ranked.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
+	var best: NPC = null
+	for r: Array in ranked:
+		if not WorldGeometry.line_blocked(state, from, (r[1] as NPC).global_position):
+			best = r[1]
+			break
+	_set_focus(best)
+
+
+func _in_sight(from: Vector3, npc: NPC, reach: float) -> bool:
+	return npc.visible and Vector2(npc.global_position.x - from.x, npc.global_position.z - from.z).length() <= reach \
+		and not WorldGeometry.line_blocked(state, from, npc.global_position)
+
+
+func _set_focus(npc: NPC) -> void:
+	if npc == focus:
+		return
+	if focus and is_instance_valid(focus):
+		focus.set_focused(false)
+	focus = npc
+	if focus:
+		focus.set_focused(true)
+	focus_changed.emit(focus.character.id if focus else -1)
+
+
+## Can the heir talk with them right now?
+func talk_check(character_id: int) -> Dictionary:
 	var c := state.get_character(character_id)
 	var heir := player_npc()
 	var target := npc_of(character_id)
-	if c == null or heir == null or target == null or state.is_player(c):
-		return
-	if talking_to >= 0:
-		end_conversation()
-	_pending_talk = character_id
-	heir.brain.set_errand({"type": "talk", "target": character_id})
-	var near := heir.visible and target.visible and heir.global_position.distance_to(target.global_position) <= TALK_RANGE * 1.5
-	if near:
-		heir_arrived(character_id)
-		return
-	Game.notify.emit("%s sets off to speak with %s.%s" % [heir.character.first_name, c.first_name, "  (Unpause to let them walk.)" if time_scale() <= 0.0 else ""], Game.COLOR_INFO)
-	camera_rig.follow_target = heir
+	if c == null or heir == null or target == null:
+		return {"ok": false, "reason": ""}
+	if mode != "walk":
+		return {"ok": false, "reason": "Step down from the map table first (Tab)."}
+	return Discovery.talk_check(state, heir.global_position, c, target.global_position)
 
 
-## The heir reached the person: both stop and the conversation opens.
-func heir_arrived(character_id: int) -> void:
-	if _pending_talk != character_id:
-		return
-	_pending_talk = -1
+## Can the heir look at them with the Eye right now?
+func scan_check(character_id: int) -> Dictionary:
+	var c := state.get_character(character_id)
 	var heir := player_npc()
 	var target := npc_of(character_id)
-	if heir == null or target == null:
-		return
-	if target.character.inside_building_id >= 0:
-		target.brain._leave_building()
-	heir.brain.set_errand({"type": "hold", "face": target.global_position})
+	if c == null or heir == null or target == null:
+		return {"ok": false, "reason": ""}
+	if mode != "walk":
+		return {"ok": false, "reason": "The Eye works face to face: step down from the map table (Tab) and walk over."}
+	return Discovery.scan_check(state, heir.global_position, c, target.global_position)
+
+
+## Starts a conversation with someone the heir is standing beside (E).
+## Returns false (and says why) when they're too far.
+func try_talk(character_id: int) -> bool:
+	var check := talk_check(character_id)
+	if not check["ok"]:
+		if not str(check["reason"]).is_empty():
+			Audio.play("ui_error")
+			Game.notify.emit(str(check["reason"]), Game.COLOR_INFO)
+		return false
+	if talking_to >= 0:
+		end_conversation()
+	var heir := player_npc()
+	var target := npc_of(character_id)
+	heir_ctl.cancel_auto_walk()
 	target.brain.set_errand({"type": "hold", "face": heir.global_position})
+	heir.face_point(target.global_position)
+	heir.set_anim("talk")
 	talking_to = character_id
-	camera_rig.follow_target = null
-	camera_rig.look_at_point((heir.global_position + target.global_position) * 0.5, minf(camera_rig.view_distance(), 18.0))
+	_set_focus(target)
+	camera_rig.close_in(float(StrategyCamera.cfg().get("talk_distance", 7.0)))
 	var result := Discovery.meet(state, target.character)
 	Audio.play("card_open")
 	conversation_started.emit(character_id, result)
 	court_changed(character_id)
+	return true
 
 
-## Ends the conversation; both go back to their day.
+## Someone joined (Recruitment.accept): their family may have moved home
+## and their work changed, so everyone affected re-plans their day.
+func recruited(character_id: int) -> void:
+	var c := state.get_character(character_id)
+	if c == null:
+		return
+	for p in state.residents_of(c.home_building_id):
+		var npc := npc_of(p.id)
+		if npc and npc.brain and p.id != state.player_id:
+			npc.brain.replan()
+	court_changed(character_id)
+
+
+## Ends the conversation; they go back to their day.
 func end_conversation() -> void:
-	if _pending_talk >= 0:
-		var heir := player_npc()
-		if heir:
-			heir.brain.set_errand({})
-		_pending_talk = -1
 	if talking_to < 0:
 		return
 	var target := npc_of(talking_to)
 	if target:
 		target.brain.set_errand({})
-	var heir2 := player_npc()
-	if heir2:
-		heir2.brain.set_errand({})
+	var heir := player_npc()
+	if heir:
+		heir.face_point(null)
+		heir.set_anim("idle")
 	talking_to = -1
+	camera_rig.restore_view()
 	conversation_ended.emit()
 
 
@@ -746,19 +984,22 @@ func is_revealing() -> bool:
 	return _reveal != null and is_instance_valid(_reveal)
 
 
-## Looks at someone with the Sovereign's Eye: the full reveal the first
-## time, a quick card after that.
+## Looks at someone with the Sovereign's Eye (Q): they must be near and in
+## sight. The full reveal the first time, a quick card after that.
 func use_eye(character_id: int) -> void:
 	var c := state.get_character(character_id)
 	if c == null or is_revealing():
 		return
-	var check := Discovery.can_use_eye(state, c)
+	var check := scan_check(character_id)
 	if not check["ok"]:
 		Audio.play("ui_error")
 		Game.notify.emit(str(check["reason"]), Game.COLOR_BAD)
 		return
-	if talking_to >= 0:
-		end_conversation()
+	var heir := player_npc()
+	var target := npc_of(character_id)
+	if heir and target and talking_to < 0:
+		heir.face_point(target.global_position)
+	_preferred_focus = character_id
 	var first := not c.appraised
 	_reveal = EyeReveal.new()
 	add_child(_reveal)
@@ -769,6 +1010,11 @@ func use_eye(character_id: int) -> void:
 
 func _on_reveal_finished(action: String, character_id: int, first: bool) -> void:
 	_reveal = null
+	if mode == "walk":
+		# The reveal may have moved the camera: back to the heir.
+		camera_rig.follow_target = player_npc()
+		if talking_to < 0:
+			player_npc().face_point(null)
 	var c := state.get_character(character_id)
 	if c == null:
 		return
@@ -778,11 +1024,12 @@ func _on_reveal_finished(action: String, character_id: int, first: bool) -> void
 		Game.notify.emit("Exceptional talent discovered! %s - %s %s (%d)" % [
 			c.full_name(), GameData.attribute_def(best).get("name", best), Appraisal.rank_id(p), p], Game.COLOR_TALENT)
 	match action:
-		"recruit", "appoint":
+		"talk":
+			if talking_to != character_id and not try_talk(character_id):
+				Game.notify.emit("Walk up to %s and press %s to talk." % [c.first_name, key_hint("interact")], Game.COLOR_INFO)
+		"appoint":
 			select_character(character_id)
 			ui.show_card_tab("court")
-		"follow":
-			select_character(character_id, true)
 		"card":
 			select_character(character_id)
 	if ui:
@@ -794,7 +1041,6 @@ func appraise(c: CharacterData) -> void:
 	if c.appraised:
 		return
 	c.appraised = true
-	c.met = true
 
 
 func appraised_count() -> int:
@@ -827,6 +1073,20 @@ func _unhandled_input(event: InputEvent) -> void:
 			Game.load_game("quicksave")
 		else:
 			Game.notify.emit("No quicksave yet (press F5 to quicksave).", Game.COLOR_BAD)
+	elif event.is_action_pressed("toggle_overview"):
+		if not is_placing():
+			toggle_overview()
+	elif event.is_action_pressed("sovereign_eye") and mode == "walk":
+		if talking_to >= 0:
+			use_eye(talking_to)
+		elif focus:
+			use_eye(focus.character.id)
+		else:
+			Audio.play("ui_error")
+			Game.notify.emit("Look at someone near you to use the Sovereign's Eye.", Game.COLOR_INFO)
+	elif event.is_action_pressed("interact") and mode == "walk":
+		if talking_to < 0 and focus:
+			try_talk(focus.character.id)
 	elif event.is_action_pressed("focus_selected") and selected:
 		focus_on(selected.character.id)
 	elif event.is_action_pressed("debug_reveal_all"):

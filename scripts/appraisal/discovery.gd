@@ -1,12 +1,14 @@
 class_name Discovery
 extends RefCounted
-## How the player finds talent (Phase 2.5, "the Sovereign's Eye").
+## How the player finds talent ("the Sovereign's Eye").
 ##
-## Nobody's gifts are visible at first. The heir walks over and talks to a
-## villager; the talk is ordinary conversation that may hint at a gift
-## (data/dialogue.json). After that first meeting the heir may use the
-## Sovereign's Eye on them, which plays a reveal scaled to their real talent
-## (EyeReveal, data/eye.json) and marks them appraised.
+## Nobody's gifts are visible at first. Walking as the heir, you get close
+## to someone, look at them and use the Sovereign's Eye: no conversation is
+## needed, but you must be near (data/controls.json "scan") and able to see
+## them, so a whole town can't be read from a menu. The reveal is scaled to
+## their real talent (EyeReveal, data/eye.json). The Eye decides who is
+## worth talking to; talk (which may also hint at a gift, data/dialogue.json)
+## is how you learn what they want and win them over (Recruitment).
 ##
 ## Static and deterministic, like the other rule systems.
 
@@ -41,12 +43,37 @@ static func tier_by_id(id: String) -> Dictionary:
 	return {}
 
 
-## Can the heir look at them with the Eye yet? (Only after speaking with them.)
-static func can_use_eye(state: WorldState, c: CharacterData) -> Dictionary:
+static func scan_config() -> Dictionary:
+	return GameData.load_file("controls").get("scan", {})
+
+
+static func _flat_distance(a: Vector3, b: Vector3) -> float:
+	return Vector2(a.x - b.x, a.z - b.z).length()
+
+
+## Can the heir, standing at `from`, look at `c` (standing at `at`) with the
+## Eye? They must be outdoors, within range and in plain sight.
+static func scan_check(state: WorldState, from: Vector3, c: CharacterData, at: Vector3) -> Dictionary:
 	if state.is_player(c):
 		return {"ok": false, "reason": "You already know yourself."}
-	if not c.met:
-		return {"ok": false, "reason": "Speak with them first."}
+	if c.inside_building_id >= 0:
+		return {"ok": false, "reason": "%s is indoors." % c.first_name}
+	var reach := float(scan_config().get("range", 10.0))
+	if _flat_distance(from, at) > reach:
+		return {"ok": false, "reason": "Get closer to %s: the Eye reaches about %d paces." % [c.first_name, roundi(reach)]}
+	if WorldGeometry.line_blocked(state, from, at):
+		return {"ok": false, "reason": "You can't see %s from here." % c.first_name}
+	return {"ok": true, "reason": ""}
+
+
+## Close enough to speak with them (and nothing in the way)?
+static func talk_check(state: WorldState, from: Vector3, c: CharacterData, at: Vector3) -> Dictionary:
+	if state.is_player(c):
+		return {"ok": false, "reason": ""}
+	if c.inside_building_id >= 0:
+		return {"ok": false, "reason": "%s is indoors." % c.first_name}
+	if _flat_distance(from, at) > float(scan_config().get("talk_range", 3.0)) or WorldGeometry.line_blocked(state, from, at):
+		return {"ok": false, "reason": "Walk up to %s to talk." % c.first_name}
 	return {"ok": true, "reason": ""}
 
 

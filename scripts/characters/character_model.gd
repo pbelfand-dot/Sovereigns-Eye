@@ -188,7 +188,7 @@ func animate(mode: String, phase: float, delta: float) -> void:
 	var arm_r := 0.0
 	var bob := 0.0
 	match mode:
-		"walk":
+		"walk", "run":
 			leg_target = sin(phase) * 0.55
 			arm_l = -sin(phase) * 0.45
 			arm_r = sin(phase) * 0.45
