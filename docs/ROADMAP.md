@@ -8,10 +8,10 @@ playable build. Numbers and content live in `data/*.json`.
 | 1 | Village, people, Appraisal (current vs. hidden potential) | Done |
 | 2 | Noble society: the heir, retainers, offices, training, knighthood | Done |
 | Art | Kit buildings, meadow, outfits, nature, props, sound | Done |
-| 3.1 | Territory: stores, Build menu, construction sites, Master of Works | Done (on the preview build) |
-| 3.2 | Growth: settlers, homes that build and upgrade themselves | Done (on the preview build) |
+| 3.1 | Territory: stores, Build menu, construction sites, Master of Works | Done |
+| 3.2 | Growth: settlers, homes that build and upgrade themselves | Done |
 | **Eye** | **On foot: scan first, then talk and persuade** (below) | **In progress: gameplay video waiting for approval** |
-| 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done (on the preview build) |
+| 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done |
 | 4+ | Dynasties (ageing, marriage, children, succession), wider realm, military | Later |
 
 ## Charters (Phase 3.3)
