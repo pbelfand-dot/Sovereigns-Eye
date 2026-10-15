@@ -133,6 +133,7 @@ new floors rise inside scaffolding.
 ![The Charter: checklist and petition (Build panel)](docs/screenshots/charter_panel.jpg)
 ![A Market Town's Market Hall](docs/screenshots/market_hall.jpg)
 ![Charter banners around the square, and merchants taking up trade](docs/screenshots/charter_banners.jpg)
+![The Village Commons grow with the charter: a hamlet's well, a village's, a town's](docs/screenshots/commons_tiers.jpg)
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
 ![The Build panel (B)](docs/screenshots/build_panel.jpg)
@@ -378,9 +379,9 @@ as readable JSON.
 
 * Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
   fine leather and there are no gowns, robes or plate armor yet.
-* The free prop sampler has no well, haystack, lumber pile, signpost or banner
-  pole, so those are still simple shapes. Crops are simple shapes too, and hats and
-  hand tools aren't shown on villagers yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
+* Haystacks and lumber piles are still simple shapes (next in
+  [3D/BACKLOG.md](3D/BACKLOG.md)). Crops are simple shapes too, and hats and hand
+  tools aren't shown on villagers yet. See [docs/ART_PLAN.md](docs/ART_PLAN.md).
 * From the farthest zoom, kit trees read smaller and darker than the old round
   blobs. Their size and tints are tunable in `data/nature.json`.
 * NPCs walk along roads and can clip through each other or props; there is

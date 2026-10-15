@@ -522,9 +522,27 @@ func _build_props() -> void:
 	var stone := Mats.hex("#8e8a80")
 	var use_kit := PropKit.available()
 	var replace: Dictionary = PropKit.config().get("replace", {}) if use_kit else {}
+	var charter := territory.charter if territory else 0
 	var kit_items := []
 	for p in layout.props:
 		var type := str(p["type"])
+		# The Village Commons (well, banners, signposts) follow the charter.
+		var commons := PropKit.commons_model(type, charter)
+		if not commons.is_empty():
+			var at_c: Vector3 = p["pos"]
+			var basis := Basis(Vector3.UP, float(p["rot"]))
+			if type == "banner" and _arm_blocked(at_c, basis):
+				basis = basis * Basis.from_scale(Vector3(-1, 1, 1))
+			var xf := Transform3D(basis, TerrainHeight.on_ground(at_c))
+			if type == "well":
+				var centre := PropKit.instance(commons)
+				if centre:
+					centre.name = "Well"
+					centre.transform = xf
+					holder.add_child(centre)
+					continue
+			kit_items.append([commons, xf])
+			continue
 		if replace.has(type):
 			var sets: Array = replace[type]
 			var at: Vector3 = p["pos"]
@@ -609,7 +627,21 @@ func _build_props() -> void:
 
 	if use_kit:
 		kit_items.append_array(dressing_items())
+	if not kit_items.is_empty():
 		PropKit.add_merged(holder, kit_items)
+
+
+## A banner's arm reaches out along its local +X: true if it would hang
+## into a building, so the banner is mirrored to reach the other way.
+func _arm_blocked(at: Vector3, basis: Basis) -> bool:
+	var reach: float = PropKit.config().get("banner_reach", 1.25)
+	for t: float in [0.45, 1.0]:
+		var tip := at + basis.x * reach * t
+		for b in layout.buildings + _site_buildings():
+			var local := b.basis().inverse() * (tip - b.position)
+			if absf(local.x) < b.footprint.x * 0.5 + 0.3 and absf(local.z) < b.footprint.y * 0.5 + 0.3:
+				return true
+	return false
 
 
 ## Extra kit props around buildings by type (data/props.json "dressing"):

@@ -25,6 +25,7 @@ var build_only := false
 var growth_only := false
 var charter_only := false
 var talk_only := false
+var commons_only := false
 
 
 func _ready() -> void:
@@ -40,6 +41,7 @@ func _ready() -> void:
 	growth_only = args.has("growth")
 	charter_only = args.has("charter")
 	talk_only = args.has("talk")
+	commons_only = args.has("commons")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -78,6 +80,10 @@ func _run() -> void:
 		return
 	if talk_only:
 		await _talk_shots()
+		get_tree().quit()
+		return
+	if commons_only:
+		await _commons_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -252,6 +258,88 @@ func _court_shots(world: VillageWorld) -> void:
 	await _wait(20)
 	await _shot("15_after_a_month.png")
 	world.deselect()
+
+
+## The Village Commons in the game, for every charter: the square from the
+## map table, the well on foot with the real follow camera, 3/4 views from
+## front and back with the heir beside it for scale, a close look, the
+## charter banners and a signpost. Files: commons_<tier>_<view>.png
+func _commons_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.5 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	var c := st.layout.square_center
+	var heir := world.player_npc()
+	var signs := st.layout.props_of_type("signpost")
+	# No toasts over the art (the welcome tip, charter news).
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	# COMMONS_TIERS=3 (comma list) renders only those charters.
+	var only := OS.get_environment("COMMONS_TIERS").split(",", false)
+	for tier in CharterSystem.tiers().size():
+		if tier > 0:
+			CharterSystem.raise_banners(st, int(CharterSystem.tier_def(tier).get("banners", 0)) - int(CharterSystem.tier_def(tier - 1).get("banners", 0)))
+		st.territory.charter = tier
+		if not only.is_empty() and not str(tier) in only:
+			continue
+		world.builder.refresh_props()
+		world.territory_changed.emit()
+		var tag := "commons_%d_" % tier
+		# The square from the map table.
+		world.set_view_mode("overview", true)
+		heir.teleport(c + Vector3(1.7, 0, 0.9))
+		heir.rotation.y = 0.9
+		world.camera_rig.set_yaw(0.6, true)
+		world.camera_rig.look_at_point(c, 30.0, true)
+		await _wait(5)
+		await _shot(tag + "square.png")
+		# 3/4 views from front and back, heir beside the well for scale.
+		for v: Array in [["front34", 0.55], ["rear34", 0.55 + PI]]:
+			world.camera_rig.set_yaw(float(v[1]), true)
+			world.camera_rig.look_at_point(c, 9.5, true)
+			await _wait(4)
+			await _shot(tag + str(v[0]) + ".png")
+		# On foot with the real follow camera: walking up to the well.
+		world.set_view_mode("walk", true)
+		var approach := c + Vector3(3.0, 0, 3.6)
+		heir.teleport(approach)
+		var to := c - approach
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.set_yaw(heir.rotation.y, true)
+		world.camera_rig.look_at_point(heir.global_position, 11.0, true)
+		for i in 4:
+			world._process(0.05)
+		await _wait(4)
+		await _shot(tag + "gameplay.png")
+		# A close look over the heir's shoulder.
+		heir.teleport(c + Vector3(1.55, 0, 1.15))
+		to = c - heir.global_position
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.set_yaw(heir.rotation.y + 0.5, true)
+		world.camera_rig.look_at_point(heir.global_position, 5.0, true)
+		for i in 4:
+			world._process(0.05)
+		await _wait(4)
+		await _shot(tag + "close.png")
+		world.set_view_mode("overview", true)
+		# A banner on the square (or by the manor in a hamlet).
+		var banners := st.layout.props_of_type("banner")
+		if not banners.is_empty():
+			var bp: Dictionary = banners[banners.size() - 1]
+			world.camera_rig.set_yaw(float(bp["rot"]) + 0.5, true)
+			world.camera_rig.look_at_point(bp["pos"], 11.0, true)
+			await _wait(4)
+			await _shot(tag + "banner.png")
+		if not signs.is_empty():
+			var sp: Dictionary = signs[0]
+			world.camera_rig.set_yaw(float(sp["rot"]) + 0.7, true)
+			world.camera_rig.look_at_point(sp["pos"], 9.0, true)
+			await _wait(4)
+			await _shot(tag + "signpost.png")
 
 
 ## A conversation on foot: the terms, a refusal (terms still open) and

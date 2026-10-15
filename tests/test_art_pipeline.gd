@@ -185,7 +185,11 @@ func test_props_kit_sets_and_dressing() -> void:
 	var merged := b.get_node("Props").find_children("Props *", "MeshInstance3D", false, false)
 	check(not merged.is_empty(), "kit props are merged into chunk meshes")
 	for mi: MeshInstance3D in merged:
-		check(mi.mesh.get_surface_count() <= 10, "%s has one surface per material (%d)" % [mi.name, mi.mesh.get_surface_count()])
+		var names := {}
+		for s in mi.mesh.get_surface_count():
+			var m := mi.mesh.surface_get_material(s)
+			names[m.resource_name if m else "none"] = true
+		check_eq(names.size(), mi.mesh.get_surface_count(), "%s has one surface per material" % mi.name)
 	var dressing := b.dressing_items()
 	check(dressing.size() > 20, "buildings are dressed with props (%d models)" % dressing.size())
 	var on_road := 0
