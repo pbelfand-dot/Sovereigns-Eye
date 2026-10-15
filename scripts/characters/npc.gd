@@ -28,6 +28,12 @@ var _crest_on := true
 var driven := false
 var _drive_speed := 0.0
 var _last_drive_speed := 0.0
+## Animation level of detail: 1 = every frame; far from the camera the
+## skeleton is updated every `anim_lod` frames (movement stays smooth).
+var anim_lod := 1
+var _anim_wait := 0.0
+var _anim_count := 0
+var _anim_last := ""
 var focused := false
 
 
@@ -267,7 +273,7 @@ func tick(delta: float, time_scale: float) -> void:
 	if time_scale > 0.0:
 		_anim_phase += delta * time_scale * (9.0 if moving else 4.0) / maxf(1.0, sqrt(time_scale))
 	model.anim_time_scale = time_scale * (_speed_factor if moving else 1.0)
-	model.animate("walk" if moving else _anim_mode, _anim_phase, delta)
+	_animate("walk" if moving else _anim_mode, delta)
 
 
 func _tick_driven(delta: float, time_scale: float) -> void:
@@ -288,9 +294,21 @@ func _tick_driven(delta: float, time_scale: float) -> void:
 	if time_scale > 0.0:
 		_anim_phase += delta * 9.0 * maxf(rate, 0.3)
 	model.anim_time_scale = maxf(rate, 0.3) if time_scale > 0.0 else 0.0
-	model.animate(mode, _anim_phase, delta)
+	_animate(mode, delta)
 	_last_drive_speed = _drive_speed
 	_drive_speed = 0.0
+
+
+## Advances the body's animation, skipping frames when far away (a change
+## of animation always shows at once).
+func _animate(mode: String, delta: float) -> void:
+	_anim_wait += delta
+	_anim_count += 1
+	if anim_lod > 1 and mode == _anim_last and (_anim_count + character.id) % anim_lod != 0:
+		return
+	_anim_last = mode
+	model.animate(mode, _anim_phase, _anim_wait)
+	_anim_wait = 0.0
 
 
 func _turn_toward(dir: Vector3, delta: float) -> void:

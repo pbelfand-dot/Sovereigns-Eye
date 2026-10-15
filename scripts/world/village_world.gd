@@ -30,6 +30,10 @@ signal mode_changed(mode: String)
 ## Who the heir is looking at changed (-1 = no one).
 signal focus_changed(character_id: int)
 
+## Beyond this distance from the camera (m), bodies animate every third
+## frame (they are a few pixels tall by then).
+const ANIM_LOD_DISTANCE := 55.0
+
 ## In-game minutes per real second at 1x speed (1 hour = 40 s, 1 day = 16 min).
 const GAME_MINUTES_PER_SECOND := 1.5
 const SPEEDS := [1.0, 2.0, 4.0, 8.0]
@@ -210,9 +214,12 @@ func _process(delta: float) -> void:
 		heir_ctl.update(delta)
 		if heir_ctl.enabled and paused and heir_ctl.move_input().length() > 0.5:
 			_hint_paused()
+	var eye := camera_rig.camera.global_position if camera_rig and camera_rig.camera else Vector3.ZERO
+	var near := ANIM_LOD_DISTANCE * ANIM_LOD_DISTANCE
 	for npc: NPC in npcs.values():
 		if npc != heir:
 			npc.brain.update(game_minutes)
+		npc.anim_lod = 1 if npc == heir or npc.global_position.distance_squared_to(eye) < near else 3
 		npc.tick(delta, scale_now)
 	sky.set_time(state.minutes)
 	if not placing_type.is_empty():
