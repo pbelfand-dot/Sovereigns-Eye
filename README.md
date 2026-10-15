@@ -83,7 +83,9 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 
 The same seed always creates the same village and the same people.
 
-![Recruiting from the Court tab](docs/screenshots/court_recruit.jpg)
+![On foot: the person you face comes into focus](docs/screenshots/on_foot.jpg)
+![The Sovereign's Eye: a Legendary reveal](docs/screenshots/eye_reveal.jpg)
+![Talking it through: what they want, your offer, their counteroffer](docs/screenshots/court_recruit.jpg)
 ![A retainer's office and training](docs/screenshots/court_retainer.jpg)
 ![The Court panel (K)](docs/screenshots/court_panel.jpg)
 
@@ -128,6 +130,9 @@ new floors rise inside scaffolding.
 ![A home's card: who lives there and what the next level needs](docs/screenshots/home_card.jpg)
 ![Settlers arriving, one with hidden S+ talent](docs/screenshots/settlers.jpg)
 
+![The Charter: checklist and petition (Build panel)](docs/screenshots/charter_panel.jpg)
+![A Market Town's Market Hall](docs/screenshots/market_hall.jpg)
+![Charter banners around the square, and merchants taking up trade](docs/screenshots/charter_banners.jpg)
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
 ![The Build panel (B)](docs/screenshots/build_panel.jpg)

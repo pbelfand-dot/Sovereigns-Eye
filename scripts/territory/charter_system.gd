@@ -259,8 +259,9 @@ static func grants_text(index: int) -> String:
 		parts.append("more of: " + ", ".join(raised))
 	if int(def.get("dues", 0)) > 0:
 		parts.append("%d gold a day in dues" % int(def.get("dues", 0)))
-	if int(def.get("retainer_cap", 0)) > 0:
-		parts.append("a household of %d more" % int(def.get("retainer_cap", 0)))
+	var places := int(def.get("retainer_cap", 0)) - int(tier_def(index - 1).get("retainer_cap", 0)) if index > 0 else 0
+	if places > 0:
+		parts.append("room for %d more in your household" % places)
 	if int(def.get("renown", 0)) > 0:
 		parts.append("+%d renown" % int(def.get("renown", 0)))
 	return ", ".join(parts)

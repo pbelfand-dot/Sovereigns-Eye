@@ -1042,8 +1042,11 @@ func _on_reveal_finished(action: String, character_id: int, first: bool) -> void
 			c.full_name(), GameData.attribute_def(best).get("name", best), Appraisal.rank_id(p), p], Game.COLOR_TALENT)
 	match action:
 		"talk":
-			if talking_to != character_id and not try_talk(character_id):
-				Game.notify.emit("Walk up to %s and press %s to talk." % [c.first_name, key_hint("interact")], Game.COLOR_INFO)
+			if talking_to != character_id:
+				if talk_check(character_id)["ok"]:
+					try_talk(character_id)
+				else:
+					Game.notify.emit("Walk up to %s and press %s to talk." % [c.first_name, key_hint("interact")], Game.COLOR_INFO)
 		"appoint":
 			select_character(character_id)
 			ui.show_card_tab("court")

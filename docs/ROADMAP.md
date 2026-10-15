@@ -155,7 +155,8 @@ Different people, different paths (each one is a test in
 - [x] Motive-based recruitment (`Recruitment`): asking about their life,
       offers, counteroffers, plain-language reasons, enforced terms and
       promises, the house's standing
-- [ ] **Approval of the gameplay video** before final polish
+- [ ] **Approval of the gameplay video** before final polish (video sent:
+      `tools/gameplay_demo.tscn` records it)
 - [ ] Polish: per-tier timing, custom eye-opening art, richer particles,
       a dedicated sting for each tier, card portrait lighting
 - [ ] Optional: idle "bark" lines villagers say aloud as you pass; rebinding
