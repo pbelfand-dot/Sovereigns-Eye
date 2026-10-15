@@ -18,12 +18,12 @@ ASSETS = {
     "SE_Well_Hamlet": (0, ["gameplay", "front34", "square"]),
     "SE_Well_Village": (1, ["gameplay", "front34", "rear34"]),
     "SE_Well_Town": (2, ["gameplay", "front34", "close"]),
-    "SE_Banner_Village": (1, ["banner", "square", "front34"]),
-    "SE_Banner_MarketTown": (2, ["banner", "square", "rear34"]),
-    "SE_Banner_Town": (3, ["banner", "square", "front34"]),
-    "SE_Signpost_Rough": (0, ["signpost", "square", "gameplay"]),
-    "SE_Signpost_Village": (1, ["signpost", "square", "gameplay"]),
-    "SE_Signpost_Town": (3, ["signpost", "square", "gameplay"]),
+    "SE_Banner_Village": (1, ["banner", "gameplay", "cycles:gameplay"]),
+    "SE_Banner_MarketTown": (2, ["banner", "gameplay", "cycles:gameplay"]),
+    "SE_Banner_Town": (3, ["banner", "square", "cycles:gameplay"]),
+    "SE_Signpost_Rough": (0, ["signpost", "square", "cycles:gameplay"]),
+    "SE_Signpost_Village": (1, ["signpost", "square", "cycles:gameplay"]),
+    "SE_Signpost_Town": (3, ["signpost", "square", "cycles:gameplay"]),
 }
 TIER_NAMES = ["Hamlet", "Village", "Market Town", "Town"]
 PANEL = (640, 400)
@@ -76,6 +76,12 @@ def main():
                 sheet.paste(fit(Image.open(p).convert("RGB"), PANEL), (i * PANEL[0], 64))
                 label(d, (i * PANEL[0] + 8, 72), title, f_small)
         for i, v in enumerate(views):
+            if v.startswith("cycles:"):
+                p = os.path.join(cycles, "%s_%s.png" % (name, v[7:]))
+                if os.path.exists(p):
+                    sheet.paste(fit(Image.open(p).convert("RGB"), PANEL), (i * PANEL[0], 64 + PANEL[1]))
+                    label(d, (i * PANEL[0] + 8, 72 + PANEL[1]), "Gameplay angle beside a 1.78 m figure (Blender)", f_small)
+                continue
             p = os.path.join(game, "commons_%d_%s.png" % (tier, v))
             if os.path.exists(p):
                 sheet.paste(fit(Image.open(p).convert("RGB"), PANEL), (i * PANEL[0], 64 + PANEL[1]))
@@ -83,8 +89,8 @@ def main():
                          "rear34": "In game: from behind", "close": "In game: close", "square": "In game: the square (map table)",
                          "banner": "In game: on the square", "signpost": "In game: at the road's end"}[v]
                 label(d, (i * PANEL[0] + 8, 72 + PANEL[1]), "%s (%s)" % (title, TIER_NAMES[tier]), f_small)
-        path = os.path.join(out, name + ".png")
-        sheet.save(path, optimize=True)
+        path = os.path.join(out, name + ".jpg")
+        sheet.save(path, quality=88, optimize=True)
         print("wrote", path)
 
 

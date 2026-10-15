@@ -289,9 +289,12 @@ def main() -> None:
             animation.get("name", f"animation-{index + 1}")
             for index, animation in enumerate(document.get("animations", []))
         ]
-        preview = f"{metadata['preview_root']}/{path.stem}.png"
-        if not (ASSET_ROOT / preview).is_file():
-            preview = ""
+        preview = ""
+        for ext in (".png", ".jpg"):
+            candidate = f"{metadata['preview_root']}/{path.stem}{ext}"
+            if (ASSET_ROOT / candidate).is_file():
+                preview = candidate
+                break
 
         rows.append(
             {

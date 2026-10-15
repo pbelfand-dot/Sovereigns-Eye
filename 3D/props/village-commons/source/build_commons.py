@@ -793,7 +793,9 @@ def review(objs, out_path, views=None, res=(640, 480), extent=3.4, center_z=1.4)
     for name, yaw, pitch, dist, fov in views:
         cam_data.angle = math.radians(fov)
         y, p = math.radians(yaw), math.radians(pitch)
-        target = Vector((0, 0, center_z if name != "close" else center_z * 0.7))
+        target = Vector((0, 0, center_z if name != "close" else (center_z * 1.45 if center_z > 2.0 else center_z * 0.7)))
+        if name == "close" and center_z > 2.0:
+            target.x = 0.6  # the cloth hangs off the arm
         d = dist * extent / 3.4
         cam.location = target + Vector((math.sin(y) * math.cos(p), -math.cos(y) * math.cos(p), math.sin(p))) * d
         cam.rotation_euler = (target - cam.location).to_track_quat("-Z", "Y").to_euler()
@@ -923,6 +925,18 @@ def main():
         for obj in built:
             for o in built:
                 o.hide_render = o is not obj
+            h = obj.dimensions.z
+            # Frame by height: wells sit low and wide, banners are tall.
+            if h > 4.0:
+                views = [("front34", -30, 12, 9.0, 40), ("rear34", 155, 14, 9.0, 40), ("gameplay", -20, 38, 13.0, 50), ("close", -25, 8, 3.4, 42)]
+                for p in review([obj], os.path.join(out, obj.name), views=views, extent=3.4, center_z=h * 0.52):
+                    print("  ", p)
+                continue
+            if h < 3.0 and obj.name.startswith("SE_Signpost"):
+                views = [("front34", -35, 14, 5.0, 40), ("rear34", 150, 16, 5.0, 40), ("gameplay", -20, 38, 9.0, 50), ("close", -40, 10, 2.6, 42)]
+                for p in review([obj], os.path.join(out, obj.name), views=views, extent=3.4, center_z=1.25):
+                    print("  ", p)
+                continue
             for p in review([obj], os.path.join(out, obj.name)):
                 print("  ", p)
     if "--export" in args:

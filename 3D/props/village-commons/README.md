@@ -6,7 +6,7 @@ Sovereign's Eye, and they **grow finer with the settlement's charter**
 (Hamlet → Village → Market Town → Town). When the Crown grants a charter, the
 square visibly changes.
 
-![Contact sheets live in previews/](previews/SE_Well_Village.png)
+![The Village well: Blender views above, the running game below](previews/SE_Well_Village.jpg)
 
 ## Assets
 

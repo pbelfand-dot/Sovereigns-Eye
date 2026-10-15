@@ -275,6 +275,9 @@ func _commons_shots() -> void:
 	var c := st.layout.square_center
 	var heir := world.player_npc()
 	var signs := st.layout.props_of_type("signpost")
+	# No toasts over the art (the welcome tip, charter news).
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
 	# COMMONS_TIERS=3 (comma list) renders only those charters.
 	var only := OS.get_environment("COMMONS_TIERS").split(",", false)
 	for tier in CharterSystem.tiers().size():
