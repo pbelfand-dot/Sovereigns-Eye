@@ -12,6 +12,12 @@
     "storehouse": { "name": "Granary",        "footprint": [10, 8],  "wall_height": 3.0, "style": "barn",      "roof": "gable",   "walls": ["#9c7a52"], "roofs": ["#6a4a32"], "trim": "#4a3424", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
     "quarry":     { "name": "Stonecutter's Yard", "footprint": [6, 4], "wall_height": 3.0, "style": "smithy", "roof": "gable",   "walls": ["#9a948a"], "roofs": ["#6b5040"], "trim": "#3f3127", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
     "farmhouse":  { "name": "Farmhouse",      "footprint": [8, 6],   "wall_height": 3.0, "style": "timber",    "roof": "gable",   "walls": ["#e6d6b0", "#efe4c8", "#dccaa2"], "roofs": ["#c9a45c", "#b8924c"], "trim": "#5a3d2b", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] },
+    "market": {
+      "name": "Market Hall", "footprint": [10, 6], "wall_height": 6.0, "style": "market", "roof": "gable",
+      "walls": ["#e8dcc0"], "roofs": ["#8f4e31"], "trim": "#5a3d2b",
+      "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0],
+      "description": "An arcaded market hall: open arches below, a meeting room above."
+    },
     "cottage":    { "name": "Cottage",        "footprint": [6, 4], "wall_height": 3.0, "style": "timber",  "roof": "gable",   "walls": ["#ecdfc2", "#e3d3ae", "#f2e8d2", "#d8c49c"], "roofs": ["#c9a45c", "#a5623b", "#8f4e31", "#b8924c"], "trim": "#5a3d2b", "model": "", "model_scale": 1.0, "model_offset": [0, 0, 0] }
   },
   "village_plan": {

@@ -283,6 +283,14 @@ const WALLS := {
 		"window": ["Wall_UnevenBrick_Window_Wide_Round", "Wall_UnevenBrick_Window_Thin_Round", "Wall_UnevenBrick_Window_Wide_Flat"],
 		"corner": "Corner_Exterior_Brick",
 	},
+	# Open arches on timber posts (the Market Hall's ground floor).
+	"arcade": {
+		"plain_ground": ["Wall_Arch"],
+		"plain": ["Wall_Arch"],
+		"door": ["Wall_Arch"],
+		"window": ["Wall_Arch"],
+		"corner": "Corner_Exterior_Wood",
+	},
 }
 
 ## Window frame + shutter modules that fit each window wall.
@@ -310,10 +318,11 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 	var tall_windows := str(block.get("windows", "")) == "tall"
 	var wall_h := stories * sh
 
-	# Ground floor so windows don't look into the void.
+	# Ground floor so windows don't look into the void (paved under arches).
+	var floor_piece := "Floor_Brick" if ground_set == "arcade" else "Floor_WoodDark"
 	for ix in cx:
 		for iz in cz:
-			shell.add("Floor_WoodDark", Transform3D(Basis(), origin + Vector3(-w * 0.5 + cell * (ix + 0.5), 0.02, -d * 0.5 + cell * (iz + 0.5))))
+			shell.add(floor_piece, Transform3D(Basis(), origin + Vector3(-w * 0.5 + cell * (ix + 0.5), 0.02, -d * 0.5 + cell * (iz + 0.5))))
 
 	# Edges: outward normal, number of 2 m segments, half-depth to the edge.
 	var edges := [
@@ -325,7 +334,8 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 	var vine_budget := int(recipe.get("vines", 0))
 	for s in stories:
 		var y := s * sh
-		var set_def: Dictionary = WALLS.get(ground_set if s == 0 else upper_set, WALLS["plaster"])
+		var set_name := ground_set if s == 0 else upper_set
+		var set_def: Dictionary = WALLS.get(set_name, WALLS["plaster"])
 		for e: Dictionary in edges:
 			var n: Vector3 = e["n"]
 			var count := int(e["count"])
@@ -337,6 +347,9 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 				var along := -count * cell * 0.5 + cell * (i + 0.5)
 				var pos := origin + n * float(e["depth"]) + basis * Vector3(along, 0, 0) + Vector3(0, y, 0)
 				var xf := Transform3D(basis, pos)
+				if set_name == "arcade":
+					shell.add("Wall_Arch", xf)
+					continue
 				if i == door_i:
 					var door_wall: String = _pick(set_def["door"], rng)
 					shell.add(door_wall, xf)

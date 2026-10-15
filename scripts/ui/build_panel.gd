@@ -1,8 +1,9 @@
 class_name BuildPanel
 extends PanelContainer
-## The village's works: stores with what comes in and goes out each day,
-## buildings the player can order (pick one, then place it in the world),
-## sites under construction with their crews, and the Master of Works.
+## The village's works: its charter and the next one to petition for,
+## stores with what comes in and goes out each day, buildings the player can
+## order (pick one, then place it in the world), sites under construction
+## with their crews, and the Master of Works.
 
 signal character_chosen(character_id: int)
 signal close_requested
@@ -45,11 +46,45 @@ func refresh() -> void:
 	var st := world.state
 	if st.territory == null:
 		return
+	_charter(st)
 	_stores(st)
 	_growth(st)
 	_orders(st)
 	_sites(st)
 	_overseer(st)
+
+
+## The charter: what the settlement is now, and what the next charter asks
+## for, as a checklist, with the petition to the Crown.
+func _charter(st: WorldState) -> void:
+	_heading("Charter: %s of %s" % [CharterSystem.title(st), st.village_name])
+	var now := CharterSystem.current(st)
+	_body.add_child(_wrap("%s  Room for %d people (%d live here); %d gold a day in dues and trade." % [
+		str(CharterSystem.tier_def(now).get("description", "")), CharterSystem.max_population(st), GrowthSystem.population(st), CharterSystem.dues(st)], 14, UITheme.TEXT))
+	var check := CharterSystem.can_petition(st)
+	var next := int(check["next"])
+	if next < 0:
+		return
+	_body.add_child(UITheme.label("Next: a %s charter" % CharterSystem.title_of(next), 15, UITheme.ACCENT))
+	for r in CharterSystem.requirements(st, next):
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		row.add_child(BuildingCard.NeedMark.new(bool(r["ok"])))
+		var l := UITheme.label("%s  (%s)" % [r["label"], r["detail"]], 14, UITheme.TEXT if r["ok"] else UITheme.TEXT_DIM)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(l)
+		_body.add_child(row)
+	var cost: Dictionary = CharterSystem.tier_def(next).get("cost", {})
+	var row2 := HBoxContainer.new()
+	row2.add_theme_constant_override("separation", 8)
+	var b := UITheme.button("Petition the Crown", func() -> void: world.petition_charter())
+	b.disabled = not check["ok"]
+	b.tooltip_text = "Grants " + CharterSystem.grants_text(next) + "." if check["ok"] else str(check["reason"])
+	row2.add_child(b)
+	row2.add_child(UITheme.label("Fee: " + TerritorySystem.cost_text(cost), 14, UITheme.ACCENT if TerritorySystem.can_afford(st, cost) else UITheme.BAD))
+	_body.add_child(row2)
+	_body.add_child(_wrap("Grants " + CharterSystem.grants_text(next) + ".", 13, UITheme.TEXT_DIM))
 
 
 func _stores(st: WorldState) -> void:
@@ -87,8 +122,11 @@ func _growth(st: WorldState) -> void:
 	var t := st.territory
 	var homes := GrowthSystem.homes(st)
 	var empty := GrowthSystem.empty_homes(st).size()
-	var cap := int(GrowthSystem.growth_cfg().get("max_population", 110))
+	var lodging := GrowthSystem.homes_with_room(st).size() - empty
+	var cap := CharterSystem.max_population(st)
 	_body.add_child(UITheme.label("%d people (room for %d)  -  %d homes, %d empty" % [GrowthSystem.population(st), cap, homes.size(), empty], 15))
+	if lodging > 0:
+		_body.add_child(_wrap("%d Townhouse%s can take in a second family." % [lodging, "s" if lodging != 1 else ""], 13, UITheme.TEXT_DIM))
 	var counts := []
 	for tier in GrowthSystem.max_tier() + 1:
 		counts.append(0)
@@ -122,7 +160,9 @@ func _growth(st: WorldState) -> void:
 	var per_day := GrowthSystem.progress_per_day(st)
 	var note := ""
 	if GrowthSystem.at_capacity(st):
-		note = "The village is as large as it can grow for now."
+		note = "Full: a %s may hold %d people." % [CharterSystem.title(st), cap]
+		if CharterSystem.current(st) < CharterSystem.top():
+			note += " A %s charter makes room for more." % CharterSystem.title_of(CharterSystem.current(st) + 1)
 	elif per_day <= 0.0:
 		note = "No one wants to settle here: make the village more appealing."
 	elif empty == 0 and t.settler_progress >= 100.0:
@@ -170,7 +210,8 @@ func _orders(st: WorldState) -> void:
 		var cost_l := UITheme.label(TerritorySystem.cost_text(cost), 14, UITheme.ACCENT if TerritorySystem.can_afford(st, cost) else UITheme.BAD)
 		cost_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(cost_l)
-		row.add_child(UITheme.label("%d/%d" % [TerritorySystem.count_built(st, type), int(def.get("limit", 99))], 13, UITheme.TEXT_DIM))
+		var limit := CharterSystem.limit_for(def, CharterSystem.current(st))
+		row.add_child(UITheme.label("%d/%d" % [TerritorySystem.count_built(st, type), limit] if limit > 0 else CharterSystem.title_of(CharterSystem.needed_for(def)), 13, UITheme.TEXT_DIM))
 		box.add_child(row)
 		var info := str(def.get("description", ""))
 		var jobs: Dictionary = def.get("jobs", {})

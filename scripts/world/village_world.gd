@@ -469,6 +469,22 @@ func place_building(type: String, pos: Vector3, rot: float) -> Dictionary:
 	return result
 
 
+## Petitions the Crown for the next charter (Build panel). On success the
+## new banners go up around the square.
+func petition_charter() -> void:
+	var result := CharterSystem.petition(state)
+	if not result["ok"]:
+		Audio.play("ui_error")
+		Game.notify.emit(str(result["text"]), Game.COLOR_BAD)
+		return
+	builder.refresh_props()
+	Audio.play(str(CharterSystem.cfg().get("ceremony", {}).get("sound", "knighted")))
+	Game.notify.emit(str(result["text"]), Game.COLOR_TALENT)
+	territory_changed.emit()
+	if ui:
+		ui.refresh()
+
+
 ## Abandons a building site from the Build panel.
 func cancel_site(building_id: int) -> void:
 	var site := state.territory.get_site(building_id)
@@ -943,7 +959,8 @@ func try_talk(character_id: int) -> bool:
 	heir.set_anim("talk")
 	talking_to = character_id
 	_set_focus(target)
-	camera_rig.close_in(float(StrategyCamera.cfg().get("talk_distance", 7.0)))
+	var cam_cfg := StrategyCamera.cfg()
+	camera_rig.close_in(float(cam_cfg.get("talk_distance", 7.0)), float(cam_cfg.get("talk_shift", -1.5)))
 	var result := Discovery.meet(state, target.character)
 	Audio.play("card_open")
 	conversation_started.emit(character_id, result)

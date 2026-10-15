@@ -281,7 +281,11 @@ func _plan_work(style: String) -> void:
 				_stay(rng.randf_range(40, 80), "work", text, dpos)
 		"market":
 			var spots := world.state.layout.market_spots()
-			if spots.is_empty():
+			if wp and wp.type == "market":
+				# Trading under the Market Hall's arches.
+				_go(wp.work_spot(world.worker_slot(c)), "Opening a stall at the market hall")
+				_stay(rng.randf_range(60, 120), "talk", text, wp.position)
+			elif spots.is_empty():
 				_plan_home()
 			else:
 				_go(spots[c.id % spots.size()], "Opening the market stall")

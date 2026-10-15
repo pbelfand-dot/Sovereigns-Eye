@@ -274,9 +274,14 @@ static func can_build(state: WorldState, type: String) -> Dictionary:
 	var def := buildable_def(type)
 	if def.is_empty():
 		return {"ok": false, "reason": "That can't be built."}
-	var limit := int(def.get("limit", 99))
+	var limit := CharterSystem.limit_for(def, CharterSystem.current(state))
+	if limit <= 0:
+		return {"ok": false, "reason": "Needs a %s charter." % CharterSystem.title_of(CharterSystem.needed_for(def))}
 	if count_built(state, type) >= limit:
-		return {"ok": false, "reason": "You have built all %d allowed for now." % limit}
+		var more := ""
+		if CharterSystem.current(state) < CharterSystem.top() and CharterSystem.limit_for(def, CharterSystem.top()) > limit:
+			more = " A higher charter allows more."
+		return {"ok": false, "reason": "You have built all %d a %s may have.%s" % [limit, CharterSystem.title(state), more]}
 	var cost: Dictionary = def.get("cost", {})
 	if not can_afford(state, cost):
 		return {"ok": false, "reason": shortfall_text(state, cost)}
@@ -817,12 +822,11 @@ static func _field_fits(state: WorldState, center: Vector3, rot: float, half: Ve
 
 ## A free spot for a building of `type` beside a road (tries roads in order,
 ## nearest the center first). Used by tests and tools; {} if none.
-static func find_spot(state: WorldState, type: String, min_dist: float = 15.0, max_dist: float = 80.0) -> Dictionary:
+static func find_spot(state: WorldState, type: String, min_dist: float = 15.0, max_dist: float = -1.0) -> Dictionary:
+	if max_dist < 0.0:
+		max_dist = CharterSystem.build_radius(state)
 	for road in state.layout.roads:
 		var pts: PackedVector3Array = road["points"]
-		var dir_name := str(road.get("name", ""))
-		if dir_name.begins_with("lane"):
-			continue
 		for i in range(1, pts.size()):
 			var a := pts[i - 1]
 			var b := pts[i]

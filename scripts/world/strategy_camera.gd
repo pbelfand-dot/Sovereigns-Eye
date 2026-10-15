@@ -39,6 +39,10 @@ var mode := "strategy"
 ## view (1.0 = clear). Set by the world; used while following the heir.
 var obstruction: Callable
 var _lift := 0.0
+## Shifts the picture so the people stand higher on screen (above a
+## conversation panel); meters, negative = people higher.
+var _view_shift := 0.0
+var _target_view_shift := 0.0
 ## Two fingers are pinching (TouchControls): a drag isn't an orbit then.
 var pinching := false
 var _pitch_bias := 0.0
@@ -116,22 +120,29 @@ func set_mode(new_mode: String, target: Node3D = null) -> void:
 		max_distance = 150.0
 		follow_target = null
 		_target_pitch_bias = 0.0
+		_view_shift = 0.0
+		_target_view_shift = 0.0
+		if camera:
+			camera.v_offset = 0.0
 		_target_distance = clampf(float(c.get("overview_distance", 62.0)), min_distance, max_distance)
 	_drag_mode = ""
 	_left_down = false
 
 
-## Moves in close for a conversation; `restore_view` returns to where it was.
-func close_in(distance: float) -> void:
+## Moves in close for a conversation, with the speakers framed above the
+## panel (`shift`, meters); `restore_view` returns to where it was.
+func close_in(distance: float, shift: float = 0.0) -> void:
 	if _saved_distance < 0.0:
 		_saved_distance = _target_distance
 	_target_distance = clampf(distance, min_distance, max_distance)
+	_target_view_shift = shift
 
 
 func restore_view() -> void:
 	if _saved_distance > 0.0:
 		_target_distance = clampf(_saved_distance, min_distance, max_distance)
 	_saved_distance = -1.0
+	_target_view_shift = 0.0
 
 
 ## Orbit by a screen-space drag (pixels): sideways turns, up/down tilts.
@@ -233,6 +244,8 @@ func _process_follow(delta: float) -> void:
 	_yaw = lerp_angle(_yaw, _target_yaw, k)
 	_distance = lerpf(_distance, _target_distance, k)
 	_pitch_bias = lerpf(_pitch_bias, _target_pitch_bias, k)
+	_view_shift = lerpf(_view_shift, _target_view_shift, k)
+	camera.v_offset = _view_shift
 	_apply_transform(delta)
 
 

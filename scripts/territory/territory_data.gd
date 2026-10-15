@@ -25,6 +25,9 @@ var settler_progress: float = 0.0
 var settler_families: int = 0
 ## Let the village build homes and upgrades by itself.
 var auto_homes: bool = true
+## The settlement's charter (CharterSystem): 0 Hamlet, 1 Village,
+## 2 Market Town, 3 Town.
+var charter: int = 0
 
 
 func amount(resource: String) -> float:
@@ -60,6 +63,7 @@ func to_dict() -> Dictionary:
 		"settler_progress": snappedf(settler_progress, 0.01),
 		"settler_families": settler_families,
 		"auto_homes": auto_homes,
+		"charter": charter,
 	}
 
 
@@ -85,4 +89,5 @@ static func from_dict(d: Dictionary) -> TerritoryData:
 	t.settler_progress = float(d.get("settler_progress", 0.0))
 	t.settler_families = int(d.get("settler_families", 0))
 	t.auto_homes = bool(d.get("auto_homes", true))
+	t.charter = int(d.get("charter", 0))
 	return t

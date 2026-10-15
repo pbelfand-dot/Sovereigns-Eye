@@ -197,7 +197,7 @@ func test_limits_and_costs() -> void:
 	state.house.gold = 5000
 	state.territory.stock["wood"] = 400.0
 	state.territory.stock["stone"] = 400.0
-	var limit := int(TerritorySystem.buildable_def("quarry")["limit"])
+	var limit := CharterSystem.limit_for(TerritorySystem.buildable_def("quarry"), CharterSystem.current(state))
 	for i in limit:
 		_place(state, "quarry")
 	check_eq(TerritorySystem.count_built(state, "quarry"), limit, "orders count toward the limit")

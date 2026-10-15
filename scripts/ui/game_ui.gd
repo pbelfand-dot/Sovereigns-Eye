@@ -7,6 +7,7 @@ var world: VillageWorld
 
 var _root: Control
 var _village_label: Label
+var _charter_label: Label
 var _clock_label: Label
 var _appraised_label: Label
 var _house_label: Label
@@ -100,6 +101,9 @@ func _build_top_bar() -> void:
 
 	_village_label = UITheme.label(world.state.village_name, 18, UITheme.ACCENT, true)
 	row.add_child(_village_label)
+	_charter_label = UITheme.label("", 15, UITheme.TEXT_DIM)
+	_charter_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(_charter_label)
 	_clock_label = UITheme.label("", 16)
 	row.add_child(_clock_label)
 
@@ -195,7 +199,9 @@ func _layout_top_bar() -> void:
 		]
 		_house_label.add_theme_color_override("font_color", UITheme.BAD if st.house.in_debt else UITheme.ACCENT)
 	var width := _bar_row.size.x if _bar_row.size.x > 0.0 else get_viewport().get_visible_rect().size.x - 16.0
-	var key := "%s|%s|%s|%d" % [full_clock, appraised, house[0], roundi(width)]
+	var charter := CharterSystem.title(st) if st.territory else ""
+	_charter_label.tooltip_text = "Charter: %s. Room for %d people. Build panel (B) to petition for the next." % [charter, CharterSystem.max_population(st)] if st.territory else ""
+	var key := "%s|%s|%s|%s|%d" % [full_clock, appraised, house[0], charter, roundi(width)]
 	if key == _bar_key:
 		return
 	_bar_key = key
@@ -207,6 +213,8 @@ func _layout_top_bar() -> void:
 		_clock_label.custom_minimum_size.x = 250.0 if plan[0] else 150.0
 		_appraised_label.text = appraised
 		_appraised_label.visible = plan[1]
+		_charter_label.text = "(%s)" % charter if not charter.is_empty() else ""
+		_charter_label.visible = plan[0] and not charter.is_empty()
 		_house_label.text = house[mini(int(plan[2]), house.size() - 1)]
 		if _bar_min_width() <= width:
 			break

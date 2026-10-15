@@ -76,6 +76,12 @@
         { "blocks": [ { "cells": [5, 4], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "props": ["wagon", "crate", "crate", "crate"] }
       ]
     },
+    "market": {
+      "variants": [
+        { "blocks": [ { "cells": [5, 3], "at": [0, 0], "stories": 2, "ground": "arcade", "walls": "plaster", "roof": "tiles", "ridge": "x", "door": true } ],
+          "props": ["crate", "crate", "wagon"], "vines": 1 }
+      ]
+    },
     "quarry": {
       "variants": [
         { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "props": ["crate", "crate"] },

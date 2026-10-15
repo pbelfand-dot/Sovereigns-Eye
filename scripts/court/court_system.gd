@@ -231,7 +231,8 @@ static func gift(state: WorldState, c: CharacterData) -> Dictionary:
 
 static func retainer_cap(state: WorldState) -> int:
 	var h := section("house")
-	return int(h.get("retainer_cap_base", 4)) + floori(state.house.renown / float(h.get("renown_per_extra_retainer", 15)))
+	return int(h.get("retainer_cap_base", 4)) + floori(state.house.renown / float(h.get("renown_per_extra_retainer", 15))) \
+		+ (CharterSystem.retainer_bonus(state) if state.territory else 0)
 
 
 static func retainer_count(state: WorldState) -> int:
@@ -484,7 +485,7 @@ static func daily_wages(state: WorldState) -> int:
 
 
 static func daily_income(state: WorldState) -> int:
-	var base := float(section("house").get("base_income", 18)) + GrowthSystem.rent(state)
+	var base := float(section("house").get("base_income", 18)) + GrowthSystem.rent(state) + CharterSystem.dues(state)
 	var steward := state.get_character(state.house.holder_of("steward"))
 	if steward:
 		base *= 1.0 + steward.get_current("administration") / float(office_def("steward").get("effect_divisor", 200.0))

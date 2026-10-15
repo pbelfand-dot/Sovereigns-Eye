@@ -105,6 +105,16 @@ static func migrate(data: Dictionary) -> Dictionary:
 		# promises. Retainers who joined before keep the standard wage
 		# (agreed_wage -1) and empty terms; standing starts at fair (50).
 		data["save_version"] = 6
+		version = 6
+	if version == 6:
+		# v7 (Phase 3.3) adds the settlement's charter. Villages that already
+		# grew past a Hamlet's limit start as a Village, so nobody is over
+		# their charter's limit.
+		var t: Dictionary = data.get("territory", {})
+		if not t.is_empty() and not t.has("charter"):
+			var people := (data.get("characters", []) as Array).size()
+			t["charter"] = 1 if people > 70 else 0
+		data["save_version"] = 7
 	return data
 
 

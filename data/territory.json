@@ -95,6 +95,8 @@
     "types": ["cottage", "farmhouse"],
     "upgrade_types": ["cottage"],
     "build_type": "cottage",
+    "_lodgers": "Townhouses (tier 2) take in lodgers as the settlement grows: families a Townhouse can hold, by charter (Hamlet, Village, Market Town, Town). Lodgers pay rent too: towns grow denser, not only wider.",
+    "lodgers": { "tier": 2, "families_by_charter": [1, 1, 2, 3] },
     "build_cost": { "wood": 35, "stone": 10 },
     "build_work": 24,
     "tiers": [
@@ -124,7 +126,7 @@
 
   "growth": {
     "_comment": "New families settle when the village is appealing and a home stands empty. Appeal fills the settler bar each day (appeal x progress_per_appeal); at 100 a family arrives. Families walk in along a road from the edge of the map.",
-    "max_population": 110,
+    "_max_population": "How many may live here is set by the settlement's charter (data/charters.json).",
     "progress_per_appeal": 2.0,
     "appeal": {
       "base": 10,
@@ -159,27 +161,42 @@
     {
       "type": "quarry", "name": "Stonecutter's Yard",
       "description": "Stonecutters haul and dress stone from the hills. The village's only source of stone.",
-      "cost": { "wood": 40, "gold": 20 }, "work": 30, "jobs": { "stonecutter": 2 }, "limit": 3
+      "cost": { "wood": 40, "gold": 20 }, "work": 30, "jobs": { "stonecutter": 2 }, "limits": [3, 3, 4, 4]
     },
     {
       "type": "workshop", "name": "Woodcutters' Lodge",
       "description": "Two more woodcutters fell timber in the forest.",
-      "cost": { "wood": 30, "stone": 10, "gold": 20 }, "work": 36, "jobs": { "woodcutter": 2 }, "limit": 3
+      "cost": { "wood": 30, "stone": 10, "gold": 20 }, "work": 36, "jobs": { "woodcutter": 2 }, "limits": [3, 3, 4, 5]
     },
     {
       "type": "farmhouse", "name": "Farmstead",
       "description": "A farmer and a farmhand work new fields around the house.",
-      "cost": { "wood": 50, "stone": 15, "gold": 30 }, "work": 40, "jobs": { "farmer": 1, "farmhand": 1 }, "fields": [2, 3], "limit": 4
+      "cost": { "wood": 50, "stone": 15, "gold": 30 }, "work": 40, "jobs": { "farmer": 1, "farmhand": 1 }, "fields": [2, 3], "limits": [4, 5, 6, 8]
     },
     {
       "type": "storehouse", "name": "Granary",
       "description": "Raises how much food, wood and stone the village can store.",
-      "cost": { "wood": 60, "stone": 30, "gold": 30 }, "work": 50, "limit": 3
+      "cost": { "wood": 60, "stone": 30, "gold": 30 }, "work": 50, "limits": [3, 3, 4, 5]
     },
     {
       "type": "bakery", "name": "Bakery",
       "description": "A baker turns flour into bread for the village.",
-      "cost": { "wood": 40, "stone": 25, "gold": 30 }, "work": 36, "jobs": { "baker": 1 }, "limit": 2
+      "cost": { "wood": 40, "stone": 25, "gold": 30 }, "work": 36, "jobs": { "baker": 1 }, "limits": [2, 2, 3, 4]
+    },
+    {
+      "type": "tavern", "name": "Tavern",
+      "description": "Ale, warmth and gossip. Homes need a tavern near them to grow, and villagers gather there in the evening.",
+      "cost": { "wood": 70, "stone": 30, "gold": 60 }, "work": 50, "jobs": { "innkeeper": 1, "tavern_hand": 1 }, "limits": [0, 1, 1, 2]
+    },
+    {
+      "type": "chapel", "name": "Chapel",
+      "description": "A place to pray. Homes need a chapel near them to grow, and the devout visit it.",
+      "cost": { "wood": 40, "stone": 70, "gold": 60 }, "work": 60, "jobs": { "priest": 1 }, "limits": [0, 1, 1, 2]
+    },
+    {
+      "type": "market", "name": "Market Hall",
+      "description": "An arcaded hall where merchants trade: gold every day, settlers drawn by market days, and a market for nearby Townhouses.",
+      "cost": { "wood": 80, "stone": 60, "gold": 80 }, "work": 64, "jobs": { "merchant": 2 }, "limits": [0, 0, 1, 2]
     }
   ]
 }

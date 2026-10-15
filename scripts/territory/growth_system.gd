@@ -59,6 +59,41 @@ static func resident_counts(state: WorldState) -> Dictionary:
 	return out
 
 
+## Families a home can hold: one, or more in a Townhouse as the settlement
+## grows (lodgers; homes "lodgers" in data/territory.json).
+static func family_capacity(state: WorldState, b: BuildingData) -> int:
+	var l: Dictionary = homes_cfg().get("lodgers", {})
+	var by_charter: Array = l.get("families_by_charter", [])
+	if by_charter.is_empty() or not can_level(b) or b.tier < int(l.get("tier", 2)):
+		return 1
+	return maxi(1, int(by_charter[clampi(CharterSystem.current(state), 0, by_charter.size() - 1)]))
+
+
+## Building id -> how many families live there.
+static func family_counts(state: WorldState) -> Dictionary:
+	var sets := {}
+	for c in state.characters:
+		if c.home_building_id >= 0:
+			if not sets.has(c.home_building_id):
+				sets[c.home_building_id] = {}
+			(sets[c.home_building_id] as Dictionary)[c.family_id] = true
+	var out := {}
+	for id: int in sets:
+		out[id] = (sets[id] as Dictionary).size()
+	return out
+
+
+## Homes with room for another family (and not being rebuilt): empty ones,
+## and Townhouses with room for lodgers.
+static func homes_with_room(state: WorldState) -> Array[BuildingData]:
+	var fams := family_counts(state)
+	var out: Array[BuildingData] = []
+	for b in homes(state):
+		if int(fams.get(b.id, 0)) < family_capacity(state, b) and state.territory.get_site(b.id) == null:
+			out.append(b)
+	return out
+
+
 ## Homes no one lives in (and not being rebuilt), ready for settlers.
 static func empty_homes(state: WorldState) -> Array[BuildingData]:
 	var counts := resident_counts(state)
@@ -86,11 +121,11 @@ static func max_tier() -> int:
 static func rent(state: WorldState) -> float:
 	if state == null or state.layout == null or state.territory == null:
 		return 0.0
-	var counts := resident_counts(state)
+	var fams := family_counts(state)
 	var total := 0.0
 	for b in homes(state):
-		if b.tier > 0 and int(counts.get(b.id, 0)) > 0:
-			total += float(tier_def(b.tier).get("rent", 0))
+		if b.tier > 0 and int(fams.get(b.id, 0)) > 0:
+			total += float(tier_def(b.tier).get("rent", 0)) * int(fams[b.id])
 	return total
 
 
@@ -167,7 +202,10 @@ static func home_needs(state: WorldState, b: BuildingData) -> Array[Dictionary]:
 					parts.append("%s %s" % [str(GameData.building_type(type).get("name", type)).to_lower(), "%d m" % roundi(d) if d < INF else "none"])
 				detail = ", ".join(parts)
 			"market":
+				# The village square, or any Market Hall.
 				var d := Vector2(b.position.x - state.layout.square_center.x, b.position.z - state.layout.square_center.z).length()
+				for m in CharterSystem.markets(state):
+					d = minf(d, Vector2(b.position.x - m.position.x, b.position.z - m.position.z).length())
 				ok = d <= float(need.get("radius", 60))
 				detail = "%d m" % roundi(d)
 		out.append({"label": str(need.get("label", need.get("id", ""))), "ok": ok, "detail": detail})
@@ -226,6 +264,7 @@ static func appeal_factors(state: WorldState) -> Array[Dictionary]:
 			out.append({"label": "Your house can't pay its people", "value": float(cfg.get("in_debt", -10))})
 	if open_jobs(state) > 0:
 		out.append({"label": "Work to be had (%d open jobs)" % open_jobs(state), "value": float(cfg.get("open_jobs", 6))})
+	out.append_array(CharterSystem.appeal_factors(state))
 	return out
 
 
@@ -257,8 +296,9 @@ static func population(state: WorldState) -> int:
 	return state.characters.size()
 
 
+## The charter sets how many may live here (CharterSystem).
 static func at_capacity(state: WorldState) -> bool:
-	return population(state) >= int(growth_cfg().get("max_population", 110))
+	return population(state) >= CharterSystem.max_population(state)
 
 
 ## Settler bar gained per day at the current appeal.
@@ -283,9 +323,10 @@ static func entry_point(state: WorldState, rng: RandomNumberGenerator) -> Vector
 ## Brings a family of settlers to an empty home. Returns their FamilyData
 ## (null if no home is free).
 static func settle(state: WorldState) -> FamilyData:
-	var free := empty_homes(state)
+	var free := homes_with_room(state)
 	if free.is_empty():
 		return null
+	var empty := empty_homes(state)
 	var t := state.territory
 	var stream := "settlers_%d" % t.settler_families
 	var rng := Seeds.rng(state.world_seed, stream + "/pick")
@@ -294,10 +335,13 @@ static func settle(state: WorldState) -> FamilyData:
 	for i in templates.size():
 		weights[str(i)] = float((templates[i] as Dictionary).get("weight", 1.0))
 	var tpl: Dictionary = templates[int(Seeds.weighted_key(rng, weights))] if not templates.is_empty() else {"background": "farming", "head": "laborer"}
-	# Nearest empty home to the square first.
+	# An empty home first, nearest the square; else rooms as lodgers.
 	free.sort_custom(func(a: BuildingData, b: BuildingData) -> bool:
+		if empty.has(a) != empty.has(b):
+			return empty.has(a)
 		return a.position.distance_to(state.layout.square_center) < b.position.distance_to(state.layout.square_center))
 	var home := free[0]
+	var lodging := not empty.has(home)
 	var fam := CharacterGenerator.settle_family(state, tpl, home, stream)
 	var entry := entry_point(state, rng)
 	for id in fam.member_ids:
@@ -307,8 +351,9 @@ static func settle(state: WorldState) -> FamilyData:
 		c.activity = ""
 		c.activity_text = "Arriving in %s" % state.village_name
 	t.settler_families += 1
-	t.home_since[home.id] = state.day()
-	rename_home(state, home)
+	if not lodging:
+		t.home_since[home.id] = state.day()
+		rename_home(state, home)
 	state.house.log_event(state.day(), "The %s came to settle in %s." % [fam.display_name(), state.village_name], "join")
 	return fam
 
@@ -338,14 +383,13 @@ static func best_home_spot(state: WorldState) -> Dictionary:
 	var cfg: Dictionary = growth_cfg().get("auto", {})
 	var type := str(homes_cfg().get("build_type", "cottage"))
 	var lo := float(cfg.get("spot_min", 14))
-	var hi := float(cfg.get("spot_max", 78))
+	var hi := maxf(float(cfg.get("spot_max", 78)), CharterSystem.build_radius(state))
 	var step := float(cfg.get("spot_step", 4))
 	var rng := Seeds.rng(state.world_seed, "home_spot_%d" % state.territory.next_building_id)
 	var best := {}
 	var best_score := INF
+	# Along the main roads and the lanes off them (a second row of homes).
 	for road in state.layout.roads:
-		if str(road.get("name", "")).begins_with("lane"):
-			continue
 		var pts: PackedVector3Array = road["points"]
 		for i in range(1, pts.size()):
 			var a := pts[i - 1]
@@ -421,7 +465,7 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 	for s in t.sites:
 		if s.kind == "home":
 			building_home = true
-	var needs_home := not building_home and empty_homes(state).is_empty() and not at_capacity(state) and appeal(state) > 0.0
+	var needs_home := not building_home and homes_with_room(state).is_empty() and not at_capacity(state) and appeal(state) > 0.0
 	if needs_home and auto_sites(state) < max_sites:
 		var site := order_home(state)
 		if site:
