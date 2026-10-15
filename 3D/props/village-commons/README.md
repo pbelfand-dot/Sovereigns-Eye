@@ -100,9 +100,11 @@ Blender 4.2 runs headless here as the `bpy` module (`pip install bpy==4.2.0` und
 - **Signpost boards** point in fixed directions; they are not yet aligned to the roads at each junction.
 - **Hand-painted look.** Everything is texture-mapped onto shared trim sheets; there are no unique bakes (AO or curvature), to stay consistent with the kit.
 - **Banner tiers.** Banners use the Village design in a Hamlet: the starting banners by the manor show the wheat sheaf before any charter.
-- **Rendering paths.**
-  - Tested in Forward+.
-  - The materials are standard PBR, and the wind shader uses only basic spatial-shader features, so they also work in the Mobile and Compatibility renderers.
+- **Rendering paths.** Checked in all three of Godot's renderers:
+  - Forward+ (desktop): every contact sheet.
+  - Mobile (the Android build).
+  - Compatibility (OpenGL).
+  - Both extra runs drew everything with no shader errors. See `previews/_renderers_town_mobile_vs_compat.jpg` (Mobile left, Compatibility right). The Compatibility renderer shows banners a little brighter, because it handles cloth translucency more simply.
 
 ## License
 
