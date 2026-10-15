@@ -21,6 +21,7 @@ var art_only := false
 var menus_only := false
 var build_only := false
 var growth_only := false
+var charter_only := false
 
 
 func _ready() -> void:
@@ -34,6 +35,7 @@ func _ready() -> void:
 	menus_only = args.has("menus")
 	build_only = args.has("build")
 	growth_only = args.has("growth")
+	charter_only = args.has("charter")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -64,6 +66,10 @@ func _run() -> void:
 		return
 	if growth_only:
 		await _growth_shots()
+		get_tree().quit()
+		return
+	if charter_only:
+		await _charter_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -482,3 +488,55 @@ func _growth_shots() -> void:
 			world.select_character(lead.character.id)
 			await _wait(25)
 			await _shot("36_settlers_arriving.png")
+
+
+## Phase 3.3: the Charter section of the Build panel, then a Market Town's
+## new banners around the square and its Market Hall.
+func _charter_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 4.0 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.ui.toggle_build()
+	await _wait(10)
+	await _shot("40_charter_panel.png")
+	world.ui.toggle_build()
+	# Grant the Village and Market Town charters (as if earned), then raise a
+	# Market Hall.
+	st.house.gold = 5000
+	for r: String in TerritorySystem.RESOURCES:
+		st.territory.stock[r] = 900.0
+	for i in 2:
+		st.territory.charter = i + 1
+		CharterSystem.raise_banners(st, int(CharterSystem.tier_def(i + 1).get("banners", 0)) - int(CharterSystem.tier_def(i).get("banners", 0)))
+	world.builder.refresh_props()
+	var spot := TerritorySystem.find_spot(st, "market", 20.0)
+	var hall: BuildingData = null
+	if not spot.is_empty():
+		var res := TerritorySystem.place(st, "market", spot["pos"], spot["rot"])
+		if res["ok"]:
+			var site: ConstructionSite = res["site"]
+			world.builder.add_site(site)
+			site.work_done = site.work_needed
+			world._finish_site(site)
+			hall = site.building
+	world.territory_changed.emit()
+	world.camera_rig.set_yaw(0.6, true)
+	world.camera_rig.look_at_point(st.layout.square_center, 44.0, true)
+	await _wait(25)
+	await _shot("41_charter_banners.png")
+	if hall:
+		world.camera_rig.set_yaw(hall.rotation + 0.45, true)
+		world.camera_rig.look_at_point(hall.position, 24.0, true)
+		await _wait(25)
+		await _shot("42_market_hall.png")
+		world.camera_rig.look_at_point(hall.position, 13.0, true)
+		await _wait(25)
+		await _shot("43_market_hall_close.png")
+	else:
+		print("no spot for the Market Hall")
+	world.ui.toggle_build()
+	await _wait(10)
+	await _shot("44_charter_panel_market_town.png")
+

@@ -101,7 +101,8 @@ static func appeal_factors(state: WorldState) -> Array[Dictionary]:
 static func mood_factors(state: WorldState, c: CharacterData) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var m: Dictionary = cfg().get("mood", {})
-	var pride := float((m.get("pride", []) as Array)[mini(current(state), (m.get("pride", [0]) as Array).size() - 1)]) if not (m.get("pride", []) as Array).is_empty() else 0.0
+	var prides: Array = m.get("pride", [])
+	var pride := float(prides[mini(current(state), prides.size() - 1)]) if not prides.is_empty() else 0.0
 	if pride != 0.0:
 		out.append({"label": "Proud of their %s" % title(state).to_lower(), "value": pride})
 	var home := state.get_building(c.home_building_id)

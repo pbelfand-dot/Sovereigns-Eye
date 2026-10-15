@@ -11,8 +11,34 @@ playable build. Numbers and content live in `data/*.json`.
 | 3.1 | Territory: stores, Build menu, construction sites, Master of Works | Done (on the preview build) |
 | 3.2 | Growth: settlers, homes that build and upgrade themselves | Done (on the preview build) |
 | **Eye** | **On foot: scan first, then talk and persuade** (below) | **In progress: gameplay video waiting for approval** |
-| 3.3 | Charters: Hamlet → Village → Market Town → Town (raises the 110-person limit, unlocks taverns, chapels, markets) | Next |
+| 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done (on the preview build) |
 | 4+ | Dynasties (ageing, marriage, children, succession), wider realm, military | Later |
+
+## Charters (Phase 3.3)
+
+A settlement grows by royal charter (`data/charters.json`, `CharterSystem`).
+Each charter has a checklist and a fee; when both are met, **Petition the
+Crown** in the Build panel (B) grants it at once: banners go up around the
+square, renown rises and the chronicle records it.
+
+| Charter | Room for | Asks for | Unlocks and grants |
+|---|---|---|---|
+| Hamlet | 70 people | (the start) | |
+| Village | 110 | 60 people, 2 Timber Houses, 5 days of food, content villagers, renown 12; 150 gold, 40 wood | a second tavern and chapel, more farmsteads; dues, +1 household place |
+| Market Town | 150 | 95 people, 2 Townhouses, a bakery, a granary, happiness 53+, renown 40; 400 gold, 80 stone | the **Market Hall**; Townhouses take a second family (lodgers) |
+| Town | 200 | 135 people, 6 Townhouses, a Market Hall, two chapels, happiness 55+, renown 80; 900 gold, 200 stone | more of everything; Townhouses take a third family |
+
+Every charter also widens the land the village may build on, brings in
+dues, draws settlers and makes villagers proud (a little happiness). The
+**Market Hall** is an arcaded hall from the kit (open arches on timber
+posts, a hall above): two merchants trade there for gold every day, market
+days draw settlers, people living near it are happier, and it counts as
+the market Townhouses need.
+
+A steward bot (`tools/charter_sim.gd`) reaches Town on every seed tried,
+between day 73 and day 184, and grows to about 170 people; beyond that,
+growth comes from upgrading more homes (more taverns, chapels and markets
+in the outer streets).
 
 ## On foot: scan first, then talk and persuade
 
