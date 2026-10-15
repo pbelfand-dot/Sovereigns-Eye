@@ -92,6 +92,13 @@ func _play_forward(st: WorldState) -> void:
 			CharterSystem.petition(st)
 		elif CharterSystem.can_petition(st)["ok"] and st.territory.sites.is_empty():
 			break
+	# Nobody walked during the fast-forward: start everyone at home, so the
+	# village wakes up spread out rather than at the edge of the map.
+	for c in st.characters:
+		var home := st.get_building(c.home_building_id)
+		if home and not st.is_player(c):
+			c.position = TerrainHeight.on_ground(home.door_position())
+			c.inside_building_id = home.id
 	print("charter_demo: day %d, %s, %d people, can petition: %s" % [st.day(), CharterSystem.title(st), st.characters.size(), CharterSystem.can_petition(st)])
 
 
