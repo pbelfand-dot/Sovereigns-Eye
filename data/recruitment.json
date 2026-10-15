@@ -4,7 +4,8 @@
   "threshold": 1.0,
   "counter_from": 0.7,
   "insult_below": 0.0,
-  "retry_days": 3,
+  "_renegotiate": "New terms for a retainer: taken if they're no worse (by the retainer's own motives) than 'tolerance' below the old ones; loyalty rises by the gain x loyalty_per_gain (up to max_loyalty); turned-down worse terms cost refused_loyalty.",
+  "renegotiate": { "tolerance": 0.05, "loyalty_per_gain": 25.0, "max_loyalty": 20.0, "refused_loyalty": -3.0 },
   "_strong_motive": "A motive whose weight x satisfaction reaches 'weight' counts 'bonus' times over: one strong reason can be enough.",
   "strong_motive": { "weight": 0.65, "bonus": 1.35 },
 

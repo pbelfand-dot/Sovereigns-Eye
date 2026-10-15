@@ -126,7 +126,7 @@ func test_phase1_save_migrates_to_a_playable_house() -> void:
 	old.erase("player")
 	old.erase("house")
 	for c: Dictionary in old["characters"]:
-		for key: String in ["retainer", "office", "focus", "player_opinion", "training_progress", "last_talk_day", "recruit_retry_day", "former_status", "former_work", "joined_day"]:
+		for key: String in ["retainer", "office", "focus", "player_opinion", "training_progress", "last_talk_day", "former_status", "former_work", "joined_day"]:
 			c.erase(key)
 	DirAccess.make_dir_recursive_absolute(SaveManager.SAVE_DIR)
 	var file := FileAccess.open(SaveManager.slot_path(OLD_SLOT), FileAccess.WRITE)

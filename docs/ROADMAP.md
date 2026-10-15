@@ -124,6 +124,13 @@ every day; a home must be free (or promised: keep it within 6 days or lose
 trust, standing, and possibly the person); a job needs a workplace with
 room; offices must be vacant. **Answers are in plain words:** they accept,
 name their terms (a counteroffer you can agree to), or refuse and say why.
+**An offer can always be made**, since offers are what the conversation
+is for: a refusal never closes the door (improve the terms and propose
+again; only an insulting lowball costs a little opinion), a household
+larger than your renown supports only costs upkeep (2 gold a day per extra
+retainer), and your own retainers hear **new terms** (taken if they're no
+worse by their own motives, raising loyalty; worse terms are turned down).
+Only you, your own family and children under 10 can't be asked.
 
 Different people, different paths (each one is a test in
 `tests/test_recruitment.gd`):

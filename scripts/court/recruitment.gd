@@ -58,20 +58,26 @@ static func decider(state: WorldState, c: CharacterData) -> CharacterData:
 	return c
 
 
-static func eligible(state: WorldState, c: CharacterData) -> Dictionary:
+## Can you make them an offer at all? Almost always: a refusal never closes
+## the door (improve the offer and ask again), a full household only costs
+## upkeep, and your own retainers hear new terms. Only you, your own family
+## (they already serve the house) and young children can't be asked.
+static func can_offer(state: WorldState, c: CharacterData) -> Dictionary:
 	if state.is_player(c):
 		return {"ok": false, "reason": "That's you."}
 	if CourtSystem.is_kin(state, c):
-		return {"ok": false, "reason": "Family of your house."}
-	if c.retainer:
-		return {"ok": false, "reason": "Already sworn to your house."}
+		return {"ok": false, "reason": "%s is family: they already serve your house." % c.first_name}
 	if c.age < int(CourtSystem.section("recruit").get("min_age", 10)):
-		return {"ok": false, "reason": "Too young to serve (10+)."}
-	if c.recruit_retry_day > state.day():
-		return {"ok": false, "reason": "They won't hear another offer for %d day(s)." % (c.recruit_retry_day - state.day())}
-	if CourtSystem.retainer_count(state) >= CourtSystem.retainer_cap(state):
-		return {"ok": false, "reason": "Your household is full (%d). Earn renown to grow it." % CourtSystem.retainer_cap(state)}
+		return {"ok": false, "reason": "%s is too young to serve (10+)." % c.first_name}
 	return {"ok": true, "reason": ""}
+
+
+## Can they be recruited (an offer they haven't sworn to yet)?
+static func eligible(state: WorldState, c: CharacterData) -> Dictionary:
+	var can := can_offer(state, c)
+	if can["ok"] and c.retainer:
+		return {"ok": false, "reason": "Already sworn to your house."}
+	return can
 
 
 # --- Motives ---------------------------------------------------------------------------------
@@ -297,13 +303,15 @@ static func offer_problem(state: WorldState, c: CharacterData, offer: Dictionary
 			var office := str(offer.get("office", ""))
 			if CourtSystem.office_def(office).is_empty():
 				return "Choose an office."
-			if state.house.holder_of(office) >= 0:
+			var holder := state.house.holder_of(office)
+			if holder >= 0 and holder != c.id:
 				return "That office is already held."
 			if c.age < 16:
 				return "Too young to hold an office (16+)."
 		"workplace":
 			var wb := state.get_building(int(offer.get("workplace", -1)))
-			if wb == null or not open_workplaces(state).has(wb):
+			var theirs := wb != null and int(c.terms.get("workplace", -1)) == wb.id
+			if wb == null or not (theirs or open_workplaces(state).has(wb)):
 				return "A job needs a workplace with room: build or choose a workshop, smithy, yard, bakery or mill."
 		"squire":
 			if c.age < 14 or c.age > 30:
@@ -551,12 +559,14 @@ static func describe(state: WorldState, offer: Dictionary) -> String:
 ## Makes the offer. Returns {result: "accept" | "counter" | "refuse" | "invalid",
 ## text, reasons, counter}. Accepting applies the terms at once.
 static func propose(state: WorldState, c: CharacterData, offer: Dictionary) -> Dictionary:
-	var can := eligible(state, c)
+	var can := can_offer(state, c)
 	if not can["ok"]:
 		return {"result": "invalid", "text": can["reason"], "reasons": [], "counter": {}}
 	var problem := offer_problem(state, c, offer)
 	if not problem.is_empty():
 		return {"result": "invalid", "text": problem, "reasons": [], "counter": {}}
+	if c.retainer:
+		return _propose_new_terms(state, c, offer)
 	var ev := evaluate(state, c, offer)
 	var who := decider(state, c)
 	var name := who.first_name if who == c else "%s's %s" % [c.first_name, "father" if who.gender == "male" else "mother"]
@@ -568,7 +578,7 @@ static func propose(state: WorldState, c: CharacterData, offer: Dictionary) -> D
 		counter = counteroffer(state, c, offer)
 	if not counter.is_empty():
 		return {"result": "counter", "text": "%s would come for %s." % [name, describe(state, counter)], "reasons": ev["reasons"], "counter": counter}
-	c.recruit_retry_day = state.day() + int(cfg().get("retry_days", 3))
+	# No door closes: improve the offer and ask again. A lowball still stings.
 	if ev["insulted"]:
 		who.player_opinion = clampf(who.player_opinion - 3.0, -100.0, 100.0)
 	return {"result": "refuse", "text": "%s refuses." % name, "reasons": ev["reasons"], "counter": {}}
@@ -579,18 +589,73 @@ static func propose(state: WorldState, c: CharacterData, offer: Dictionary) -> D
 ## They join on these terms: wage, home, position. Everything is real.
 static func accept(state: WorldState, c: CharacterData, offer: Dictionary) -> void:
 	CourtSystem.join(state, c)
+	_apply_terms(state, c, offer)
+	state.house.log_event(state.day(), "%s joined the household for %s." % [c.full_name(), describe(state, offer)], "join")
+
+
+## The terms a retainer serves on now, as an offer (to start new terms from).
+static func current_terms(state: WorldState, c: CharacterData) -> Dictionary:
+	var t := {"wage": CourtSystem.wage(c), "home": -1, "position": "household", "appeal": false}
+	if not c.office.is_empty():
+		t["position"] = "office"
+		t["office"] = c.office
+	elif int(c.terms.get("workplace", -1)) >= 0 and state.get_building(int(c.terms["workplace"])):
+		t["position"] = "workplace"
+		t["workplace"] = int(c.terms["workplace"])
+	elif c.title == "squire":
+		t["position"] = "squire"
+	elif not c.focus.is_empty():
+		t["position"] = "training"
+		t["focus"] = c.focus
+	return t
+
+
+## New terms for one of your retainers. Terms they like better (by their
+## own motives) are taken gladly and raise their loyalty; worse ones they
+## turn down, a little hurt. Returns the same shape as propose().
+static func _propose_new_terms(state: WorldState, c: CharacterData, offer: Dictionary) -> Dictionary:
+	var rn: Dictionary = cfg().get("renegotiate", {})
+	var old := current_terms(state, c)
+	var ev := evaluate(state, c, offer)
+	var gain := float(ev["total"]) - float(evaluate(state, c, old)["total"])
+	if gain >= -float(rn.get("tolerance", 0.05)):
+		_apply_terms(state, c, offer)
+		var up := clampf(gain * float(rn.get("loyalty_per_gain", 25.0)), 0.0, float(rn.get("max_loyalty", 20.0)))
+		c.loyalty = clampf(c.loyalty + up, 0.0, 100.0)
+		state.house.log_event(state.day(), "%s now serves for %s." % [c.full_name(), describe(state, offer)], "court")
+		var how := "gladly" if up >= 3.0 else "readily"
+		return {"result": "accept", "text": "%s %s agrees: %s." % [c.first_name, how, describe(state, offer)], "reasons": ev["reasons"], "counter": {}}
+	c.loyalty = clampf(c.loyalty + float(rn.get("refused_loyalty", -3.0)), 0.0, 100.0)
+	return {"result": "refuse", "text": "%s won't take worse terms than they have now." % c.first_name, "reasons": ev["reasons"], "counter": {}}
+
+
+## Puts terms into effect: the wage, the place (an office, training, a
+## workplace, a squire's place) and the home. Used when someone joins and
+## when a retainer agrees to new terms.
+static func _apply_terms(state: WorldState, c: CharacterData, offer: Dictionary) -> void:
+	var pos := str(offer.get("position", "household"))
+	if not c.office.is_empty() and not (pos == "office" and str(offer.get("office", "")) == c.office):
+		CourtSystem.vacate(state, c.office)
 	c.terms = offer.duplicate()
 	c.agreed_wage = int(offer.get("wage", 0))
-	match str(offer.get("position", "household")):
+	# Leaving a squire's place or training: those duties end.
+	if c.title == "squire" and pos != "squire":
+		c.title = ""
+	if pos == "household":
+		c.focus = ""
+	match pos:
 		"training":
 			CourtSystem.set_focus(state, c, str(offer.get("focus", c.best_attribute())))
 		"office":
-			CourtSystem.appoint(state, str(offer.get("office", "")), c)
+			if c.office != str(offer.get("office", "")):
+				CourtSystem.appoint(state, str(offer.get("office", "")), c)
 		"workplace":
 			c.work_building_id = int(offer.get("workplace", -1))
 		"squire":
 			c.title = "squire"
 			CourtSystem.set_focus(state, c, "combat")
+	if pos != "workplace":
+		CourtSystem.assign_workplace(state, c)
 	var home := int(offer.get("home", -1))
 	if home >= 0:
 		move_household(state, c, state.get_building(home))
@@ -599,9 +664,12 @@ static func accept(state: WorldState, c: CharacterData, offer: Dictionary) -> vo
 		if not manor.is_empty():
 			c.home_building_id = manor[0].id
 	elif home == PROMISE_HOME:
-		state.house.promises.append({"character": c.id, "kind": "home",
-			"due": state.day() + int(cfg().get("promises", {}).get("home_days", 6)), "made": state.day()})
-	state.house.log_event(state.day(), "%s joined the household for %s." % [c.full_name(), describe(state, offer)], "join")
+		var open := false
+		for p in state.house.promises:
+			open = open or int(p.get("character", -1)) == c.id
+		if not open:
+			state.house.promises.append({"character": c.id, "kind": "home",
+				"due": state.day() + int(cfg().get("promises", {}).get("home_days", 6)), "made": state.day()})
 
 
 ## Moves someone and the family living with them into a home.

@@ -3,7 +3,7 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
@@ -13,6 +13,8 @@ extends Node
 ## a finished farmstead, the Build panel and a placement preview. "growth"
 ## renders step 2: the village at the start and after 45 simulated days,
 ## a home being upgraded, home levels, a building card and settlers arriving.
+## "talk" renders a conversation on foot: the offer terms, a refusal with
+## the terms still open, and the better offer that is accepted.
 
 var out_dir := "user://captures"
 var seed_text := "12345"
@@ -22,6 +24,7 @@ var menus_only := false
 var build_only := false
 var growth_only := false
 var charter_only := false
+var talk_only := false
 
 
 func _ready() -> void:
@@ -36,6 +39,7 @@ func _ready() -> void:
 	build_only = args.has("build")
 	growth_only = args.has("growth")
 	charter_only = args.has("charter")
+	talk_only = args.has("talk")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -70,6 +74,10 @@ func _run() -> void:
 		return
 	if charter_only:
 		await _charter_shots()
+		get_tree().quit()
+		return
+	if talk_only:
+		await _talk_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -244,6 +252,67 @@ func _court_shots(world: VillageWorld) -> void:
 	await _wait(20)
 	await _shot("15_after_a_month.png")
 	world.deselect()
+
+
+## A conversation on foot: the terms, a refusal (terms still open) and
+## the better offer they accept.
+func _talk_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	world.set_speed(0)
+	var st := world.state
+	var heir := world.player_npc()
+	var target: NPC = null
+	for npc: NPC in world.npcs.values():
+		var c := npc.character
+		if npc != heir and not CourtSystem.is_kin(st, c) and c.age >= 18 and npc.inside_building_id < 0:
+			var d := heir.global_position.distance_to(npc.global_position)
+			if target == null or d < heir.global_position.distance_to(target.global_position):
+				target = npc
+	if target == null:
+		return
+	var spot := target.global_position + Vector3(0, 0, 2.0)
+	for i in 16:
+		var p := target.global_position + Vector3(cos(TAU * i / 16.0), 0, sin(TAU * i / 16.0)) * 2.0
+		if not WorldGeometry.inside_building(st, p, 0.6) and not WorldGeometry.line_blocked(st, p, target.global_position):
+			spot = p
+			break
+	target.brain.set_errand({"type": "hold", "face": spot})
+	heir.teleport(spot)
+	var to := target.global_position - spot
+	heir.rotation.y = atan2(-to.x, -to.z)
+	world.camera_rig.set_yaw(heir.rotation.y, true)
+	world._process(0.05)
+	var c := target.character
+	c.player_opinion = -30.0
+	world.try_talk(c.id)
+	var panel := world.ui.conversation_panel()
+	await _wait(10)
+	panel._on_ask()
+	panel.flush()
+	panel._on_make()
+	panel._set_wage(1)
+	await _wait(30)
+	await _shot("30_offer_terms.png")
+	panel._on_propose()
+	panel.flush()
+	await _wait(20)
+	await _shot("31_offer_refused.png")
+	c.player_opinion = 70.0
+	panel._set_wage(Recruitment.wage_need(c) + 1)
+	panel._on_propose()
+	if not c.retainer and not panel.counter.is_empty():
+		panel._on_agree()
+	panel.flush()
+	await _wait(20)
+	await _shot("32_offer_accepted.png")
+	panel._on_make()
+	await _wait(20)
+	await _shot("33_new_terms.png")
 
 
 ## Main menu Sound panel and the in-game pause menu (volume sliders).

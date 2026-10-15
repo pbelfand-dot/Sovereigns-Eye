@@ -534,6 +534,116 @@ func test_a_charter_in_the_live_world() -> void:
 	await frames(2)
 
 
+## A real left click on a control, through the viewport like a player's.
+func _click(world: VillageWorld, control: Control, device := 0) -> void:
+	var at := control.get_global_rect().get_center()
+	var move := InputEventMouseMotion.new()
+	move.position = at
+	move.global_position = at
+	move.device = device
+	world.get_viewport().push_input(move, true)
+	for pressed: bool in [true, false]:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.pressed = pressed
+		ev.position = at
+		ev.global_position = at
+		ev.device = device
+		world.get_viewport().push_input(ev, true)
+		await frames(1)
+
+
+## Talking is for making offers: the buttons answer real clicks and taps,
+## the offer stays on screen, and a refusal never closes the door.
+func test_offers_can_always_be_made_by_clicking() -> void:
+	var world: VillageWorld = await _boot("smoke-offer")
+	var st := world.state
+	GameSettings.memory_only = true
+	world.ui._help.visible = false
+	var target := _still_villager(world)
+	check(target != null, "found a villager")
+	if target == null:
+		world.queue_free()
+		return
+	var c := target.character
+	world.set_speed(0)
+	check(_stand_near(world, target, 2.0), "found a spot beside them")
+	world._process(0.05)
+	check(world.try_talk(c.id), "the conversation opens")
+	await frames(3)
+	var panel := world.ui.conversation_panel()
+	panel.flush()
+	await frames(1)
+	check(panel.visible, "the conversation shows")
+	check(not panel._make.disabled, "an offer can be made to a stranger, first thing")
+	check(not panel._blocked.visible, "nothing says otherwise")
+
+	# Click "Make an offer...": the terms open, on screen.
+	await _click(world, panel._make)
+	check(panel._offer_box.visible, "clicking Make an offer opens the terms")
+	await frames(1)
+	var screen := world.get_viewport().get_visible_rect()
+	check(screen.encloses(panel.get_global_rect()), "the whole conversation fits on screen (%s in %s)" % [panel.get_global_rect(), screen])
+	check(screen.encloses(panel._propose.get_global_rect()), "Propose is on screen")
+	check(not panel._propose.disabled, "and can be pressed: %s" % panel._propose.tooltip_text)
+
+	# A stingy offer to someone who doesn't care for you: refused, and the
+	# terms stay open to improve.
+	c.player_opinion = -40.0
+	c.traits = [] as Array[String]
+	for i in 10:
+		if int(panel.offer.get("wage", 0)) == 0:
+			break
+		await _click(world, panel._wage_label.get_parent().get_child(1))
+	check_eq(int(panel.offer.get("wage", -1)), 0, "the - button lowers the wage")
+	await _click(world, panel._propose)
+	panel.flush()
+	check(not c.retainer, "a stingy offer to someone who dislikes you is turned down")
+	check(panel.visible, "the conversation goes on")
+	check(panel._offer_box.visible, "the terms stay open after a refusal")
+	check(not panel._propose.disabled, "and you can propose again at once")
+	check(not panel._make.disabled, "Make an offer is never locked")
+
+	# Better terms, the same day: they take them.
+	c.player_opinion = 80.0
+	c.traits = ["loyal"] as Array[String]
+	for i in 4:
+		await _click(world, panel._wage_label.get_parent().get_child(3))
+	check(int(panel.offer.get("wage", 0)) >= 4, "the + button raises the wage")
+	await _click(world, panel._propose)
+	panel.flush()
+	if not c.retainer and panel._agree.visible:
+		await _click(world, panel._agree)
+	check(c.retainer, "a better offer is accepted right after a refusal")
+	check(not panel._offer_box.visible, "the terms close once agreed")
+
+	# Retainers can be offered new terms too.
+	check(not panel._make.disabled, "you can still offer a retainer new terms")
+	check_eq(panel._make.text, "Offer new terms...", "worded for someone already sworn")
+	await _click(world, panel._make)
+	check(panel._offer_box.visible, "and the terms open again")
+	world.end_conversation()
+
+	# On a touch screen, with the on-screen controls showing, a tap on the
+	# offer buttons reaches them (taps arrive as emulated mouse clicks).
+	GameSettings.set_bool("controls/touch_controls", true)
+	var other := _still_villager(world)
+	if other:
+		check(_stand_near(world, other, 2.0), "found a spot beside another villager")
+		world._process(0.05)
+		check(world.try_talk(other.character.id), "a second conversation opens")
+		await frames(3)
+		world.ui._touch._process(0.0)
+		await frames(1)
+		panel.flush()
+		await _click(world, panel._make, InputEvent.DEVICE_ID_EMULATION)
+		check(panel._offer_box.visible, "a tap on Make an offer opens the terms with touch controls on")
+		world.end_conversation()
+	GameSettings.set_bool("controls/touch_controls", false)
+	world.queue_free()
+	await frames(2)
+
+
 func _all_text(root: Node) -> String:
 	var out := ""
 	for n in root.find_children("*", "", true, false):

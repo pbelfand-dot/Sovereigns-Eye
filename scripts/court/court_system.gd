@@ -477,11 +477,19 @@ static func wage(c: CharacterData) -> int:
 	return total
 
 
+## Gold a day for the household: wages, plus upkeep for every retainer
+## beyond what your renown supports.
 static func daily_wages(state: WorldState) -> int:
 	var total := 0
 	for c in state.retainers():
 		total += wage(c)
-	return total
+	return total + household_upkeep(state)
+
+
+## Upkeep for a household larger than your renown supports (gold a day).
+static func household_upkeep(state: WorldState, extra: int = 0) -> int:
+	var over := maxi(retainer_count(state) + extra - retainer_cap(state), 0)
+	return over * int(section("house").get("over_cap_upkeep", 2))
 
 
 static func daily_income(state: WorldState) -> int:
