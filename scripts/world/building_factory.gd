@@ -38,7 +38,7 @@ static func build(b: BuildingData) -> Node3D:
 
 ## Quaternius kit building: shared prefab meshes + box collision proxies.
 static func _build_kit(root: Node3D, b: BuildingData) -> bool:
-	var p := VillageKit.prefab(b.type, b.variant)
+	var p := VillageKit.prefab(b.type, b.variant, b.tier)
 	if p.is_empty() or (p["shell"] as ArrayMesh).get_surface_count() == 0:
 		return false
 	# Sit on the lowest corner so no wall floats above sloping ground.

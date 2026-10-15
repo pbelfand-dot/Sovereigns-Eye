@@ -47,13 +47,25 @@ static func happiness_factors(c: CharacterData, world: WorldState) -> Array[Dict
 		out.append({"label": "Rivals (%d)" % rivals, "value": -3.0 * rivals})
 	var wasted := wasted_talent_penalty(c)
 	if wasted < 0.0:
-		out.append({"label": "Talents go unused", "value": wasted})
+		# Before the Eye, all anyone can see is restlessness.
+		out.append({"label": "Talents go unused" if c.appraised else "Restless in their work", "value": wasted})
 	if c.stress > 60.0:
 		out.append({"label": "Overworked", "value": -(c.stress - 60.0) / 3.0})
 	if world != null and c.home_building_id >= 0:
 		var residents := world.residents_of(c.home_building_id).size()
-		if residents > 7:
+		var home_b := world.get_building(c.home_building_id)
+		var room := GrowthSystem.family_capacity(world, home_b) if home_b and world.territory else 1
+		if residents > 7 * room:
 			out.append({"label": "Crowded home", "value": -3.0})
+	var home_bonus := GrowthSystem.home_happiness(world, c)
+	if home_bonus != 0.0:
+		var home := world.get_building(c.home_building_id)
+		out.append({"label": "Fine home (%s)" % home.type_name(), "value": home_bonus})
+	if world != null and world.territory != null:
+		out.append_array(CharterSystem.mood_factors(world, c))
+	if TerritorySystem.is_hungry(world):
+		var hunger := TerritorySystem.section("hunger")
+		out.append({"label": str(hunger.get("label", "Hungry")), "value": float(hunger.get("happiness", -20))})
 	return out
 
 

@@ -63,23 +63,38 @@ static func initialize(state: WorldState) -> void:
 	state.house.renown = int(h.get("start_renown", 10))
 	state.player_id = pick_player(state)
 	var rng := Seeds.rng(state.world_seed, "court")
-	var op := section("opinion")
-	var trait_mods: Dictionary = op.get("traits", {})
-	var manor := _building_of_type(state, "manor")
 	for c in state.characters:
-		var v := float(op.get("base", 5)) + rng.randf_range(-1.0, 1.0) * float(op.get("spread", 15))
-		if c.family_id == state.ruling_family_id:
-			v += float(op.get("ruling_family", 55))
-		elif manor >= 0 and c.work_building_id == manor:
-			v += float(op.get("manor_staff", 15))
-		for t in c.traits:
-			v += float(trait_mods.get(t, 0.0))
-		c.player_opinion = clampf(v, -100.0, 100.0)
+		c.player_opinion = roll_opinion(state, c, rng)
+	initialize_meetings(state)
 	var p := state.player()
 	if p:
 		p.player_opinion = 100.0
 		p.appraised = true  # you know yourself
 	state.house.log_event(state.day(), "%s takes up the running of %s's household." % [p.full_name() if p else "The heir", house_name(state)], "house")
+
+
+## The heir has always known their own family (they still need the Eye to
+## see their gifts). Safe to call again on loaded games.
+static func initialize_meetings(state: WorldState) -> void:
+	for c in state.characters:
+		if c.family_id == state.ruling_family_id or state.is_player(c):
+			c.met = true
+
+
+## Someone's starting opinion of the player (-100..100): a roll, kinship,
+## manor service and personality.
+static func roll_opinion(state: WorldState, c: CharacterData, rng: RandomNumberGenerator) -> float:
+	var op := section("opinion")
+	var trait_mods: Dictionary = op.get("traits", {})
+	var manor := _building_of_type(state, "manor")
+	var v := float(op.get("base", 5)) + rng.randf_range(-1.0, 1.0) * float(op.get("spread", 15))
+	if c.family_id == state.ruling_family_id:
+		v += float(op.get("ruling_family", 55))
+	elif manor >= 0 and c.work_building_id == manor:
+		v += float(op.get("manor_staff", 15))
+	for t in c.traits:
+		v += float(trait_mods.get(t, 0.0))
+	return clampf(v, -100.0, 100.0)
 
 
 ## The ruling family's scion closest to the preferred age, else the lord.
@@ -216,116 +231,15 @@ static func gift(state: WorldState, c: CharacterData) -> Dictionary:
 
 static func retainer_cap(state: WorldState) -> int:
 	var h := section("house")
-	return int(h.get("retainer_cap_base", 4)) + floori(state.house.renown / float(h.get("renown_per_extra_retainer", 15)))
+	return int(h.get("retainer_cap_base", 4)) + floori(state.house.renown / float(h.get("renown_per_extra_retainer", 15))) \
+		+ (CharterSystem.retainer_bonus(state) if state.territory else 0)
 
 
 static func retainer_count(state: WorldState) -> int:
 	return state.retainers().size()
 
 
-static func signing_cost(state: WorldState, c: CharacterData) -> int:
-	return int(section("recruit").get("signing_wages", 3)) * _base_wage(c, c.age < 16)
-
-
-## Whether and how likely they'd join, with the reasons, so the card can show
-## the odds before the player asks.
-## {"ok", "reason", "chance", "factors": [{label, value}], "cost", "ward", "decider"}
-static func recruit_check(state: WorldState, c: CharacterData) -> Dictionary:
-	var cfg := section("recruit")
-	var out := {"ok": false, "reason": "", "chance": 0.0, "factors": [], "cost": signing_cost(state, c), "ward": c.age <= int(cfg.get("ward_max_age", 15)), "decider": c.id}
-	if state.is_player(c):
-		out["reason"] = "That's you."
-		return out
-	if is_kin(state, c):
-		out["reason"] = "Family of your house."
-		return out
-	if c.retainer:
-		out["reason"] = "Already sworn to your house."
-		return out
-	if c.age < int(cfg.get("min_age", 10)):
-		out["reason"] = "Too young to serve (10+)."
-		return out
-	var factors: Array[Dictionary] = []
-	var decider := c
-	if out["ward"]:
-		var parent := _deciding_parent(state, c)
-		if parent:
-			decider = parent
-			out["decider"] = parent.id
-	factors.append({"label": "Base", "value": float(cfg.get("base_chance", 0.25))})
-	var who := "Their parents'" if decider != c else "Their"
-	factors.append({"label": "%s opinion of you (%+d)" % [who, roundi(decider.player_opinion)], "value": decider.player_opinion / float(cfg.get("opinion_divisor", 150.0))})
-	var loyal := (decider.loyalty - 50.0) / float(cfg.get("loyalty_divisor", 250.0))
-	if absf(loyal) >= 0.01:
-		factors.append({"label": "Loyalty to %s" % house_name(state), "value": loyal})
-	if MoodSystem.wasted_talent_penalty(c) < 0.0:
-		factors.append({"label": "Feels their talents are wasted", "value": float(cfg.get("overlooked_bonus", 0.18))})
-	var mods: Dictionary = cfg.get("traits", {})
-	for t in c.traits:
-		if mods.has(t):
-			factors.append({"label": str(GameData.trait_def(t).get("name", t)), "value": float(mods[t])})
-	var tier_gap := c.status_tier() - 1
-	if tier_gap > 0:
-		factors.append({"label": "%s station" % c.status_name(), "value": -tier_gap * float(cfg.get("status_penalty_per_tier", 0.08))})
-	if c.age >= int(cfg.get("elder_age", 60)):
-		factors.append({"label": "Too old to start anew", "value": -float(cfg.get("elder_penalty", 0.2))})
-	var renown := state.house.renown / float(cfg.get("renown_divisor", 500.0))
-	if renown >= 0.005:
-		factors.append({"label": "Your renown", "value": renown})
-	var player := state.player()
-	if player:
-		factors.append({"label": "Your Leadership", "value": player.get_current("leadership") / float(cfg.get("leadership_divisor", 400.0))})
-		factors.append({"label": "Your Politics", "value": player.get_current("politics") / float(cfg.get("politics_divisor", 500.0))})
-	var chancellor := state.get_character(state.house.holder_of("chancellor"))
-	if chancellor:
-		factors.append({"label": "Chancellor %s" % chancellor.first_name, "value": chancellor.get_current("politics") / float(cfg.get("politics_divisor", 500.0))})
-	var total := 0.0
-	for f in factors:
-		total += float(f["value"])
-	out["factors"] = factors
-	out["chance"] = clampf(total, float(cfg.get("min_chance", 0.03)), float(cfg.get("max_chance", 0.95)))
-	if c.recruit_retry_day > state.day():
-		out["reason"] = "They turned you down; ask again in %d day(s)." % (c.recruit_retry_day - state.day())
-		return out
-	if retainer_count(state) >= retainer_cap(state):
-		out["reason"] = "Your household is full (%d). Earn renown to grow it." % retainer_cap(state)
-		return out
-	if state.house.gold < int(out["cost"]):
-		out["reason"] = "Not enough gold to take them on (%d needed)." % int(out["cost"])
-		return out
-	out["ok"] = true
-	return out
-
-
-static func _deciding_parent(state: WorldState, c: CharacterData) -> CharacterData:
-	var best: CharacterData = null
-	for r in c.relationships_of_type(["parent"]):
-		var p := state.get_character(int(r["target"]))
-		if p and (best == null or p.player_opinion > best.player_opinion):
-			best = p
-	return best
-
-
-## Asks them to join. `roll` is a uniform 0..1 number (rng.randf() in the
-## game; fixed in tests). Returns {"ok", "success", "text"}.
-static func try_recruit(state: WorldState, c: CharacterData, roll: float) -> Dictionary:
-	var check := recruit_check(state, c)
-	if not check["ok"]:
-		return {"ok": false, "success": false, "text": check["reason"]}
-	var cfg := section("recruit")
-	if roll >= float(check["chance"]):
-		c.recruit_retry_day = state.day() + int(cfg.get("retry_days", 5))
-		c.player_opinion = clampf(c.player_opinion + float(cfg.get("refusal_opinion", -3)), -100.0, 100.0)
-		var who := "%s's parents refuse" % c.first_name if c.id != int(check["decider"]) else "%s declines" % c.first_name
-		state.house.log_event(state.day(), "%s your offer of service." % who, "refusal")
-		return {"ok": true, "success": false, "text": "%s your offer (%d%% chance)." % [who, roundi(float(check["chance"]) * 100.0)]}
-	state.house.gold -= int(check["cost"])
-	join(state, c)
-	var as_what := "as a page" if c.age < 16 else "as a retainer"
-	return {"ok": true, "success": true, "text": "%s swears service to %s %s!" % [c.full_name(), house_name(state), as_what]}
-
-
-## Makes someone a retainer (no checks; see try_recruit).
+## Makes someone a retainer (no checks; Recruitment.propose decides).
 static func join(state: WorldState, c: CharacterData) -> void:
 	c.retainer = true
 	c.joined_day = state.day()
@@ -356,6 +270,15 @@ static func dismiss(state: WorldState, c: CharacterData, left: bool = false) -> 
 		c.work_building_id = c.former_work
 	c.focus = ""
 	c.training_progress.clear()
+	# The terms they joined on end with their service.
+	c.terms = {}
+	c.agreed_wage = -1
+	c.title = ""
+	var open_promises: Array[Dictionary] = []
+	for p in state.house.promises:
+		if int(p.get("character", -1)) != c.id:
+			open_promises.append(p)
+	state.house.promises = open_promises
 	if left:
 		c.player_opinion = clampf(c.player_opinion - 10.0, -100.0, 100.0)
 		c.add_history(state.current_year(), state.current_season(), "career", "Left the service of %s" % house_name(state))
@@ -447,6 +370,10 @@ static func set_focus(state: WorldState, c: CharacterData, attr_id: String) -> v
 static func assign_workplace(state: WorldState, c: CharacterData) -> void:
 	if not c.retainer:
 		return
+	var agreed := state.get_building(int(c.terms.get("workplace", -1)))
+	if agreed and c.office.is_empty():
+		c.work_building_id = agreed.id
+		return
 	var type := "manor"
 	if not c.office.is_empty():
 		type = str(office_def(c.office).get("work", "manor"))
@@ -459,9 +386,15 @@ static func assign_workplace(state: WorldState, c: CharacterData) -> void:
 		c.work_building_id = b
 
 
+## A craftsperson who joined for a workplace of their own keeps their
+## trade's working day there (until they're given an office).
+static func has_trade_terms(c: CharacterData) -> bool:
+	return c.retainer and c.office.is_empty() and int(c.terms.get("workplace", -1)) >= 0
+
+
 ## Work behaviour for the NPC brain ("" = use the occupation's).
 static func work_style(c: CharacterData) -> String:
-	if not c.retainer:
+	if not c.retainer or has_trade_terms(c):
 		return ""
 	if not c.office.is_empty():
 		return str(office_def(c.office).get("work_style", "estate"))
@@ -471,6 +404,9 @@ static func work_style(c: CharacterData) -> String:
 static func work_text(state: WorldState, c: CharacterData) -> String:
 	if not c.retainer:
 		return ""
+	if has_trade_terms(c):
+		var b := state.get_building(c.work_building_id)
+		return "Working at %s for %s" % [b.name if b else "their workshop", house_name(state)]
 	if not c.office.is_empty():
 		return str(office_def(c.office).get("activity", "Serving the house"))
 	return "Training %s for %s" % [attr_name(focus_of(c)), house_name(state)]
@@ -479,6 +415,8 @@ static func work_text(state: WorldState, c: CharacterData) -> String:
 ## Schedule override: pages keep a scion's day of lessons; adult retainers use
 ## the noble household routine so even former children or elders attend work.
 static func schedule_for(c: CharacterData) -> String:
+	if has_trade_terms(c):
+		return ""
 	if c.retainer:
 		return "scion" if c.age < 16 else "noble"
 	return ""
@@ -509,6 +447,7 @@ static func knight(state: WorldState, c: CharacterData) -> Dictionary:
 	state.house.gold -= int(cfg.get("cost", 60))
 	state.house.renown += int(cfg.get("renown", 5))
 	c.social_status = "knight"
+	c.title = ""
 	c.loyalty = clampf(c.loyalty + float(cfg.get("loyalty", 15)), 0.0, 100.0)
 	c.player_opinion = clampf(c.player_opinion + float(cfg.get("opinion", 20)), -100.0, 100.0)
 	c.happiness = clampf(c.happiness + 10.0, 0.0, 100.0)
@@ -527,11 +466,13 @@ static func _base_wage(c: CharacterData, ward: bool) -> int:
 	return int(w.get("knight", 4)) if c.is_knight() else int(w.get("retainer", 2))
 
 
+## Gold a day: the wage they agreed to when they joined (else the standard
+## wage), plus an office's stipend for an office given after joining.
 static func wage(c: CharacterData) -> int:
 	if not c.retainer:
 		return 0
-	var total := _base_wage(c, c.age < 16)
-	if not c.office.is_empty():
+	var total := c.agreed_wage if c.agreed_wage >= 0 else _base_wage(c, c.age < 16)
+	if not c.office.is_empty() and str(c.terms.get("office", "")) != c.office:
 		total += int(section("wages").get("office", 3))
 	return total
 
@@ -544,7 +485,7 @@ static func daily_wages(state: WorldState) -> int:
 
 
 static func daily_income(state: WorldState) -> int:
-	var base := float(section("house").get("base_income", 18))
+	var base := float(section("house").get("base_income", 18)) + GrowthSystem.rent(state) + CharterSystem.dues(state)
 	var steward := state.get_character(state.house.holder_of("steward"))
 	if steward:
 		base *= 1.0 + steward.get_current("administration") / float(office_def("steward").get("effect_divisor", 200.0))
@@ -713,7 +654,8 @@ static func daily_update(state: WorldState, rng: RandomNumberGenerator) -> Array
 	h.gold += daily_income(state)
 	var wages := daily_wages(state)
 	var w_cfg := section("wages")
-	if wages > 0 and h.gold < wages:
+	var paid := not (wages > 0 and h.gold < wages)
+	if not paid:
 		if not h.in_debt:
 			events.append({"text": "Your coffers are empty: your retainers' wages went unpaid!", "kind": "bad"})
 			h.log_event(day, "Wages went unpaid.", "bad")
@@ -731,6 +673,7 @@ static func daily_update(state: WorldState, rng: RandomNumberGenerator) -> Array
 		var whole := floori(h.renown_progress)
 		h.renown += whole
 		h.renown_progress -= whole
+	events.append_array(Recruitment.daily_update(state, paid))
 	var player := state.player()
 	if player:
 		events.append_array(train_day(state, player))

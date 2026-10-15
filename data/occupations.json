@@ -35,6 +35,8 @@
                        "training": { "intelligence": 0.75 } },
     "herbalist":     { "name": "Herbalist",          "status": "commoner", "workplace": "chapel",     "work_style": "forest",     "schedule": "worker",    "activity": "Gathering herbs",           "outfit": "robe",  "headwear": "hood",     "tool": "staff",     "age": [22, 75], "village": true,
                        "training": { "intelligence": 0.55 } },
+    "stonecutter":   { "name": "Stonecutter",        "status": "peasant",  "workplace": "quarry",     "work_style": "stationary", "schedule": "worker",    "activity": "Dressing stone",            "outfit": "apron", "headwear": "cap",      "tool": "hammer",    "age": [16, 59], "village": false },
+    "laborer":       { "name": "Laborer",            "status": "peasant",  "workplace": "",           "work_style": "fields",     "schedule": "farmer",    "activity": "Working the fields for a day's wage", "outfit": "tunic", "headwear": "", "tool": "", "age": [16, 59], "village": false },
     "child":         { "name": "Child",              "status": "inherit",  "workplace": "",           "work_style": "play",       "schedule": "child",     "activity": "Playing",                   "outfit": "tunic", "headwear": "",         "tool": "",          "age": [0, 13],  "village": true },
     "elder":         { "name": "Elder",              "status": "inherit",  "workplace": "",           "work_style": "stroll",     "schedule": "elder",     "activity": "Sharing old stories",       "outfit": "robe",  "headwear": "",         "tool": "staff",     "age": [60, 90], "village": true },
 

@@ -7,7 +7,8 @@ extends RefCounted
 
 ## Returns an R8 image covering origin .. origin + size (meters, x/z) at
 ## `res` x `res` pixels. 255 = bare trodden earth, 0 = untouched grass.
-static func bake(layout: VillageLayout, origin: Vector2, size: float, res: int, cfg: Dictionary) -> Image:
+## `extra` adds building sites that aren't in the layout yet.
+static func bake(layout: VillageLayout, origin: Vector2, size: float, res: int, cfg: Dictionary, extra: Array[BuildingData] = []) -> Image:
 	var px := size / res
 	var data := PackedFloat32Array()
 	data.resize(res * res)
@@ -25,7 +26,7 @@ static func bake(layout: VillageLayout, origin: Vector2, size: float, res: int, 
 	_stamp(data, res, origin, px, sq, layout.square_radius, layout.square_radius + float(cfg.get("square_margin", 3.5)))
 	var wall_margin := float(cfg.get("building_margin", 1.6))
 	var door_path := float(cfg.get("door_path", 4.0))
-	for b in layout.buildings:
+	for b in layout.buildings + extra:
 		_stamp_rect(data, res, origin, px, Vector2(b.position.x, b.position.z), b.rotation, b.footprint * 0.5, wall_margin)
 		var door := b.door_position()
 		_stamp(data, res, origin, px, Vector2(door.x, door.z), 0.6, 0.6 + door_path * 0.5)

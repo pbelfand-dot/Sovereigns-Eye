@@ -47,6 +47,27 @@ static func has_prefab(type: String) -> bool:
 	return available() and config().get("prefabs", {}).has(type)
 
 
+## A home's recipe at a higher level (data/building_kit.json "home_tiers"):
+## the door block gains stories on top of the same ground floor, so an
+## upgrade only adds floors. Tier 0 returns the recipe unchanged.
+static func tier_recipe(base: Dictionary, tier: int) -> Dictionary:
+	var tiers: Array = config().get("home_tiers", [])
+	if tier <= 0 or tiers.is_empty():
+		return base
+	var t: Dictionary = tiers[mini(tier, tiers.size() - 1)]
+	var r := base.duplicate(true)
+	for block: Dictionary in r.get("blocks", []):
+		if not bool(block.get("door", false)):
+			continue
+		block["ground"] = str(block.get("ground", block.get("walls", "plaster")))
+		block["walls"] = str(t.get("upper_walls", block.get("walls", "plaster")))
+		block["stories"] = mini(int(block.get("stories", 1)) + int(t.get("add_stories", 1)), int(t.get("max_stories", 3)))
+	if t.has("balcony"):
+		r["balcony"] = bool(t["balcony"])
+	r["vines"] = int(r.get("vines", 0)) + int(t.get("add_vines", 0))
+	return r
+
+
 ## Variant recipes for a building type.
 static func variants(type: String) -> Array:
 	return config().get("prefabs", {}).get(type, {}).get("variants", [])
@@ -111,25 +132,43 @@ static func material_named(key: String) -> Material:
 	return _materials.get(key, null)
 
 
-## Assembled prefab for a building type and variant number.
+## Height of the walls (stories of the door block) for a type, variant and tier.
+static func wall_height(type: String, variant: int, tier: int = 0) -> float:
+	var list := variants(type)
+	if list.is_empty():
+		return 0.0
+	var top := 0
+	for block: Dictionary in tier_recipe(list[posmod(variant, list.size())], tier).get("blocks", []):
+		if bool(block.get("door", false)):
+			top = int(block.get("stories", 1))
+	return top * float(config().get("story_height", 3.0))
+
+
+## Assembled prefab for a building type, variant number and home tier.
 ## Returns {} if the type has no recipe.
-static func prefab(type: String, variant: int) -> Dictionary:
+static func prefab(type: String, variant: int, tier: int = 0) -> Dictionary:
 	var list := variants(type)
 	if list.is_empty():
 		return {}
 	var vi := posmod(variant, list.size())
-	var key := "%s_%d" % [type, vi]
+	var base_key := "%s_%d" % [type, vi]
+	var key := base_key if tier <= 0 else "%s_t%d" % [base_key, tier]
 	if _prefabs.has(key):
 		return _prefabs[key]
-	var recipe: Dictionary = list[vi]
+	var recipe := tier_recipe(list[vi], tier)
+	# Every tier rolls from the base key, so walls, windows and doors of the
+	# floors they share come out the same. Vines roll separately because
+	# they only grow on the top floor.
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(key)
+	rng.seed = hash(base_key)
+	var vine_rng := RandomNumberGenerator.new()
+	vine_rng.seed = hash(base_key + "/vines")
 	var shell := _Assembler.new()
 	var details := _Assembler.new()
 	var boxes: Array[AABB] = []
 	var top := 0.0
 	for block: Dictionary in recipe.get("blocks", []):
-		top = maxf(top, _build_block(block, recipe, rng, shell, details, boxes))
+		top = maxf(top, _build_block(block, recipe, rng, vine_rng, shell, details, boxes))
 	_add_props(recipe, rng, details)
 	var out := {
 		"key": key,
@@ -139,6 +178,8 @@ static func prefab(type: String, variant: int) -> Dictionary:
 		"sails": bool(recipe.get("sails", false)),
 		"height": top,
 		"pieces": shell.count + details.count,
+		"parts": shell.parts,
+		"detail_parts": details.parts,
 	}
 	_prefabs[key] = out
 	return out
@@ -185,18 +226,31 @@ static func clear_cache() -> void:
 	_prefabs.clear()
 
 
+## Merges a list of [module, Transform3D] parts into one mesh (one surface
+## per shared material), e.g. the walls raised so far on a building site.
+static func assemble(parts: Array) -> ArrayMesh:
+	var a := _Assembler.new()
+	for p: Array in parts:
+		a.add(str(p[0]), p[1])
+	return a.commit()
+
+
 # --- Assembly -------------------------------------------------------------------
 
 class _Assembler:
 	var tools: Dictionary = {}  # material key -> SurfaceTool
 	var mats: Dictionary = {}
 	var count := 0
+	## [[module, Transform3D], ...] in the order added (construction sites
+	## re-assemble a subset of these to raise a building piece by piece).
+	var parts: Array = []
 
 	func add(module: String, xf: Transform3D) -> void:
 		var mesh := VillageKit.module_mesh(module)
 		if mesh == null:
 			return
 		count += 1
+		parts.append([module, xf])
 		for s in mesh.get_surface_count():
 			var mat := VillageKit.shared_material(mesh.surface_get_material(s))
 			var key := mat.resource_name if mat else "_none"
@@ -229,6 +283,14 @@ const WALLS := {
 		"window": ["Wall_UnevenBrick_Window_Wide_Round", "Wall_UnevenBrick_Window_Thin_Round", "Wall_UnevenBrick_Window_Wide_Flat"],
 		"corner": "Corner_Exterior_Brick",
 	},
+	# Open arches on timber posts (the Market Hall's ground floor).
+	"arcade": {
+		"plain_ground": ["Wall_Arch"],
+		"plain": ["Wall_Arch"],
+		"door": ["Wall_Arch"],
+		"window": ["Wall_Arch"],
+		"corner": "Corner_Exterior_Wood",
+	},
 }
 
 ## Window frame + shutter modules that fit each window wall.
@@ -240,7 +302,7 @@ const WINDOW_FIT := {
 
 
 ## Builds one block; returns its top height (meters).
-static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumberGenerator, shell: _Assembler, details: _Assembler, boxes: Array[AABB]) -> float:
+static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumberGenerator, vine_rng: RandomNumberGenerator, shell: _Assembler, details: _Assembler, boxes: Array[AABB]) -> float:
 	var cell := float(config().get("cell", 2.0))
 	var sh := float(config().get("story_height", 3.0))
 	var cells: Array = block["cells"]
@@ -256,10 +318,11 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 	var tall_windows := str(block.get("windows", "")) == "tall"
 	var wall_h := stories * sh
 
-	# Ground floor so windows don't look into the void.
+	# Ground floor so windows don't look into the void (paved under arches).
+	var floor_piece := "Floor_Brick" if ground_set == "arcade" else "Floor_WoodDark"
 	for ix in cx:
 		for iz in cz:
-			shell.add("Floor_WoodDark", Transform3D(Basis(), origin + Vector3(-w * 0.5 + cell * (ix + 0.5), 0.02, -d * 0.5 + cell * (iz + 0.5))))
+			shell.add(floor_piece, Transform3D(Basis(), origin + Vector3(-w * 0.5 + cell * (ix + 0.5), 0.02, -d * 0.5 + cell * (iz + 0.5))))
 
 	# Edges: outward normal, number of 2 m segments, half-depth to the edge.
 	var edges := [
@@ -271,7 +334,8 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 	var vine_budget := int(recipe.get("vines", 0))
 	for s in stories:
 		var y := s * sh
-		var set_def: Dictionary = WALLS.get(ground_set if s == 0 else upper_set, WALLS["plaster"])
+		var set_name := ground_set if s == 0 else upper_set
+		var set_def: Dictionary = WALLS.get(set_name, WALLS["plaster"])
 		for e: Dictionary in edges:
 			var n: Vector3 = e["n"]
 			var count := int(e["count"])
@@ -283,6 +347,9 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 				var along := -count * cell * 0.5 + cell * (i + 0.5)
 				var pos := origin + n * float(e["depth"]) + basis * Vector3(along, 0, 0) + Vector3(0, y, 0)
 				var xf := Transform3D(basis, pos)
+				if set_name == "arcade":
+					shell.add("Wall_Arch", xf)
+					continue
 				if i == door_i:
 					var door_wall: String = _pick(set_def["door"], rng)
 					shell.add(door_wall, xf)
@@ -302,9 +369,9 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 				else:
 					var plain: Array = set_def["plain_ground"] if s == 0 else set_def["plain"]
 					shell.add(_pick(plain, rng), xf)
-					if vine_budget > 0 and s == stories - 1 and rng.randf() < 0.5:
+					if vine_budget > 0 and s == stories - 1 and vine_rng.randf() < 0.5:
 						vine_budget -= 1
-						details.add(["Prop_Vine1", "Prop_Vine2", "Prop_Vine4"][rng.randi() % 3], xf * Transform3D(Basis(), Vector3(0, sh - 0.25, 0.14)))
+						details.add(["Prop_Vine1", "Prop_Vine2", "Prop_Vine4"][vine_rng.randi() % 3], xf * Transform3D(Basis(), Vector3(0, sh - 0.25, 0.14)))
 		# Corner posts / quoins.
 		var corner: String = set_def["corner"]
 		for k in 4:

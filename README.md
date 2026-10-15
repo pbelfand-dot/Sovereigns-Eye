@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 2 first playable** (internal codename "Project Appraisal").
+> **Status: Phase 3 in progress: your village builds, grows and attracts settlers** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The village](docs/screenshots/village.jpg)
@@ -61,34 +61,114 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | # | Goal | How |
 |---|---|---|
 | 1-2 | Launch & start a new game | Main menu → **New Game** → leave the seed blank (random) or type one → **Begin** |
-| 3 | Explore the village | Drag with the mouse, WASD, pinch/scroll to zoom, Q/E to rotate |
+| 3 | Walk the village as your heir | **WASD** (or the left stick) to walk, **Shift** to run; drag with the mouse (or the right stick, or the arrow keys) to turn the camera, scroll to zoom. Buildings block your way and your view |
 | 4 | NPCs walking around | Speed up time with **2**, **3**, **4**: people go to work, the tavern, the chapel and home to bed |
-| 5-7 | Click an NPC → character card | Left-click anyone. That **appraises** them and opens their card |
-| 8 | Find exceptional talent | Press **L** for the Village Ledger, sort by *Greatest talent*. Read *History* tabs for "Rumor has it…" clues |
-| 9 | Happiness, loyalty, personality | Card → **Personality** tab, including *why* they feel that way |
-| 10 | Build your household | Card → **Court**: talk, give gifts, and recruit willing villagers. Children aged 10–15 can join as pages with a parent's approval |
+| 5 | Look at someone with the Sovereign's Eye | Get near someone and face them: their name shows at the bottom. Press **Q** (controller **Y**). No talk needed, but they must be close (about 10 paces) and in plain sight, so you can't read a whole town from a menu. The reveal grows grander the rarer the person (Ordinary → Skilled → Exceptional → Legendary). See [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 6 | Talk to the promising ones | Walk up and press **E** (controller **A**). Their talk may hint at a gift. **Ask about their life** to learn what they want, in their own words |
+| 7 | Win them over | **Make an offer**: a daily wage, a home (a free one, rooms at the manor, or a promise), a place (household, training, an office, a workplace with tools, a squire's place) and an appeal to their duty. They accept, name their terms, or refuse, and say why. Different people want different things |
+| 8 | Keep your word | Wages are paid from the treasury every day, families really move into the homes you give, jobs need a real workplace, and a broken promise costs trust, your house's standing, and sometimes the person |
+| 9 | Happiness, loyalty, personality | Click anyone for their card → **Personality** tab, including *why* they feel that way |
+| 10 | Your household | Card → **Court**: what you've learned they want, gifts, offices and training. Children aged 10–15 can join as pages; a parent decides |
 | 11 | Develop retainers | Choose a training focus, appoint a Steward, Marshal, Chancellor, or Court Scholar, and knight proven servants |
 | 12 | Run your court | Press **K** to see gold, daily income and wages, renown, offices, retainers, loyalty, and the house chronicle |
 | 13 | Save / load | **F5** quicksave, **F9** quickload, or **Esc → Save Game / Load Game**. Quit, relaunch, **Continue** |
+| 14 | Watch the stores | The bar under the top bar shows **food, wood and stone** and their change per day. Farmers grow food, woodcutters fell timber, everyone eats and burns firewood. Winter fields yield less |
+| 15 | Order a building | Press **Tab** (or **M**) for the map table, then **B** → pick a building → click beside a road (choosing a building takes you to the map table on its own). It turns to face the road, a lane is laid to its door, and trees in the way are felled for wood. **T** turns it, **Shift+click** places another, **Esc** cancels |
+| 16 | Watch it go up | A crew (carpenters first) stakes out the ground, then the walls rise inside a scaffold and the roof goes on. When it's finished, villagers take the new jobs |
+| 17 | Build faster | Appraise villagers for a hidden **Administration** talent, recruit them and appoint them **Master of Works** (Court tab). Every site speeds up with their Administration |
+| 18 | Watch it grow | Keep food in store and people happy. The **settler bar** (Build panel) fills, and new families walk in from the edge of the map. Appraise them: newcomers can hide great talent too |
+| 19 | Homes build themselves | When every home is full, villagers build a new cottage beside a road. Cottages near the square gain floors (**Timber House**, then **Townhouse**) once their needs are met, and pay rent |
+| 20 | Inspect a building | Click any building: who lives and works there, what it makes, and for homes a checklist of what the next level needs |
+| 21 | Earn a charter | Build panel (**B**) → **Charter**: a checklist for the next charter (Hamlet → Village → Market Town → Town) and **Petition the Crown** when it's met. Each charter makes room for more people, unlocks buildings (another tavern and chapel, then the **Market Hall**) and brings in dues. In a Market Town, Townhouses take in lodgers |
 
 The same seed always creates the same village and the same people.
 
-![Recruiting from the Court tab](docs/screenshots/court_recruit.jpg)
+![On foot: the person you face comes into focus](docs/screenshots/on_foot.jpg)
+![The Sovereign's Eye: a Legendary reveal](docs/screenshots/eye_reveal.jpg)
+![Talking it through: what they want, your offer, their counteroffer](docs/screenshots/court_recruit.jpg)
 ![A retainer's office and training](docs/screenshots/court_retainer.jpg)
 ![The Court panel (K)](docs/screenshots/court_panel.jpg)
 
+### Building and growth (Phase 3, steps 1–2)
+
+You decide **what** goes up and **where**, and the village builds it. Homes
+build and upgrade themselves; town charters come next.
+
+| Building | Cost | What it adds |
+|---|---|---|
+| Stonecutter's Yard | 40 wood, 20 gold | 2 stonecutters: the only source of **stone** |
+| Woodcutters' Lodge | 30 wood, 10 stone, 20 gold | 2 more woodcutters |
+| Farmstead | 50 wood, 15 stone, 30 gold | a farmer, a farmhand and 2–3 new fields |
+| Granary | 60 wood, 30 stone, 30 gold | +300 storage for food, wood and stone |
+| Bakery | 40 wood, 25 stone, 30 gold | a baker |
+
+New jobs are filled by farmhands, tavern hands and older apprentices, so building
+moves people around: a new farm promotes a farmhand to farmer, and a quarry takes
+hands away from the fields. Builders don't do their normal work while they build.
+All costs, rates and limits are in `data/territory.json`.
+
+**Growth.** Appeal (food in store, happiness, renown, open jobs) fills a settler
+bar each day. When it's full and a home stands empty, a family arrives. Their
+names, looks, traits, talents and life stories are generated the same way as the
+founding villagers'. Adults without a trade work as **laborers** in the fields and
+on building crews, and are first in line for new jobs. When every home is full,
+the village builds a cottage on its own. Settlers waiting for a home come before
+upgrades, and these automatic jobs always leave 60 wood and 25 stone for your own
+orders. You can switch them off in the Build panel.
+
+| Home level | Needs | Gives |
+|---|---|---|
+| Cottage | – | – |
+| Timber House (+1 floor, 30 wood, 15 stone) | lived there 3 days, 5 days of food, happiness 45+, chapel or tavern within 60 m | 1 gold rent a day, +4 happiness |
+| Townhouse (+2 floors and a balcony, 40 wood, 30 stone, 10 gold) | 8 days as a Timber House, 10 days of food, happiness 55+, chapel **and** tavern within 75 m, bakery within 80 m, market square within 60 m | 2 gold rent a day, +8 happiness |
+
+An upgrade keeps the house's existing floors exactly. The roof comes off and the
+new floors rise inside scaffolding.
+
+![Day 1 and day 60 of the same village](docs/screenshots/growth_before_after.jpg)
+![A cottage gaining floors, a Timber House and a Townhouse](docs/screenshots/home_levels.jpg)
+![A home's card: who lives there and what the next level needs](docs/screenshots/home_card.jpg)
+![Settlers arriving, one with hidden S+ talent](docs/screenshots/settlers.jpg)
+
+![The Charter: checklist and petition (Build panel)](docs/screenshots/charter_panel.jpg)
+![A Market Town's Market Hall](docs/screenshots/market_hall.jpg)
+![Charter banners around the square, and merchants taking up trade](docs/screenshots/charter_banners.jpg)
+![Building stages](docs/screenshots/construction_stages.jpg)
+![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
+![The Build panel (B)](docs/screenshots/build_panel.jpg)
+![A new farmstead with its fields](docs/screenshots/new_farmstead.jpg)
+
 ### Controls
+
+**On foot (as the heir)**
+
+| Action | Keyboard & mouse | Controller | Touch |
+|---|---|---|---|
+| Walk / run | WASD / Shift | Left stick / left trigger | Stick (bottom left) |
+| Turn the camera | Drag with any mouse button · ← → | Right stick | Drag with a second finger (or anywhere off the controls) |
+| Zoom | Scroll wheel · pinch · R / F · ↑ ↓ | Bumpers | Pinch |
+| Sovereign's Eye on the person you face | Q | Y | **Eye** button |
+| Talk (when beside them) | E | A | **Talk** button |
+| The map table (build, plan) and back | Tab or M | View | **Map** button |
+| Select a villager (their card) | Left-click | — | Tap |
+| Click to move (optional: Esc menu → Accessibility) | Right-click the ground or a person | — | — |
+
+**On the map table**
 
 | Action | Mouse / trackpad | Keys |
 |---|---|---|
-| Select & appraise | Left-click a villager | — |
+| Select a villager (their card) | Left-click | — |
 | Pan | Left-drag or right-drag · two-finger scroll | WASD / arrows (Shift = fast) |
 | Zoom | Scroll wheel · pinch | R / F, + / − |
 | Rotate | Middle-drag · Option + left-drag | Q / E |
-| Follow selected | — | C |
+| Find selected | — | C |
 | Pause / speed | Top bar buttons | Space · 1 2 3 4 |
 | Village ledger | Top bar | L |
 | Your court | Top bar | K |
+| Build menu / stores | Top bar | B |
+| Inspect a building | Left-click it | — |
+| Turn building being placed | — | T |
+| Place another of the same | Shift + left-click | — |
 | Quicksave / quickload | — | F5 / F9 |
 | Close / menu | — | Esc |
 | Help overlay | — | H |
@@ -132,6 +212,7 @@ scripts/characters/    CharacterData, generator, Quaternius HumanModel (+ primit
 scripts/appraisal/     Appraisal skill + talent roller (potential/current)
 scripts/court/         Noble-house rules: recruitment, offices, training, wages,
                        loyalty, knighthood, treasury and renown
+scripts/territory/     Village stores, building orders, construction sites, hiring
 scripts/ai/            NPC daily-routine brain + mood (happiness/loyalty/stress)
 scripts/world/         Layout generator, village builder, VillageKit prefabs, roads,
                        camera, sky
@@ -270,14 +351,30 @@ To re-render that comparison: `godot --path . res://tools/style_demo.tscn -- out
 
 ```bash
 tools/run_tests.sh                       # Headless tests (generation, determinism, rank odds,
-                                         # court, save/load, art pipeline, audio, live world)
+                                         # court, territory, save/load, art pipeline, audio,
+                                         # live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
+# Screenshots (needs a display): court | art | menus | build
+godot --path . res://tools/capture.tscn -- 12345 /tmp/shots build
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 2 first playable)
+## 9. Known limitations (Phase 3, step 2)
+
+* The village stops growing at 110 people for now. The town charters in step 3
+  (Hamlet → Village → Market Town → Town) will raise that limit.
+* People don't age, have children, move away or die yet, so a village only ever
+  grows.
+* Only five building types can be ordered. Taverns, chapels and markets come with
+  the charters in step 3. Farms don't gain levels; only cottages do.
+* With 100+ villagers the overview reaches about 2,300 draw calls. That's fine on
+  desktop; phones haven't been tested.
+* Placing or finishing a building rebuilds the ground, grass and props
+  (about 0.1 s, one hitch per click).
+* There is no demolition yet. You can cancel a site (full refund before work
+  starts, half after).
 
 * Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
   fine leather and there are no gowns, robes or plate armor yet.

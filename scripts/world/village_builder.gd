@@ -14,12 +14,20 @@ const CROP_LOOK := {
 const STALL_COLORS := ["#b23a3a", "#3a6ab2", "#d8a03a", "#3a8a5a", "#8a3ab2"]
 
 var layout: VillageLayout
+## Stores and building sites (Phase 3), set before build(): sites wear the
+## ground, felled trees are skipped. Optional (tools build bare layouts).
+var territory: TerritoryData
 var building_nodes: Dictionary = {}
+var site_nodes: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 ## Trodden-ground mask (GroundWear) shared by the meadow shader and scatter.
 var _wear: Image
 var _wear_origin := Vector2.ZERO
 var _wear_size := 1.0
+var _terrain: MeshInstance3D
+## Scatter group name -> items placed at build time, re-filtered (not
+## re-rolled) when the ground changes so the rest of the meadow stays put.
+var _scatter_cache: Dictionary = {}
 
 
 func build(source: VillageLayout) -> void:
@@ -36,6 +44,7 @@ func build(source: VillageLayout) -> void:
 		_build_trees()
 	_build_props()
 	_build_buildings()
+	_build_sites()
 
 
 # --- Terrain ------------------------------------------------------------------------
@@ -89,9 +98,10 @@ func _build_terrain() -> void:
 	mi.mesh = mesh
 	_wear_origin = Vector2(-e, -e)
 	_wear_size = e * 2.0
-	_wear = GroundWear.bake(layout, _wear_origin, _wear_size, int(cfg.get("wear", {}).get("mask_size", 512)), cfg.get("wear", {}))
+	_wear = GroundWear.bake(layout, _wear_origin, _wear_size, int(cfg.get("wear", {}).get("mask_size", 512)), cfg.get("wear", {}), _site_buildings())
 	mi.material_override = meadow_material(layout, cfg, _wear_origin, _wear_size, _wear)
 	add_child(mi)
+	_terrain = mi
 
 
 ## The meadow ground shader with its baked wear mask, tuned from art_style.json.
@@ -226,42 +236,54 @@ func _build_fields() -> void:
 	var holder := Node3D.new()
 	holder.name = "Fields"
 	add_child(holder)
+	for f in layout.fields:
+		add_field(f, holder)
+
+
+## Draws one field (soil, crop rows, fence). Each field rolls its own crop
+## jitter from its position, so adding fields later never reshuffles others.
+func add_field(f: Dictionary, holder: Node3D = null) -> void:
+	if holder == null:
+		holder = get_node_or_null("Fields")
+		if holder == null:
+			return
 	var soil := Mats.hex("#6e5134")
 	var fence := Mats.hex("#7a5a3a")
-	for f in layout.fields:
-		var center: Vector3 = f["center"]
-		var size: Vector2 = f["size"]
-		var rot: float = f["rot"]
-		var field := Node3D.new()
-		field.position = TerrainHeight.on_ground(center)
-		field.rotation.y = rot
-		holder.add_child(field)
-		Mats.box(field, Vector3(size.x, 0.16, size.y), Vector3(0, 0.04, 0), soil)
-		var look: Dictionary = CROP_LOOK.get(f["crop"], CROP_LOOK["wheat"])
-		var is_stalk: bool = look["shape"] == "stalk"
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.use_colors = true
-		mm.mesh = Mats.box_mesh(Vector3(0.22, 0.75, 0.22)) if is_stalk else Mats.sphere_mesh(0.3, 8, 4)
-		var rows := int((size.y - 1.2) / 1.1)
-		var cols := int((size.x - 1.2) / (0.55 if is_stalk else 0.9))
-		mm.instance_count = rows * cols
-		var base_color := Color(str(look["color"]))
-		var i := 0
-		for row in rows:
-			for col in cols:
-				var x := -size.x * 0.5 + 0.6 + col * (size.x - 1.2) / maxf(1.0, cols - 1)
-				var z := -size.y * 0.5 + 0.6 + row * (size.y - 1.2) / maxf(1.0, rows - 1)
-				var s := _rng.randf_range(0.75, 1.15)
-				var y := 0.12 + (0.375 * s if is_stalk else 0.12)
-				mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3(s, s, s)).rotated(Vector3.UP, _rng.randf() * TAU), Vector3(x, y, z)))
-				mm.set_instance_color(i, base_color.darkened(_rng.randf_range(0.0, 0.2)))
-				i += 1
-		var mmi := MultiMeshInstance3D.new()
-		mmi.multimesh = mm
-		mmi.material_override = Mats.vertex_colored(0.9)
-		field.add_child(mmi)
-		_build_fence(field, size, fence)
+	var center: Vector3 = f["center"]
+	var size: Vector2 = f["size"]
+	var rot: float = f["rot"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(Vector2i(roundi(center.x * 10.0), roundi(center.z * 10.0)))
+	var field := Node3D.new()
+	field.position = TerrainHeight.on_ground(center)
+	field.rotation.y = rot
+	holder.add_child(field)
+	Mats.box(field, Vector3(size.x, 0.16, size.y), Vector3(0, 0.04, 0), soil)
+	var look: Dictionary = CROP_LOOK.get(f["crop"], CROP_LOOK["wheat"])
+	var is_stalk: bool = look["shape"] == "stalk"
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = Mats.box_mesh(Vector3(0.22, 0.75, 0.22)) if is_stalk else Mats.sphere_mesh(0.3, 8, 4)
+	var rows := int((size.y - 1.2) / 1.1)
+	var cols := int((size.x - 1.2) / (0.55 if is_stalk else 0.9))
+	mm.instance_count = rows * cols
+	var base_color := Color(str(look["color"]))
+	var i := 0
+	for row in rows:
+		for col in cols:
+			var x := -size.x * 0.5 + 0.6 + col * (size.x - 1.2) / maxf(1.0, cols - 1)
+			var z := -size.y * 0.5 + 0.6 + row * (size.y - 1.2) / maxf(1.0, rows - 1)
+			var s := rng.randf_range(0.75, 1.15)
+			var y := 0.12 + (0.375 * s if is_stalk else 0.12)
+			mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3(s, s, s)).rotated(Vector3.UP, rng.randf() * TAU), Vector3(x, y, z)))
+			mm.set_instance_color(i, base_color.darkened(rng.randf_range(0.0, 0.2)))
+			i += 1
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = Mats.vertex_colored(0.9)
+	field.add_child(mmi)
+	_build_fence(field, size, fence)
 
 
 ## Post-and-rail fence with a gap in the middle of the front side.
@@ -307,9 +329,39 @@ func _build_nature() -> void:
 	var skip: Array = cfg.get("mobile_skip", []) if OS.has_feature("mobile") else []
 	for group: Dictionary in cfg.get("scatter", []):
 		var group_name := str(group.get("name", ""))
-		if not skip.has(group_name):
-			NatureKit.add_instances(holder, str(group.get("wind", "none")), scatter_items(group),
-				float(group.get("visible_to", 0.0)), bool(group.get("shadows", false)), group_name)
+		if skip.has(group_name):
+			continue
+		if not _scatter_cache.has(group_name):
+			_scatter_cache[group_name] = scatter_items(group)
+		NatureKit.add_instances(holder, str(group.get("wind", "none")), _kept_scatter(group, _scatter_cache[group_name]),
+			float(group.get("visible_to", 0.0)), bool(group.get("shadows", false)), group_name)
+
+
+## Scatter items still on open ground (new lanes and building sites wear the
+## ground after the meadow was scattered).
+func _kept_scatter(group: Dictionary, items: Dictionary) -> Dictionary:
+	var out := {}
+	for model: String in items:
+		var kept := []
+		for it: Array in items[model]:
+			var o: Vector3 = (it[0] as Transform3D).origin
+			if _scatter_ok(group, wear_at(Vector2(o.x, o.z))):
+				kept.append(it)
+		if not kept.is_empty():
+			out[model] = kept
+	return out
+
+
+## Whether a scatter group may grow on ground this worn.
+static func _scatter_ok(group: Dictionary, wear: float) -> bool:
+	var wear_range: Array = group.get("wear", [])
+	if wear_range.size() == 2:
+		return wear >= float(wear_range[0]) and wear <= float(wear_range[1])
+	return wear <= float(group.get("max_wear", 0.05))
+
+
+func _tree_cleared(index: int) -> bool:
+	return territory != null and territory.cleared_trees.has(index)
 
 
 ## Kit tree for every layout tree spot: model -> [[Transform3D, custom], ...].
@@ -321,7 +373,8 @@ func tree_items() -> Dictionary:
 	var accents: Array = cfg.get("accents", [])
 	var accent_dist := float(cfg.get("accent_min_dist", 75.0))
 	var items := {}
-	for t in layout.trees:
+	for ti in layout.trees.size():
+		var t := layout.trees[ti]
 		var kind := int(t.w)
 		var spec: Dictionary = kinds.get(str(kind), kinds.get("0", {}))
 		var roll := rng.randf()
@@ -336,7 +389,10 @@ func tree_items() -> Dictionary:
 		var s := t.z * float(spec.get("scale", 0.8))
 		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * s)
 		var pos := TerrainHeight.on_ground(Vector3(t.x, 0, t.y)) - Vector3(0, 0.05, 0)
-		_add_item(items, model, Transform3D(basis, pos), NatureKit.custom(str(Seeds.pick(rng, spec.get("tints", ["#ffffff"]))), rng.randf()))
+		var custom := NatureKit.custom(str(Seeds.pick(rng, spec.get("tints", ["#ffffff"]))), rng.randf())
+		# Felled trees still roll their dice so the others keep their looks.
+		if not _tree_cleared(ti):
+			_add_item(items, model, Transform3D(basis, pos), custom)
 	return items
 
 
@@ -348,8 +404,6 @@ func scatter_items(group: Dictionary) -> Dictionary:
 	var models: Array = group.get("models", [])
 	var tints: Array = group.get("tints", ["#ffffff"])
 	var dist: Array = group.get("dist", [10.0, 120.0])
-	var wear_range: Array = group.get("wear", [])
-	var max_wear := float(group.get("max_wear", 0.05))
 	var patchiness := float(group.get("patchiness", 0.0))
 	var scale: Array = group.get("scale", [1.0, 1.0])
 	var near_trees := float(group.get("near_trees", 0.0))
@@ -372,11 +426,7 @@ func scatter_items(group: Dictionary) -> Dictionary:
 			p = Vector2(layout.square_center.x, layout.square_center.z) + Vector2(cos(a), sin(a)) * r
 		if absf(p.x) > limit or absf(p.y) > limit:
 			continue
-		var wear := wear_at(p)
-		if wear_range.size() == 2:
-			if wear < float(wear_range[0]) or wear > float(wear_range[1]):
-				continue
-		elif wear > max_wear:
+		if not _scatter_ok(group, wear_at(p)):
 			continue
 		if patchiness > 0.0:
 			var n := TerrainHeight.grass_variation(p.x * 0.8, p.y * 0.8)
@@ -415,10 +465,13 @@ func _build_trees() -> void:
 	var round_colors: Array[Color] = []
 	var cone_tops: Array[Transform3D] = []
 	var cone_colors: Array[Color] = []
-	for t in layout.trees:
+	for ti in layout.trees.size():
+		var t := layout.trees[ti]
 		var base := TerrainHeight.on_ground(Vector3(t.x, 0, t.y))
 		var s := t.z
 		var yaw := Basis(Vector3.UP, _rng.randf() * TAU)
+		if _tree_cleared(ti):
+			continue
 		match int(t.w):
 			1:  # conifer
 				trunks.append(Transform3D(yaw.scaled(Vector3(s, s, s)), base + Vector3(0, 0.8 * s, 0)))
@@ -482,6 +535,11 @@ func _build_props() -> void:
 		node.position = TerrainHeight.on_ground(p["pos"])
 		node.rotation.y = float(p["rot"])
 		holder.add_child(node)
+		# Looks roll from the prop's position, so rebuilding the props (after
+		# clearing rocks, raising a building) never changes the others.
+		var at_pos: Vector3 = p["pos"]
+		var prng := RandomNumberGenerator.new()
+		prng.seed = hash(Vector2i(roundi(at_pos.x * 10.0), roundi(at_pos.z * 10.0)))
 		match type:
 			"well":
 				Mats.cylinder(node, 1.1, 1.2, 0.9, Vector3(0, 0.45, 0), stone, 14)
@@ -491,14 +549,14 @@ func _build_props() -> void:
 				Mats.add_mesh(node, Mats.prism_mesh(Vector3(1.6, 0.8, 2.6)), Mats.hex("#8f4e31"), Vector3(0, 2.3, 0), Vector3(0, PI * 0.5, 0))
 				Mats.cylinder(node, 0.08, 0.08, 1.9, Vector3(0, 1.6, 0), wood, 6, Vector3(0, 0, PI * 0.5))
 			"stall":
-				var cloth := Mats.hex(STALL_COLORS[_rng.randi_range(0, STALL_COLORS.size() - 1)])
+				var cloth := Mats.hex(STALL_COLORS[prng.randi_range(0, STALL_COLORS.size() - 1)])
 				for sx: float in [-1.0, 1.0]:
 					for sz: float in [-1.0, 1.0]:
 						Mats.box(node, Vector3(0.12, 2.3, 0.12), Vector3(sx * 1.3, 1.15, sz * 0.8), dark_wood)
 				Mats.box(node, Vector3(2.9, 0.08, 2.0), Vector3(0, 2.32, 0), cloth, Vector3(0.12, 0, 0))
 				Mats.box(node, Vector3(2.5, 0.9, 0.7), Vector3(0, 0.45, 0.4), wood)
 				for i in 5:
-					var good := Mats.hex(["#c94a3a", "#e3b34a", "#7fae4a", "#d8d0b8", "#8a5a9a"][_rng.randi_range(0, 4)])
+					var good := Mats.hex(["#c94a3a", "#e3b34a", "#7fae4a", "#d8d0b8", "#8a5a9a"][prng.randi_range(0, 4)])
 					Mats.sphere(node, 0.16, Vector3(-0.9 + i * 0.45, 1.0, 0.45), good)
 			"bench":
 				Mats.box(node, Vector3(1.8, 0.1, 0.45), Vector3(0, 0.45, 0), wood)
@@ -535,7 +593,7 @@ func _build_props() -> void:
 				Mats.box(node, Vector3(1.2, 0.28, 0.06), Vector3(0.45, 1.85, 0), wood, Vector3(0, 0, 0.08))
 				Mats.box(node, Vector3(1.0, 0.26, 0.06), Vector3(-0.35, 1.45, 0), wood, Vector3(0, 0.6, -0.06))
 			"rock":
-				var s := _rng.randf_range(0.5, 1.4)
+				var s := prng.randf_range(0.5, 1.4)
 				var rocks: Dictionary = NatureKit.config().get("rocks", {}) if NatureKit.available() else {}
 				var models: Array = rocks.get("models", [])
 				var kit_mesh: Mesh = null
@@ -594,7 +652,7 @@ func road_clearance(p: Vector2) -> float:
 
 ## Inside (or right against) another building, or in a field.
 func _blocked_for_props(pos: Vector3, owner: BuildingData) -> bool:
-	for b in layout.buildings:
+	for b in layout.buildings + _site_buildings():
 		if b == owner:
 			continue
 		var local := b.basis().inverse() * (pos - b.position)
@@ -619,3 +677,103 @@ func _build_buildings() -> void:
 		var node := BuildingFactory.build(b)
 		holder.add_child(node)
 		building_nodes[b.id] = node
+
+
+func add_building_node(b: BuildingData) -> Node3D:
+	var holder := get_node_or_null("Buildings")
+	var node := BuildingFactory.build(b)
+	holder.add_child(node)
+	building_nodes[b.id] = node
+	return node
+
+
+## Rebuilds a building's look (e.g. after a home gains a floor).
+func replace_building_node(b: BuildingData) -> Node3D:
+	var old: Node = building_nodes.get(b.id, null)
+	if old:
+		old.get_parent().remove_child(old)
+		old.queue_free()
+	return add_building_node(b)
+
+
+## Shows or hides a building (a home is hidden while its site rebuilds it).
+func set_building_visible(building_id: int, on: bool) -> void:
+	var node: Node3D = building_nodes.get(building_id, null)
+	if node:
+		node.visible = on
+
+
+# --- Building sites & refreshing (Phase 3) ------------------------------------------------
+
+func _site_buildings() -> Array[BuildingData]:
+	var out: Array[BuildingData] = []
+	if territory:
+		for s in territory.sites:
+			out.append(s.building)
+	return out
+
+
+func _build_sites() -> void:
+	var holder := Node3D.new()
+	holder.name = "Sites"
+	add_child(holder)
+	if territory:
+		for s in territory.sites:
+			add_site(s)
+
+
+func add_site(site: ConstructionSite) -> ConstructionView:
+	var view := ConstructionView.new()
+	get_node("Sites").add_child(view)
+	view.setup(site)
+	site_nodes[site.id()] = view
+	if site.is_upgrade():
+		set_building_visible(site.id(), false)
+	return view
+
+
+func remove_site(building_id: int) -> void:
+	var view: Node = site_nodes.get(building_id, null)
+	if view:
+		view.queue_free()
+	site_nodes.erase(building_id)
+
+
+## Moves every site's look to its current progress.
+func update_sites() -> void:
+	if territory == null:
+		return
+	for s in territory.sites:
+		var view: ConstructionView = site_nodes.get(s.id(), null)
+		if view:
+			view.set_progress(s.progress())
+
+
+## Re-reads the ground after the layout changed (new lane, site, building):
+## worn earth, roads, trees and grass. Untouched parts of the meadow keep
+## exactly the same plants.
+func refresh_ground() -> void:
+	var cfg: Dictionary = GameData.load_file("art_style").get("terrain", {})
+	var wear_cfg: Dictionary = cfg.get("wear", {})
+	_wear = GroundWear.bake(layout, _wear_origin, _wear_size, int(wear_cfg.get("mask_size", 512)), wear_cfg, _site_buildings())
+	if _terrain and _terrain.material_override is ShaderMaterial:
+		(_terrain.material_override as ShaderMaterial).set_shader_parameter("wear_mask", ImageTexture.create_from_image(_wear))
+	_replace_holder("Roads", _build_roads)
+	if NatureKit.available():
+		_replace_holder("Nature", _build_nature)
+	else:
+		_rng.seed = layout.terrain_seed
+		_replace_holder("Trees", _build_trees)
+
+
+## Rebuilds the merged props (rocks cleared, new buildings dressed).
+func refresh_props() -> void:
+	_replace_holder("Props", _build_props)
+
+
+func _replace_holder(holder_name: String, build_fn: Callable) -> void:
+	var old := get_node_or_null(holder_name)
+	if old:
+		remove_child(old)
+		old.queue_free()
+	build_fn.call()

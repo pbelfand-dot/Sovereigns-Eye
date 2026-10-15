@@ -81,6 +81,7 @@ func _ready() -> void:
 	sound_col.add_theme_constant_override("separation", 10)
 	_sound_panel.add_child(sound_col)
 	sound_col.add_child(SoundSettings.new())
+	sound_col.add_child(AccessibilitySettings.new())
 	sound_col.add_child(UITheme.button("Back", _show_menu))
 	_slots = SaveSlotDialog.new()
 	_slots.visible = false

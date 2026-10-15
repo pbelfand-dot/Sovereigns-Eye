@@ -13,6 +13,8 @@ var rotation: float = 0.0
 ## Width (x) and depth (z) of the footprint in meters.
 var footprint: Vector2 = Vector2(6, 5)
 var variant: int = 0
+## Home level (Phase 3): 0 = as built, each upgrade adds one (data/territory.json "homes").
+var tier: int = 0
 
 
 func type_def() -> Dictionary:
@@ -20,6 +22,10 @@ func type_def() -> Dictionary:
 
 
 func type_name() -> String:
+	if tier > 0:
+		var tiers: Array = GameData.load_file("territory").get("homes", {}).get("tiers", [])
+		if tier < tiers.size():
+			return str(tiers[tier].get("name", type.capitalize()))
 	return str(type_def().get("name", type.capitalize()))
 
 
@@ -59,6 +65,7 @@ func to_dict() -> Dictionary:
 		"rot": snappedf(rotation, 0.0001),
 		"size": [footprint.x, footprint.y],
 		"variant": variant,
+		"tier": tier,
 	}
 
 
@@ -73,4 +80,5 @@ static func from_dict(d: Dictionary) -> BuildingData:
 	var s: Array = d.get("size", [6, 5])
 	b.footprint = Vector2(float(s[0]), float(s[1]))
 	b.variant = int(d.get("variant", 0))
+	b.tier = int(d.get("tier", 0))
 	return b

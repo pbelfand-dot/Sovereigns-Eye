@@ -29,8 +29,11 @@ func _ready() -> void:
 	env.ambient_light_energy = 0.55
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var we := WorldEnvironment.new()
+	we.name = "Env"
 	we.environment = env
 	add_child(we)
+	if transparent_bg:
+		env.background_mode = Environment.BG_CLEAR_COLOR
 
 	var key := DirectionalLight3D.new()
 	key.rotation_degrees = Vector3(-25, 155, 0)
@@ -51,6 +54,10 @@ func _ready() -> void:
 	_camera.make_current()
 
 
+## A framing for posters and reveal cards: head and shoulders, wider.
+var framing := 2.4
+
+
 func show_character(c: CharacterData) -> void:
 	if _model:
 		_model.queue_free()
@@ -64,7 +71,7 @@ func show_character(c: CharacterData) -> void:
 	var h := _model.body_height
 	var head_y := _model.head_height()
 	var look := Vector3(0, head_y - 0.18 * h, 0)
-	_camera.position = look + Vector3(0.0, 0.08 * h, -2.4 * h)
+	_camera.position = look + Vector3(0.0, 0.08 * h, -framing * h)
 	_camera.look_at(look, Vector3.UP)
 
 

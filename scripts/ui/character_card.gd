@@ -188,6 +188,10 @@ func _refresh_live() -> void:
 
 func _refresh_banner() -> void:
 	var c := character
+	# Nothing marks a gifted person until the Sovereign's Eye has seen them.
+	_banner.visible = c.appraised
+	if not c.appraised:
+		return
 	var best := c.best_attribute()
 	var p := c.get_potential(best)
 	var color := Appraisal.rank_color(p)
@@ -219,6 +223,9 @@ func _section(box: VBoxContainer, title: String) -> void:
 
 func _build_appraisal() -> void:
 	_clear(_appraisal_box)
+	if not character.appraised:
+		_build_unseen()
+		return
 	var report := Appraisal.appraise(character)
 	var hint := UITheme.label("Current ability / maximum potential", 13, UITheme.TEXT_DIM)
 	_appraisal_box.add_child(hint)
@@ -255,6 +262,29 @@ func _build_appraisal() -> void:
 	_appraisal_box.add_child(legend)
 
 
+## Before the Eye: only what anyone could see, and the way to learn more.
+func _build_unseen() -> void:
+	var c := character
+	_section(_appraisal_box, "Unseen")
+	_appraisal_box.add_child(_wrap_label("What %s could become is hidden. Find them in the village, get close enough to see them clearly, and look with the Sovereign's Eye (%s). If they're worth it, walk up and talk (%s) to learn what they want." % [
+		c.first_name, world.key_hint("sovereign_eye"), world.key_hint("interact")], 15, UITheme.TEXT))
+	var rumors: Array[String] = []
+	for h in c.history:
+		if str(h["category"]) == "rumor":
+			rumors.append(str(h["text"]))
+	if not rumors.is_empty():
+		_section(_appraisal_box, "What people say")
+		for r in rumors:
+			_appraisal_box.add_child(_wrap_label("\"%s\"" % r, 14, UITheme.TEXT_DIM))
+
+
+## Opens a tab by name ("appraisal", "court", "personality", ...).
+func show_tab(tab_name: String) -> void:
+	for i in _tabs.get_tab_count():
+		if _tabs.get_tab_title(i).to_lower() == tab_name.to_lower():
+			_tabs.current_tab = i
+
+
 # --- Court tab (Phase 2) ----------------------------------------------------------------------
 
 func _build_court() -> void:
@@ -280,10 +310,10 @@ func _build_court() -> void:
 	op_l.mouse_filter = Control.MOUSE_FILTER_PASS
 	op_box.add_child(op_l)
 	row.add_child(op_box)
-	var talk := CourtSystem.can_talk(st, c)
+	var near := world.talk_check(c.id)
 	var tb := UITheme.button("Talk", _on_talk)
-	tb.disabled = not talk["ok"]
-	tb.tooltip_text = str(talk["reason"]) if not talk["ok"] else "Spend some time with them: raises their opinion of you.\nOnce a day. Your Politics makes you better company."
+	tb.disabled = not near["ok"]
+	tb.tooltip_text = "Speak with them face to face: once a day it raises their opinion of you (your Politics makes you better company)." if near["ok"] else "Walk up to them and press %s to talk." % world.key_hint("interact")
 	row.add_child(tb)
 	var gift := CourtSystem.can_gift(st, c)
 	var gb := UITheme.button("Gift (%d gold)" % CourtSystem.gift_cost(c), _on_gift)
@@ -300,36 +330,34 @@ func _build_court() -> void:
 func _build_court_recruit() -> void:
 	var c := character
 	var st := world.state
-	_section(_court_box, "Recruit")
-	var r := CourtSystem.recruit_check(st, c)
-	var factors: Array = r["factors"]
-	if factors.is_empty():
-		_court_box.add_child(_wrap_label(str(r["reason"]), 15, UITheme.TEXT_DIM))
-		return
-	var chance := float(r["chance"])
-	var color := UITheme.GOOD if chance >= 0.6 else (UITheme.ACCENT if chance >= 0.3 else UITheme.BAD)
-	_court_box.add_child(UITheme.label("Chance they accept: %d%%" % roundi(chance * 100.0), 18, color, true))
-	if r["ward"]:
-		var decider := st.get_character(int(r["decider"]))
-		var who := decider.full_name() if decider and decider != c else "they"
-		_court_box.add_child(_wrap_label("At %d they would join as a page. %s decides." % [c.age, who.capitalize() if who == "they" else who], 14, UITheme.TEXT_DIM))
-	# Keep the primary action above the detailed odds so it is visible without
-	# scrolling on a 720p screen.
-	var b := UITheme.button("Offer a place in your household (%d gold)" % int(r["cost"]), _on_recruit)
-	b.disabled = not r["ok"]
-	b.tooltip_text = str(r["reason"]) if not r["ok"] else "They may refuse. A refusal lowers their opinion a little and you must wait before asking again."
-	_court_box.add_child(b)
-	if not r["ok"]:
-		_court_box.add_child(_wrap_label(str(r["reason"]), 14, UITheme.BAD))
-	for f: Dictionary in factors:
-		var line := HBoxContainer.new()
-		var name_l := UITheme.label("   " + str(f["label"]), 14, UITheme.TEXT_DIM)
-		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		line.add_child(name_l)
-		var v := float(f["value"]) * 100.0
-		line.add_child(UITheme.label("%+d%%" % roundi(v), 14, UITheme.value_color(v)))
-		_court_box.add_child(line)
-	_court_box.add_child(_wrap_label("Household: %d / %d retainers  -  Gold: %d" % [CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st), st.house.gold], 13, UITheme.TEXT_DIM))
+	_section(_court_box, "What they want")
+	var can := Recruitment.eligible(st, c)
+	if not can["ok"]:
+		_court_box.add_child(_wrap_label(str(can["reason"]), 14, UITheme.BAD))
+	var who := Recruitment.decider(st, c)
+	if who != c:
+		_court_box.add_child(_wrap_label("At %d they would join as a page. %s decides for them." % [c.age, who.full_name()], 14, UITheme.TEXT_DIM))
+	if c.known_motives.is_empty():
+		_court_box.add_child(_wrap_label("You don't know yet. Talk to them and ask about their life.", 14, UITheme.TEXT_DIM))
+	else:
+		var weights := Recruitment.motives(st, who)
+		for id: String in c.known_motives:
+			_court_box.add_child(_motive_row(id, float(weights.get(id, 0.0))))
+	_court_box.add_child(_wrap_label("Offers are made face to face: walk up to %s and press E to talk." % c.first_name, 13, UITheme.TEXT_DIM))
+	_court_box.add_child(_wrap_label("Household: %d / %d  -  Gold: %d  -  Your word: %s" % [CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st), st.house.gold, Recruitment.standing_label(st.house.standing)], 13, UITheme.TEXT_DIM))
+
+
+## One known motive: what it is and how much it matters, in words.
+func _motive_row(id: String, weight: float) -> Control:
+	var cost := id in ["ties", "risk"]
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 8)
+	var name_l := UITheme.label("•  " + Recruitment.motive_name(id), 15, UITheme.BAD if cost else UITheme.TEXT)
+	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(name_l)
+	var word := Recruitment.strength_word(weight)
+	line.add_child(UITheme.label("holds them back %s" % word if cost else "matters %s" % word, 14, UITheme.TEXT_DIM))
+	return line
 
 
 func _build_court_retainer() -> void:
@@ -425,7 +453,10 @@ func _focus_picker(c: CharacterData) -> OptionButton:
 	opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var current := CourtSystem.focus_of(c)
 	for a: String in CourtSystem.TRAINABLE:
-		opt.add_item("%s  %d / %d  (%s)" % [CourtSystem.attr_name(a), c.get_current(a), c.get_potential(a), Appraisal.rank_id(c.get_potential(a))])
+		if c.appraised:
+			opt.add_item("%s  %d / %d  (%s)" % [CourtSystem.attr_name(a), c.get_current(a), c.get_potential(a), Appraisal.rank_id(c.get_potential(a))])
+		else:
+			opt.add_item("%s  %d / ?" % [CourtSystem.attr_name(a), c.get_current(a)])
 		if a == current:
 			opt.selected = opt.item_count - 1
 	opt.tooltip_text = "Which talent to develop each day. Growth slows as they near their potential."
@@ -440,7 +471,7 @@ func _training_lines(c: CharacterData) -> void:
 		return
 	for a: String in rates:
 		var line := HBoxContainer.new()
-		var text := "   %s  %d / %d" % [CourtSystem.attr_name(a), c.get_current(a), c.get_potential(a)]
+		var text := "   %s  %d / %s" % [CourtSystem.attr_name(a), c.get_current(a), str(c.get_potential(a)) if c.appraised else "?"]
 		var m := CourtSystem.mentor_for(st, c, a)
 		if m["mentor"]:
 			text += "  (mentored by %s)" % (m["mentor"] as CharacterData).first_name
@@ -512,19 +543,13 @@ func _after_action(result: Dictionary, good: bool = true) -> void:
 
 
 func _on_talk() -> void:
-	_after_action(CourtSystem.talk(world.state, character, _day_rng("talk")))
+	world.try_talk(character.id)
 
 
 func _on_gift() -> void:
 	var result := CourtSystem.gift(world.state, character)
 	Audio.play("coins" if bool(result.get("ok", true)) else "ui_error")
 	_after_action(result)
-
-
-func _on_recruit() -> void:
-	var result := CourtSystem.try_recruit(world.state, character, _day_rng("recruit").randf())
-	Audio.play("court_good" if bool(result.get("success", false)) else "court_bad")
-	_after_action(result, bool(result.get("success", false)))
 
 
 func _on_office_chosen(office_id: String) -> void:
@@ -592,7 +617,7 @@ func _build_personality() -> void:
 	_meter("Loyalty", c.loyalty, MoodSystem.loyalty_label(c.loyalty), Color("#6fa8e6"))
 	_meter("Stress", c.stress, MoodSystem.stress_label(c.stress), Color("#e07a6a"))
 	var amb := c.get_current("ambition")
-	_meter("Ambition", minf(amb, 100.0), "%s (ceiling %d)" % [MoodSystem.ambition_label(amb), c.get_potential("ambition")], Color("#e9bf62"))
+	_meter("Ambition", minf(amb, 100.0), "%s (ceiling %d)" % [MoodSystem.ambition_label(amb), c.get_potential("ambition")] if c.appraised else MoodSystem.ambition_label(amb), Color("#e9bf62"))
 
 	_section(_personality_box, "Why they feel this way")
 	_factor_list("Happiness", MoodSystem.happiness_factors(c, world.state), MoodSystem.happiness_target(c, world.state))

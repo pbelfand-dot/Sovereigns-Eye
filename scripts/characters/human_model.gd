@@ -187,7 +187,7 @@ func animate(mode: String, _phase: float, delta: float) -> void:
 			if first:
 				var length := _player.get_animation(clip).length
 				_player.seek(fmod(float(_variety) * 0.37, maxf(length, 0.01)), true)
-	var rate := anim_time_scale if mode == "walk" else sqrt(maxf(anim_time_scale, 0.0))
+	var rate := anim_time_scale if mode in ["walk", "run"] else sqrt(maxf(anim_time_scale, 0.0))
 	if _is_child and mode == "walk":
 		rate *= 1.25
 	_player.advance(delta * rate * _speed)

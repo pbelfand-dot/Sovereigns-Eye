@@ -66,6 +66,9 @@ static func load_state(slot: String) -> WorldState:
 	var state := WorldState.from_dict(data)
 	# Saves from before Phase 2 have no house yet: found it now.
 	CourtSystem.initialize(state)
+	# Saves from before Phase 3 have no stores yet.
+	TerritorySystem.initialize(state)
+	CourtSystem.initialize_meetings(state)
 	return state
 
 
@@ -78,6 +81,40 @@ static func migrate(data: Dictionary) -> Dictionary:
 		# everyone's opinion of the player are created on load by
 		# CourtSystem.initialize().
 		data["save_version"] = 2
+		version = 2
+	if version == 2:
+		# v3 (Phase 3) adds the village's stores and building sites. They are
+		# created on load by TerritorySystem.initialize() with the starting
+		# stock; nothing else changes.
+		data["save_version"] = 3
+		version = 3
+	if version == 3:
+		# v4 (Phase 3 step 2) adds home levels and the settler bar. Missing
+		# fields default to a first-level home and an empty bar.
+		data["save_version"] = 4
+		version = 4
+	if version == 4:
+		# v5 (the Sovereign's Eye) adds "met" and "remembered" on characters.
+		# Anyone already appraised counts as met (CharacterData.from_dict);
+		# the ruling family knows each other (CourtSystem.initialize_meetings).
+		data["save_version"] = 5
+		version = 5
+	if version == 5:
+		# v6 (motive-based recruitment) adds the terms people joined on, the
+		# motives they've told you, titles, and the house's standing and open
+		# promises. Retainers who joined before keep the standard wage
+		# (agreed_wage -1) and empty terms; standing starts at fair (50).
+		data["save_version"] = 6
+		version = 6
+	if version == 6:
+		# v7 (Phase 3.3) adds the settlement's charter. Villages that already
+		# grew past a Hamlet's limit start as a Village, so nobody is over
+		# their charter's limit.
+		var t: Dictionary = data.get("territory", {})
+		if not t.is_empty() and not t.has("charter"):
+			var people := (data.get("characters", []) as Array).size()
+			t["charter"] = 1 if people > 70 else 0
+		data["save_version"] = 7
 	return data
 
 

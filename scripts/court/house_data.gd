@@ -14,6 +14,11 @@ var in_debt: bool = false
 var chronicle: Array[Dictionary] = []
 ## Fractional renown earned so far (Chancellor), paid out in whole points.
 var renown_progress: float = 0.0
+## How common folk regard the house's word, 0..100 (Recruitment): kept
+## promises and paid wages raise it, broken ones and hunger lower it.
+var standing: float = 50.0
+## Open promises: [{character, kind ("home"), due (day), made (day)}].
+var promises: Array[Dictionary] = []
 
 const CHRONICLE_LIMIT := 60
 
@@ -36,6 +41,8 @@ func to_dict() -> Dictionary:
 		"in_debt": in_debt,
 		"chronicle": chronicle.duplicate(true),
 		"renown_progress": snappedf(renown_progress, 0.001),
+		"standing": snappedf(standing, 0.01),
+		"promises": promises.duplicate(true),
 	}
 
 
@@ -50,4 +57,8 @@ static func from_dict(d: Dictionary) -> HouseData:
 	for e: Dictionary in d.get("chronicle", []):
 		h.chronicle.append({"day": int(e.get("day", 0)), "text": str(e.get("text", "")), "kind": str(e.get("kind", "court"))})
 	h.renown_progress = float(d.get("renown_progress", 0.0))
+	h.standing = float(d.get("standing", 50.0))
+	for p: Dictionary in d.get("promises", []):
+		h.promises.append({"character": int(p.get("character", -1)), "kind": str(p.get("kind", "home")),
+			"due": int(p.get("due", 0)), "made": int(p.get("made", 0))})
 	return h

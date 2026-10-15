@@ -23,6 +23,18 @@ var hovered := false
 var selected := false
 var _crest: Node3D
 var _is_player := false
+var _crest_on := true
+## Moved directly by the player (HeirController) instead of along paths.
+var driven := false
+var _drive_speed := 0.0
+var _last_drive_speed := 0.0
+## Animation level of detail: 1 = every frame; far from the camera the
+## skeleton is updated every `anim_lod` frames (movement stays smooth).
+var anim_lod := 1
+var _anim_wait := 0.0
+var _anim_count := 0
+var _anim_last := ""
+var focused := false
 
 
 func setup(c: CharacterData) -> void:
@@ -41,6 +53,16 @@ func setup(c: CharacterData) -> void:
 	global_position = c.position
 	rotation.y = c.facing
 	set_inside(c.inside_building_id >= 0)
+
+
+## Rebuilds the body after a change of job (new clothes and tools).
+func refresh_model() -> void:
+	var old := model
+	model = HumanModel.for_character(character)
+	add_child(model)
+	if old:
+		remove_child(old)
+		old.queue_free()
 
 
 func _build_markers() -> void:
@@ -83,7 +105,13 @@ func set_player_marker(on: bool) -> void:
 		_crest.add_child(_marker_triangle(0.046, 0.04, Color("#3a2410"), 0))
 		_crest.add_child(_marker_triangle(0.034, 0.029, Color("#f4c84e"), 1))
 	if _crest:
-		_crest.visible = on and not _label.visible
+		_crest.visible = on and _crest_on and not _label.visible
+
+
+## The crest helps find yourself from above; on foot the camera already does.
+func show_crest(on: bool) -> void:
+	_crest_on = on
+	refresh_markers()
 
 
 ## Downward-pointing triangle for the player crest (screen-space units).
@@ -110,15 +138,17 @@ static func _marker_triangle(width: float, height: float, color: Color, priority
 
 
 func refresh_markers() -> void:
-	_ring.visible = (hovered or selected) and visible
+	_ring.visible = (hovered or selected or focused) and visible
 	if selected:
 		_ring.material_override = Mats.emissive(Color("#f0c24a"), 1.6)
+	elif focused:
+		_ring.material_override = Mats.emissive(Color("#bcd6f2"), 1.1)
 	else:
 		_ring.material_override = Mats.emissive(Color("#f4ead2"), 0.8)
-	_label.visible = hovered or selected
+	_label.visible = hovered or selected or focused
 	if _crest:
 		# The hover label already says "Heir (You)"; don't stack the crest on it.
-		_crest.visible = _is_player and not _label.visible
+		_crest.visible = _is_player and _crest_on and not _label.visible
 	if _label.visible:
 		var role := character.occupation_name()
 		if _is_player:
@@ -136,6 +166,24 @@ func set_hovered(value: bool) -> void:
 func set_selected(value: bool) -> void:
 	selected = value
 	refresh_markers()
+
+
+## The person the heir is looking at (who the Eye or a word would go to).
+func set_focused(value: bool) -> void:
+	if focused == value:
+		return
+	focused = value
+	refresh_markers()
+
+
+## The player moved this body by `step` this frame (HeirController). Turns
+## toward the movement and picks walk or run from the speed.
+func drive(step: Vector3, delta: float) -> void:
+	driven = true
+	var flat := Vector3(step.x, 0, step.z)
+	_drive_speed = flat.length() / maxf(delta, 0.0001)
+	if _drive_speed > 0.05:
+		_turn_toward(flat.normalized(), delta)
 
 
 # --- Movement ---------------------------------------------------------------------
@@ -176,7 +224,7 @@ func set_anim(mode: String) -> void:
 
 ## What the villager is doing right now: "walk", "work", "talk" or "idle".
 func activity() -> String:
-	return "walk" if is_moving() else _anim_mode
+	return "walk" if is_moving() or (driven and _last_drive_speed > 0.15) else _anim_mode
 
 
 ## Hide inside a building (or come back out).
@@ -194,6 +242,9 @@ func teleport(p: Vector3) -> void:
 ## Called by the world every frame. `time_scale` is the game speed (0 = paused).
 func tick(delta: float, time_scale: float) -> void:
 	if not visible:
+		return
+	if driven:
+		_tick_driven(delta, time_scale)
 		return
 	var moving := false
 	if time_scale > 0.0 and is_moving():
@@ -222,7 +273,42 @@ func tick(delta: float, time_scale: float) -> void:
 	if time_scale > 0.0:
 		_anim_phase += delta * time_scale * (9.0 if moving else 4.0) / maxf(1.0, sqrt(time_scale))
 	model.anim_time_scale = time_scale * (_speed_factor if moving else 1.0)
-	model.animate("walk" if moving else _anim_mode, _anim_phase, delta)
+	_animate("walk" if moving else _anim_mode, delta)
+
+
+func _tick_driven(delta: float, time_scale: float) -> void:
+	if _face_target != null and _drive_speed <= 0.05:
+		var to: Vector3 = _face_target - global_position
+		to.y = 0
+		if to.length() > 0.05:
+			_turn_toward(to.normalized(), delta)
+	var walk := BASE_WALK_SPEED * 1.6
+	var mode := _anim_mode
+	if _drive_speed > walk * 1.35:
+		mode = "run"
+	elif _drive_speed > 0.15:
+		mode = "walk"
+	var rate := _drive_speed / walk if mode in ["walk", "run"] else 1.0
+	if mode == "run":
+		rate = _drive_speed / (walk * 2.0)
+	if time_scale > 0.0:
+		_anim_phase += delta * 9.0 * maxf(rate, 0.3)
+	model.anim_time_scale = maxf(rate, 0.3) if time_scale > 0.0 else 0.0
+	_animate(mode, delta)
+	_last_drive_speed = _drive_speed
+	_drive_speed = 0.0
+
+
+## Advances the body's animation, skipping frames when far away (a change
+## of animation always shows at once).
+func _animate(mode: String, delta: float) -> void:
+	_anim_wait += delta
+	_anim_count += 1
+	if anim_lod > 1 and mode == _anim_last and (_anim_count + character.id) % anim_lod != 0:
+		return
+	_anim_last = mode
+	model.animate(mode, _anim_phase, _anim_wait)
+	_anim_wait = 0.0
 
 
 func _turn_toward(dir: Vector3, delta: float) -> void:

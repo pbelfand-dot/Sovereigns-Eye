@@ -3,19 +3,25 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
 ## which is much faster on software renderers. "art" only renders the
 ## village overview, the square, a meadow close-up and a forest edge (for
-## art changes).
+## art changes). "build" renders Phase 3: building sites at several stages,
+## a finished farmstead, the Build panel and a placement preview. "growth"
+## renders step 2: the village at the start and after 45 simulated days,
+## a home being upgraded, home levels, a building card and settlers arriving.
 
 var out_dir := "user://captures"
 var seed_text := "12345"
 var court_only := false
 var art_only := false
 var menus_only := false
+var build_only := false
+var growth_only := false
+var charter_only := false
 
 
 func _ready() -> void:
@@ -27,6 +33,9 @@ func _ready() -> void:
 	court_only = args.has("court")
 	art_only = args.has("art")
 	menus_only = args.has("menus")
+	build_only = args.has("build")
+	growth_only = args.has("growth")
+	charter_only = args.has("charter")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -51,12 +60,25 @@ func _run() -> void:
 		await _menu_shots()
 		get_tree().quit()
 		return
+	if build_only:
+		await _build_shots()
+		get_tree().quit()
+		return
+	if growth_only:
+		await _growth_shots()
+		get_tree().quit()
+		return
+	if charter_only:
+		await _charter_shots()
+		get_tree().quit()
+		return
 	if court_only:
 		Game.state = WorldGenerator.generate(seed_text)
 		Game.state.minutes += 6.0 * 60.0  # early afternoon: people at work
 		var court_world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
 		add_child(court_world)
 		await _wait(5)
+		court_world.set_view_mode("overview", true)
 		court_world.paused = true
 		await _court_shots(court_world)
 		get_tree().quit()
@@ -73,6 +95,7 @@ func _run() -> void:
 	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
 	add_child(world)
 	await _wait(5)
+	world.set_view_mode("overview", true)
 	world.set_speed(3)
 	for i in 300:
 		world._process(0.1)
@@ -121,6 +144,9 @@ func _run() -> void:
 			best = npc
 	if best:
 		world.paused = true
+		# As if the heir had talked to them and used the Eye already.
+		best.character.met = true
+		best.character.appraised = true
 		world.select_character(best.character.id, true)
 		world.camera_rig.look_at_point(best.global_position, 16.0, true)
 		await _wait(30)
@@ -166,10 +192,10 @@ func _court_shots(world: VillageWorld) -> void:
 	for c: CharacterData in people:
 		if recruited.size() >= 3:
 			break
-		if not CourtSystem.recruit_check(st, c)["ok"]:
+		if not Recruitment.eligible(st, c)["ok"]:
 			continue
 		c.appraised = true
-		CourtSystem.try_recruit(st, c, 0.0)
+		Recruitment.accept(st, c, {"wage": 3, "position": "household"})
 		var office := str(office_for.get(CourtSystem.focus_of(c), "steward"))
 		if c.age >= 16 and st.house.holder_of(office) < 0:
 			CourtSystem.appoint(st, office, c)
@@ -177,7 +203,7 @@ func _court_shots(world: VillageWorld) -> void:
 		recruited.append(c)
 	# A prospect who hasn't joined yet: the recruit view with its odds.
 	for c: CharacterData in people:
-		if not c.retainer and CourtSystem.recruit_check(st, c)["ok"]:
+		if not c.retainer and Recruitment.eligible(st, c)["ok"]:
 			c.appraised = true
 			world.select_character(c.id, true)
 			world.ui._card._tabs.current_tab = 1
@@ -236,4 +262,281 @@ func _menu_shots() -> void:
 	world.ui.open_pause_menu()
 	await _wait(5)
 	await _shot("17_pause_sound.png")
+
+
+
+## Phase 3: orders a Stonecutter's Yard, a Woodcutters' Lodge, a Granary and a
+## Farmstead beside the roads, shows them at different stages, finishes the
+## farm, then the Build panel and a placement preview.
+func _build_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 4.0 * 60.0  # late morning: crews at work
+	var st := Game.state
+	st.house.gold = 2000
+	for r: String in TerritorySystem.RESOURCES:
+		st.territory.stock[r] = 600.0
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	var plan := [["quarry", 0.05], ["workshop", 0.4], ["storehouse", 0.75], ["farmhouse", 1.0]]
+	var sites: Array[ConstructionSite] = []
+	for entry: Array in plan:
+		var spot := TerritorySystem.find_spot(st, str(entry[0]), 18.0, 70.0)
+		if spot.is_empty():
+			print("no spot for ", entry[0])
+			continue
+		var res := world.place_building(str(entry[0]), spot["pos"], spot["rot"])
+		if res["ok"]:
+			var site: ConstructionSite = res["site"]
+			site.work_done = site.work_needed * float(entry[1]) - 0.001
+			sites.append(site)
+	world.builder.update_sites()
+	# Let the crews walk over to their sites.
+	world.set_speed(1)
+	for i in 240:
+		world._process(0.1)
+	world.set_speed(0)
+	world.paused = true
+	for site in sites.duplicate():
+		if not st.territory.sites.has(site):
+			sites.erase(site)
+		elif site.progress() >= 0.99:
+			site.work_done = site.work_needed
+			world._finish_site(site)
+			sites.erase(site)
+	world.builder.update_sites()
+	await _wait(5)
+	var center := Vector3.ZERO
+	for site in sites:
+		center += site.building.position
+	if not sites.is_empty():
+		center /= sites.size()
+	world.camera_rig.set_yaw(0.4, true)
+	world.camera_rig.look_at_point(center, 95.0, true)
+	await _wait(20)
+	await _shot("20_build_overview.png")
+	for i in sites.size():
+		var b := sites[i].building
+		world.camera_rig.set_yaw(b.rotation + 0.6, true)
+		world.camera_rig.look_at_point(b.position, 24.0, true)
+		await _wait(20)
+		await _shot("21_site_%d_%s.png" % [roundi(sites[i].progress() * 100.0), b.type])
+	for id in st.territory.built:
+		var b := st.get_building(id)
+		if b and b.type == "farmhouse":
+			world.camera_rig.set_yaw(b.rotation + 0.7, true)
+			world.camera_rig.look_at_point(b.position, 42.0, true)
+			await _wait(20)
+			await _shot("22_new_farmstead.png")
+	world.camera_rig.set_yaw(0.4, true)
+	world.camera_rig.look_at_point(center, 70.0, true)
+	world.ui.toggle_build()
+	await _wait(10)
+	await _shot("23_build_panel.png")
+	world.ui.toggle_build()
+	# Placement preview: a valid spot, then a blocked one.
+	var spot := TerritorySystem.find_spot(st, "bakery", 20.0, 80.0)
+	if not spot.is_empty():
+		world.set_process(false)
+		world.start_placing("bakery")
+		world.preview_at(spot["pos"])
+		world.camera_rig.set_yaw(0.3, true)
+		world.camera_rig.look_at_point(spot["pos"], 30.0, true)
+		await _wait(20)
+		await _shot("24_place_ok.png")
+		var smithy := st.layout.buildings_of_type("smithy")[0]
+		world.preview_at(smithy.position)
+		world.camera_rig.look_at_point(smithy.position, 30.0, true)
+		await _wait(20)
+		await _shot("25_place_blocked.png")
+		world.cancel_placing()
+
+
+## Runs the village's days without bodies (as the tests do), with a player
+## who orders a few buildings early on.
+static func simulate(st: WorldState, days: int, plan: Dictionary) -> void:
+	for d in days:
+		if plan.has(d):
+			var spot := TerritorySystem.find_spot(st, str(plan[d]), 18.0, 70.0)
+			if not spot.is_empty():
+				TerritorySystem.place(st, str(plan[d]), spot["pos"], spot["rot"])
+		for k in 48:
+			st.minutes += 30.0
+			for s in TerritorySystem.advance(st, 30.0):
+				TerritorySystem.complete(st, s)
+		var day := Calendar.day_index(st.whole_minutes())
+		st.last_daily_update = day
+		var rng := Seeds.rng(st.world_seed, "day_%d" % day)
+		for c in st.characters:
+			MoodSystem.daily_update(c, st, rng)
+		CourtSystem.daily_update(st, Seeds.rng(st.world_seed, "court_day_%d" % day))
+		TerritorySystem.daily_update(st)
+		GrowthSystem.daily_update(st)
+
+
+func _boot_world() -> VillageWorld:
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.set_view_mode("overview", true)
+	world.set_speed(1)
+	for i in 120:
+		world._process(0.1)
+	world.set_speed(0)
+	world.paused = true
+	return world
+
+
+func _growth_shots() -> void:
+	# Day one.
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 4.0 * 60.0
+	var world := await _boot_world()
+	world.ui._help.visible = false
+	world.camera_rig.set_yaw(0.5, true)
+	world.camera_rig.look_at_point(Vector3(0, 0, 4), 120.0, true)
+	await _wait(20)
+	await _shot("30_growth_day_1.png")
+	world.queue_free()
+	await _wait(3)
+
+	# 45 days later, with a player who built stone, wood, food and a bakery.
+	var st := WorldGenerator.generate(seed_text)
+	st.house.gold = 400
+	var days := int(OS.get_environment("GROWTH_DAYS")) if OS.get_environment("GROWTH_DAYS").is_valid_int() else 45
+	simulate(st, days, {1: "quarry", 4: "quarry", 7: "workshop", 10: "farmhouse", 14: "storehouse", 18: "bakery", 24: "farmhouse"})
+	print("after %d days: %d people" % [days, st.characters.size()])
+	print("after 45 days: %d people, %d settler families, %d homes" % [st.characters.size(), st.territory.settler_families, GrowthSystem.homes(st).size()])
+	# Open one upgrade to show it going up (if the village hasn't one running).
+	var upgrading: ConstructionSite = null
+	for s in st.territory.sites:
+		if s.is_upgrade():
+			upgrading = s
+	if upgrading == null:
+		for b in GrowthSystem.homes(st):
+			if GrowthSystem.can_level(b) and b.tier < GrowthSystem.max_tier() and not st.residents_of(b.id).is_empty() and st.territory.get_site(b.id) == null:
+				upgrading = TerritorySystem.open_upgrade(st, b, b.tier + 1, {}, 20.0)
+				break
+	if upgrading:
+		upgrading.work_done = upgrading.work_needed * 0.55
+	st.minutes = floorf(st.minutes / Calendar.MINUTES_PER_DAY) * Calendar.MINUTES_PER_DAY + 11.0 * 60.0
+	Game.state = st
+	world = await _boot_world()
+	world.ui._help.visible = false
+	world.camera_rig.set_yaw(0.5, true)
+	world.camera_rig.look_at_point(Vector3(0, 0, 4), 120.0, true)
+	await _wait(20)
+	await _shot("31_growth_later.png")
+	if upgrading:
+		var b := upgrading.building
+		world.camera_rig.set_yaw(b.rotation + 0.6, true)
+		world.camera_rig.look_at_point(b.position, 22.0, true)
+		await _wait(20)
+		await _shot("32_home_upgrading.png")
+	for tier in [1, 2]:
+		for b in GrowthSystem.homes(st):
+			if b.tier == tier and st.territory.get_site(b.id) == null:
+				world.camera_rig.set_yaw(b.rotation + 0.5, true)
+				world.camera_rig.look_at_point(b.position, 20.0, true)
+				await _wait(20)
+				await _shot("33_home_tier_%d.png" % tier)
+				break
+	# A home's card with its needs.
+	var shown := false
+	for b in GrowthSystem.homes(st):
+		if GrowthSystem.can_level(b) and b.tier < GrowthSystem.max_tier() and not st.residents_of(b.id).is_empty() and st.territory.get_site(b.id) == null:
+			world.camera_rig.set_yaw(b.rotation + 0.5, true)
+			world.camera_rig.look_at_point(b.position, 30.0, true)
+			world.select_building(b.id)
+			await _wait(15)
+			await _shot("34_home_card.png")
+			world.deselect()
+			shown = true
+			break
+	if not shown:
+		print("no home for the card shot")
+	world.ui.toggle_build()
+	await _wait(10)
+	await _shot("35_build_panel_growth.png")
+	world.ui.toggle_build()
+	# Settlers arriving: a cottage for them, then they walk in.
+	var home := GrowthSystem.empty_homes(st)
+	if home.is_empty():
+		var site := GrowthSystem.order_home(st)
+		if site == null:
+			for r: String in TerritorySystem.RESOURCES:
+				st.territory.stock[r] = 600.0
+			site = GrowthSystem.order_home(st)
+		if site:
+			world._on_growth_event({"text": "", "kind": "info", "site": site.id()})
+			site.work_done = site.work_needed
+			world._finish_site(site)
+	var fam := GrowthSystem.settle(st)
+	if fam:
+		world._on_growth_event({"text": "The %s has come to settle in %s. New faces to appraise!" % [fam.display_name(), st.village_name], "kind": "join", "arrived": fam.member_ids.duplicate()})
+		world.paused = false
+		world.set_speed(0)
+		for i in 60:
+			world._process(0.1)
+		world.paused = true
+		var lead := world.npc_of(fam.member_ids[0])
+		if lead:
+			world.camera_rig.set_yaw(0.3, true)
+			world.camera_rig.look_at_point(lead.global_position, 16.0, true)
+			lead.character.met = true
+			lead.character.appraised = true
+			world.select_character(lead.character.id)
+			await _wait(25)
+			await _shot("36_settlers_arriving.png")
+
+
+## Phase 3.3: the Charter section of the Build panel, then a Market Town's
+## new banners around the square and its Market Hall.
+func _charter_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 4.0 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.ui.toggle_build()
+	await _wait(10)
+	await _shot("40_charter_panel.png")
+	world.ui.toggle_build()
+	# Grant the Village and Market Town charters (as if earned), then raise a
+	# Market Hall.
+	st.house.gold = 5000
+	for r: String in TerritorySystem.RESOURCES:
+		st.territory.stock[r] = 900.0
+	for i in 2:
+		st.territory.charter = i + 1
+		CharterSystem.raise_banners(st, int(CharterSystem.tier_def(i + 1).get("banners", 0)) - int(CharterSystem.tier_def(i).get("banners", 0)))
+	world.builder.refresh_props()
+	var spot := TerritorySystem.find_spot(st, "market", 20.0)
+	var hall: BuildingData = null
+	if not spot.is_empty():
+		var res := TerritorySystem.place(st, "market", spot["pos"], spot["rot"])
+		if res["ok"]:
+			var site: ConstructionSite = res["site"]
+			world.builder.add_site(site)
+			site.work_done = site.work_needed
+			world._finish_site(site)
+			hall = site.building
+	world.territory_changed.emit()
+	world.camera_rig.set_yaw(0.6, true)
+	world.camera_rig.look_at_point(st.layout.square_center, 44.0, true)
+	await _wait(25)
+	await _shot("41_charter_banners.png")
+	if hall:
+		world.camera_rig.set_yaw(hall.rotation + 0.45, true)
+		world.camera_rig.look_at_point(hall.position, 24.0, true)
+		await _wait(25)
+		await _shot("42_market_hall.png")
+		world.camera_rig.look_at_point(hall.position, 13.0, true)
+		await _wait(25)
+		await _shot("43_market_hall_close.png")
+	else:
+		print("no spot for the Market Hall")
+	world.ui.toggle_build()
+	await _wait(10)
+	await _shot("44_charter_panel_market_town.png")
 

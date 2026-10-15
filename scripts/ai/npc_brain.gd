@@ -22,6 +22,10 @@ var _current: Dictionary = {}
 var _stay_left := 0.0
 ## Personal clock offset (hours) so the village doesn't move in lockstep.
 var _offset := 0.0
+## An order that overrides the daily routine:
+##   {type: "hold", face: Vector3} stand still, e.g. while the heir speaks
+##   with them
+var errand: Dictionary = {}
 
 
 func _init(body: NPC, owner_world: VillageWorld) -> void:
@@ -64,8 +68,34 @@ func activity_at(hour: float) -> String:
 	return "home"
 
 
+## Gives the brain an order (see `errand`); {} returns to the routine.
+func set_errand(e: Dictionary) -> void:
+	errand = e
+	_steps.clear()
+	_current = {}
+	if e.is_empty():
+		block_activity = ""
+
+
+func _errand_update(_game_minutes: float) -> void:
+	match str(errand.get("type", "")):
+		"hold":
+			if c.inside_building_id >= 0:
+				_leave_building()
+			npc.stop()
+			npc.set_anim("talk")
+			if errand.has("face"):
+				npc.face_point(errand["face"])
+		_:
+			set_errand({})
+
+
 ## Called every frame with the in-game minutes that passed.
 func update(game_minutes: float) -> void:
+	if not errand.is_empty():
+		if game_minutes > 0.0 or str(errand.get("type", "")) == "hold":
+			_errand_update(game_minutes)
+		return
 	var activity := activity_at(Calendar.hour_f(world.state.minutes))
 	if activity != block_activity:
 		block_activity = activity
@@ -199,6 +229,10 @@ func _plan_home() -> void:
 
 
 func _plan_work(style: String) -> void:
+	var site := TerritorySystem.builder_site(world.state, c)
+	if site:
+		_plan_build(site)
+		return
 	var wp := world.state.get_building(c.work_building_id)
 	var occ := c.occupation()
 	var text := str(occ.get("activity", "Working"))
@@ -247,7 +281,11 @@ func _plan_work(style: String) -> void:
 				_stay(rng.randf_range(40, 80), "work", text, dpos)
 		"market":
 			var spots := world.state.layout.market_spots()
-			if spots.is_empty():
+			if wp and wp.type == "market":
+				# Trading under the Market Hall's arches.
+				_go(wp.work_spot(world.worker_slot(c)), "Opening a stall at the market hall")
+				_stay(rng.randf_range(60, 120), "talk", text, wp.position)
+			elif spots.is_empty():
 				_plan_home()
 			else:
 				_go(spots[c.id % spots.size()], "Opening the market stall")
@@ -265,12 +303,27 @@ func _plan_work(style: String) -> void:
 				_stay(rng.randf_range(40, 90), "work", text, wp.position)
 			else:
 				_plan_play()
+		"oversee":
+			var sites := world.state.territory.sites if world.state.territory else []
+			if sites.is_empty():
+				_plan_work("estate")
+			else:
+				var s: ConstructionSite = sites[rng.randi_range(0, sites.size() - 1)]
+				_go(TerritorySystem.work_spot(s, 4 + rng.randi_range(0, 1)), "Off to inspect the works")
+				_stay(rng.randf_range(30, 60), "talk", "Overseeing the new %s" % TerritorySystem.display_name(s.building.type), s.building.position)
 		"play":
 			_plan_play()
 		"stroll":
 			_plan_stroll()
 		_:
 			_plan_home()
+
+
+## On a building crew: work at the site instead of the usual job.
+func _plan_build(site: ConstructionSite) -> void:
+	var spot := TerritorySystem.work_spot(site, site.builders.find(c.id))
+	_go(spot, "Off to the building site")
+	_stay(rng.randf_range(40, 90), "work", "Building the new %s" % TerritorySystem.display_name(site.building.type), site.building.position)
 
 
 func _plan_fields(wp: BuildingData, text: String) -> void:

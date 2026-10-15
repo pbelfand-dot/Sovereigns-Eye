@@ -1,0 +1,202 @@
+{
+  "_comment": "Phase 3 - Territory, step 1: the village's stores (food, wood, stone; gold is the house treasury) and building. The player places important buildings from the Build menu; villagers raise them; a Master of Works speeds every site. All tuning lives here.",
+
+  "resources": [
+    { "id": "food",  "name": "Food",  "color": "#d9b94c", "description": "Grain, bread and greens. Everyone eats every day; an empty granary makes the village miserable." },
+    { "id": "wood",  "name": "Wood",  "color": "#b07a45", "description": "Timber for building and firewood for every hearth." },
+    { "id": "stone", "name": "Stone", "color": "#b3aea4", "description": "Cut stone for foundations and walls. Build a Stonecutter's Yard to quarry it." },
+    { "id": "gold",  "name": "Gold",  "color": "#e8c35a", "description": "Your house's treasury (rents, dues and wages)." }
+  ],
+
+  "start": { "food": 150, "wood": 120, "stone": 60 },
+
+  "storage": {
+    "_comment": "Most of each resource the village can hold: base + bonus for every finished building of a type.",
+    "base": 400,
+    "per_building": { "storehouse": 300 }
+  },
+
+  "consumption": {
+    "food_adult": 1.0,
+    "food_child": 0.6,
+    "child_below_age": 14,
+    "wood_per_household": 0.35
+  },
+
+  "production": {
+    "_comment": "Per worker per day at normal productivity. Builders on a construction site produce nothing that day.",
+    "farmer":      { "food": 5.0 },
+    "farmhand":    { "food": 3.5 },
+    "miller":      { "food": 3.0 },
+    "baker":       { "food": 4.0 },
+    "herbalist":   { "food": 1.0 },
+    "woodcutter":  { "wood": 8.0 },
+    "carpenter":   { "wood": 2.0 },
+    "stonecutter": { "stone": 6.0 },
+    "laborer":     { "food": 2.5 }
+  },
+
+  "productivity": {
+    "_comment": "Worker output multiplier: happiness 0 -> min, 100 -> max; traits multiply.",
+    "happiness_min": 0.75,
+    "happiness_max": 1.2,
+    "traits": { "diligent": 1.15, "lazy": 0.85 }
+  },
+
+  "seasons": {
+    "_comment": "Food output by season: fields lie fallow in winter, the harvest comes in autumn.",
+    "Spring": { "food": 1.0 },
+    "Summer": { "food": 1.1 },
+    "Autumn": { "food": 1.25 },
+    "Winter": { "food": 0.6 }
+  },
+
+  "hunger": { "happiness": -20, "label": "The granary is empty" },
+
+  "construction": {
+    "_comment": "Work is counted in builder-hours. Each builder adds their rate for every hour of their work shift; the Master of Works multiplies everything.",
+    "crew": 3,
+    "builder_min_age": 14,
+    "builder_max_age": 59,
+    "builders": { "carpenter": 1.5, "laborer": 1.0, "farmhand": 1.0, "tavern_hand": 0.9, "apprentice": 0.8 },
+    "overseer_office": "master_of_works",
+    "overseer_divisor": 100.0,
+    "clear_tree_wood": 3,
+    "clear_rock_stone": 5,
+    "refund_unstarted": 1.0,
+    "refund_started": 0.5,
+    "visual_steps": 14
+  },
+
+  "placement": {
+    "_comment": "Meters. New buildings snap beside a road and face it; lanes are laid automatically from the door to the nearest road. Nothing is built in the manor's forecourt (manor_clear around its door).",
+    "manor_clear": 11.0,
+    "road_snap": 8.0,
+    "setback": 2.6,
+    "building_gap": 1.5,
+    "field_gap": 1.0,
+    "prop_gap": 1.2,
+    "square_gap": 2.0,
+    "lane_width": 3.0,
+    "lane_min": 1.5,
+    "lane_max": 28.0,
+    "tree_clear": 1.8
+  },
+
+  "hiring": {
+    "_comment": "Who takes the jobs at a finished building, in order of preference. Adults only.",
+    "from": ["laborer", "farmhand", "tavern_hand", "apprentice", "herbalist"],
+    "min_age": 16,
+    "max_age": 59
+  },
+
+  "homes": {
+    "_comment": "Homes grow on their own (step 2). Each family lives in its own home. When every home is full, the village builds a cottage beside a main road; homes whose needs are met are upgraded by adding floors. Rent is gold per day for each lived-in home at that level.",
+    "types": ["cottage", "farmhouse"],
+    "upgrade_types": ["cottage"],
+    "build_type": "cottage",
+    "_lodgers": "Townhouses (tier 2) take in lodgers as the settlement grows: families a Townhouse can hold, by charter (Hamlet, Village, Market Town, Town). Lodgers pay rent too: towns grow denser, not only wider.",
+    "lodgers": { "tier": 2, "families_by_charter": [1, 1, 2, 3] },
+    "build_cost": { "wood": 35, "stone": 10 },
+    "build_work": 24,
+    "tiers": [
+      { "name": "Cottage", "rent": 0, "happiness": 0 },
+      {
+        "name": "Timber House", "rent": 1, "happiness": 4, "cost": { "wood": 30, "stone": 15 }, "work": 20,
+        "needs": [
+          { "id": "settled", "days": 3, "label": "Lived here for 3 days" },
+          { "id": "food_days", "days": 5, "label": "5 days of food in the granary" },
+          { "id": "content", "happiness": 45, "label": "The family is content (happiness 45+)" },
+          { "id": "near_any", "types": ["chapel", "tavern"], "radius": 60, "label": "A chapel or tavern within 60 m" }
+        ]
+      },
+      {
+        "name": "Townhouse", "rent": 2, "happiness": 8, "cost": { "wood": 40, "stone": 30, "gold": 10 }, "work": 30,
+        "needs": [
+          { "id": "settled", "days": 8, "label": "Lived here 8 days as a Timber House" },
+          { "id": "food_days", "days": 10, "label": "10 days of food in the granary" },
+          { "id": "content", "happiness": 55, "label": "The family is happy (happiness 55+)" },
+          { "id": "near_all", "types": ["chapel", "tavern"], "radius": 75, "label": "Both a chapel and a tavern within 75 m" },
+          { "id": "near_any", "types": ["bakery"], "radius": 80, "label": "A bakery within 80 m" },
+          { "id": "market", "radius": 60, "label": "The market square within 60 m" }
+        ]
+      }
+    ]
+  },
+
+  "growth": {
+    "_comment": "New families settle when the village is appealing and a home stands empty. Appeal fills the settler bar each day (appeal x progress_per_appeal); at 100 a family arrives. Families walk in along a road from the edge of the map.",
+    "_max_population": "How many may live here is set by the settlement's charter (data/charters.json).",
+    "progress_per_appeal": 2.0,
+    "appeal": {
+      "base": 10,
+      "happiness_weight": 0.6,
+      "food_days_good": 10,
+      "food_good": 10,
+      "food_days_short": 3,
+      "food_short": -15,
+      "hungry": -40,
+      "renown_divisor": 10,
+      "renown_cap": 15,
+      "open_jobs": 6,
+      "in_debt": -10
+    },
+    "settlers": [
+      { "background": "farming", "head": "laborer", "spouse": "laborer", "spouse_chance": 0.7, "children": [0, 3], "elder_chance": 0.15, "elder_job": "elder", "weight": 6 },
+      { "background": "craft", "head": "carpenter", "spouse": "laborer", "spouse_chance": 0.6, "children": [0, 2], "elder_chance": 0.1, "elder_job": "elder", "weight": 2 },
+      { "background": "farming", "head": "woodcutter", "spouse": "laborer", "spouse_chance": 0.6, "children": [0, 2], "elder_chance": 0.1, "elder_job": "elder", "weight": 2 }
+    ],
+    "entry_roads": ["west", "east", "south"],
+    "auto": {
+      "_comment": "Homes and upgrades the village orders by itself. They never spend below the reserve, so your own orders keep their materials.",
+      "max_sites": 2,
+      "reserve": { "wood": 60, "stone": 25 },
+      "spot_min": 14,
+      "spot_max": 78,
+      "spot_step": 4
+    }
+  },
+
+  "buildable": [
+    {
+      "type": "quarry", "name": "Stonecutter's Yard",
+      "description": "Stonecutters haul and dress stone from the hills. The village's only source of stone.",
+      "cost": { "wood": 40, "gold": 20 }, "work": 30, "jobs": { "stonecutter": 2 }, "limits": [3, 3, 4, 4]
+    },
+    {
+      "type": "workshop", "name": "Woodcutters' Lodge",
+      "description": "Two more woodcutters fell timber in the forest.",
+      "cost": { "wood": 30, "stone": 10, "gold": 20 }, "work": 36, "jobs": { "woodcutter": 2 }, "limits": [3, 3, 4, 5]
+    },
+    {
+      "type": "farmhouse", "name": "Farmstead",
+      "description": "A farmer and a farmhand work new fields around the house.",
+      "cost": { "wood": 50, "stone": 15, "gold": 30 }, "work": 40, "jobs": { "farmer": 1, "farmhand": 1 }, "fields": [2, 3], "limits": [4, 5, 6, 8]
+    },
+    {
+      "type": "storehouse", "name": "Granary",
+      "description": "Raises how much food, wood and stone the village can store.",
+      "cost": { "wood": 60, "stone": 30, "gold": 30 }, "work": 50, "limits": [3, 3, 4, 5]
+    },
+    {
+      "type": "bakery", "name": "Bakery",
+      "description": "A baker turns flour into bread for the village.",
+      "cost": { "wood": 40, "stone": 25, "gold": 30 }, "work": 36, "jobs": { "baker": 1 }, "limits": [2, 2, 3, 4]
+    },
+    {
+      "type": "tavern", "name": "Tavern",
+      "description": "Ale, warmth and gossip. Homes need a tavern near them to grow, and villagers gather there in the evening.",
+      "cost": { "wood": 70, "stone": 30, "gold": 60 }, "work": 50, "jobs": { "innkeeper": 1, "tavern_hand": 1 }, "limits": [0, 1, 1, 2]
+    },
+    {
+      "type": "chapel", "name": "Chapel",
+      "description": "A place to pray. Homes need a chapel near them to grow, and the devout visit it.",
+      "cost": { "wood": 40, "stone": 70, "gold": 60 }, "work": 60, "jobs": { "priest": 1 }, "limits": [0, 1, 1, 2]
+    },
+    {
+      "type": "market", "name": "Market Hall",
+      "description": "An arcaded hall where merchants trade: gold every day, settlers drawn by market days, and a market for nearby Townhouses.",
+      "cost": { "wood": 80, "stone": 60, "gold": 80 }, "work": 64, "jobs": { "merchant": 2 }, "limits": [0, 0, 1, 2]
+    }
+  ]
+}

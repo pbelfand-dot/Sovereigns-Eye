@@ -1,0 +1,72 @@
+{
+  "_comment": "Phase 3.3 - Charters. A settlement grows from Hamlet to Village, Market Town and Town by petitioning the Crown once it meets a charter's requirements and can pay its fee. Each charter raises how many people may live here, unlocks buildings (more taverns and chapels, then the Market Hall), brings in dues, widens your household and makes the place more appealing to settlers. build_radius: how far from the square (m) new homes may be raised, as the settlement spreads along roads and lanes. Requirement ids: population {count}, homes_tier {tier, count} (homes at that level or higher), building {type, count} (any of that type, old or new), renown {value}, food_days {days}, content {happiness} (average).",
+
+  "tiers": [
+    {
+      "id": "hamlet", "name": "Hamlet",
+      "max_population": 70, "build_radius": 80, "dues": 0, "appeal": 0, "retainer_cap": 0, "banners": 0,
+      "description": "A cluster of homes around the manor. The Crown takes little notice."
+    },
+    {
+      "id": "village", "name": "Village",
+      "max_population": 110, "build_radius": 94, "dues": 2, "appeal": 4, "retainer_cap": 1, "renown": 5, "banners": 2,
+      "requires": [
+        {"id": "population", "count": 60, "label": "60 people live here"},
+        {"id": "homes_tier", "tier": 1, "count": 2, "label": "2 Timber Houses (or better)"},
+        {"id": "food_days", "days": 5, "label": "5 days of food in store"},
+        {"id": "content", "happiness": 50, "label": "Villagers are content (average happiness 50+)"},
+        {"id": "renown", "value": 12, "label": "Your house's renown is 12 or more"}
+      ],
+      "cost": {"gold": 150, "wood": 40},
+      "description": "A proper village with its own fair: more taverns and chapels may be raised."
+    },
+    {
+      "id": "market_town", "name": "Market Town",
+      "max_population": 150, "build_radius": 108, "dues": 5, "appeal": 8, "retainer_cap": 2, "renown": 10, "banners": 4,
+      "requires": [
+        {"id": "population", "count": 95, "label": "95 people live here"},
+        {"id": "homes_tier", "tier": 2, "count": 2, "label": "2 Townhouses"},
+        {"id": "building", "type": "bakery", "count": 1, "label": "A bakery"},
+        {"id": "building", "type": "storehouse", "count": 1, "label": "A granary"},
+        {"id": "content", "happiness": 53, "label": "Villagers are content (average happiness 53+)"},
+        {"id": "renown", "value": 40, "label": "Your house's renown is 40 or more"}
+      ],
+      "cost": {"gold": 400, "stone": 80},
+      "description": "The right to hold a weekly market: build a Market Hall and trade brings in gold."
+    },
+    {
+      "id": "town", "name": "Town",
+      "max_population": 200, "build_radius": 120, "dues": 10, "appeal": 12, "retainer_cap": 3, "renown": 20, "banners": 6,
+      "requires": [
+        {"id": "population", "count": 135, "label": "135 people live here"},
+        {"id": "homes_tier", "tier": 2, "count": 6, "label": "6 Townhouses"},
+        {"id": "building", "type": "market", "count": 1, "label": "A Market Hall"},
+        {"id": "building", "type": "chapel", "count": 2, "label": "Two chapels"},
+        {"id": "content", "happiness": 55, "label": "Villagers are happy (average happiness 55+)"},
+        {"id": "renown", "value": 80, "label": "Your house's renown is 80 or more"}
+      ],
+      "cost": {"gold": 900, "stone": 200},
+      "description": "A chartered town: the Crown counts your house among the great of the realm."
+    }
+  ],
+
+  "market": {
+    "_comment": "A Market Hall's trade, in gold a day: for each merchant at work plus a share for every 10 people, at most 'max' per hall. Each hall also adds 'appeal' to the settler bar (up to two halls) and counts as a market for Townhouses.",
+    "gold_per_merchant": 3,
+    "gold_per_10_people": 1.0,
+    "max": 16,
+    "appeal": 6
+  },
+
+  "mood": {
+    "_comment": "Happiness: pride in the charter (per tier, Hamlet first) and a Market Hall within market_radius of home.",
+    "pride": [0, 1, 2, 3],
+    "market": 3,
+    "market_radius": 80
+  },
+
+  "ceremony": {
+    "standing": 5,
+    "sound": "knighted"
+  }
+}

@@ -13,6 +13,7 @@ static func generate(seed_text: String) -> WorldState:
 	state.layout = VillageLayoutGenerator.new().generate(state.world_seed)
 	CharacterGenerator.new().generate(state)
 	CourtSystem.initialize(state)
+	TerritorySystem.initialize(state)
 	return state
 
 

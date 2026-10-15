@@ -39,13 +39,11 @@ func test_recruitment_and_offices_update_both_sides() -> void:
 	state.house.gold = 1000
 	var original_status := c.social_status
 	var original_work := c.work_building_id
-	var check_result := CourtSystem.recruit_check(state, c)
-	check(check_result["ok"], "a willing outsider can be recruited")
-	var gold_before := state.house.gold
-	var result := CourtSystem.try_recruit(state, c, 0.0)
-	check(result["success"], "a roll below the displayed chance succeeds")
+	check(Recruitment.eligible(state, c)["ok"], "a willing outsider can be asked")
+	var result := Recruitment.propose(state, c, {"wage": 3, "position": "household"})
+	check_eq(result["result"], "accept", "a devoted outsider accepts a fair wage")
 	check(c.retainer, "the recruit is marked as a retainer")
-	check_eq(state.house.gold, gold_before - int(check_result["cost"]), "the signing cost is paid")
+	check_eq(CourtSystem.wage(c), 3, "they are paid the wage they agreed to")
 
 	var appointed := CourtSystem.appoint(state, "steward", c)
 	check(appointed["ok"], "an adult retainer can hold office")
