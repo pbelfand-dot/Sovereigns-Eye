@@ -483,3 +483,62 @@ func test_click_to_move_and_touch_controls() -> void:
 	GameSettings.set_bool("controls/touch_controls", false)
 	world.queue_free()
 	await frames(2)
+
+
+func test_a_charter_in_the_live_world() -> void:
+	var world: VillageWorld = await _boot("smoke-charter")
+	var st := world.state
+	st.house.gold = 5000
+	for r: String in TerritorySystem.RESOURCES:
+		st.territory.stock[r] = 900.0
+	await frames(1)
+	check(world.ui._charter_label.text.contains("Hamlet"), "the top bar names the charter: %s" % world.ui._charter_label.text)
+	world.ui.toggle_build()
+	await frames(1)
+	var panel_text := _all_text(world.ui._build)
+	check(panel_text.contains("Charter: Hamlet"), "the Build panel shows the charter")
+	check(panel_text.contains("Petition the Crown"), "with the petition")
+	# Earn it (as if by play), then petition from the panel.
+	st.house.renown = 20
+	for c in st.characters:
+		c.happiness = 70.0
+	var homes := 0
+	for b in GrowthSystem.homes(st):
+		if GrowthSystem.can_level(b) and homes < 2:
+			b.tier = 1
+			homes += 1
+	var next_id := 1000
+	while st.characters.size() < 60:
+		var copy := CharacterData.from_dict(st.characters[st.characters.size() % 40].to_dict())
+		copy.id = next_id
+		next_id += 1
+		st.add_character(copy)
+	var banners_before := st.layout.props_of_type("banner").size()
+	world.petition_charter()
+	await frames(2)
+	check_eq(CharterSystem.title(st), "Village", "the petition is granted in the live world")
+	check_eq(st.layout.props_of_type("banner").size(), banners_before + 2, "banners go up")
+	check(world.ui._charter_label.text.contains("Village"), "the top bar updates")
+	check(_all_text(world.ui._build).contains("Charter: Village"), "and the Build panel")
+	world.ui.toggle_build()
+	# A Village may raise a tavern: placement goes to the map table.
+	world.start_placing("tavern")
+	check_eq(world.mode, "overview", "placing a tavern opens the map table")
+	check(world.is_placing(), "and places it")
+	world.cancel_placing()
+	# The charter survives a save and load.
+	world.sync_to_state()
+	var back := WorldState.from_dict(JSON.parse_string(JSON.stringify(st.to_dict())))
+	check_eq(back.territory.charter, 1, "saved with the game")
+	world.queue_free()
+	await frames(2)
+
+
+func _all_text(root: Node) -> String:
+	var out := ""
+	for n in root.find_children("*", "", true, false):
+		if n is Label:
+			out += (n as Label).text + "\n"
+		elif n is Button:
+			out += (n as Button).text + "\n"
+	return out
