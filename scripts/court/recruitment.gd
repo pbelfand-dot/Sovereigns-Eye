@@ -195,7 +195,11 @@ static func ask(state: WorldState, c: CharacterData) -> Dictionary:
 		if c.known_motives.has(id):
 			continue
 		c.known_motives.append(id)
-		var options: Array = lines.get(id, ["\"...\""])
+		# Fondness matters to them, but they may not be fond of you (yet).
+		var key := id
+		if id == "bond" and who.player_opinion < float(cfg().get("bond_fond_at", 15.0)) and lines.has("bond_wary"):
+			key = "bond_wary"
+		var options: Array = lines.get(key, ["\"...\""])
 		var line := str(options[(c.id + c.known_motives.size()) % options.size()])
 		return {"line": _fill(line, state), "motive": id}
 	return {"line": _fill(str(cfg().get("nothing_more", "\"That's all.\"")), state), "motive": ""}

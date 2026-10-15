@@ -598,7 +598,13 @@ func test_offers_can_always_be_made_by_clicking() -> void:
 	check_eq(int(panel.offer.get("wage", -1)), 0, "the - button lowers the wage")
 	await _click(world, panel._propose)
 	panel.flush()
+	await frames(2)
 	check(not c.retainer, "a stingy offer to someone who dislikes you is turned down")
+	var bar := panel._scroll.get_v_scroll_bar()
+	check(bar.max_value > bar.page, "the talk is longer than the log (it scrolls)")
+	check(bar.value >= bar.max_value - bar.page - 1.0, "the log follows to their answer (%d of %d, page %d)" % [roundi(bar.value), roundi(bar.max_value), roundi(bar.page)])
+	var last := panel._log.get_child(panel._log.get_child_count() - 1) as Control
+	check(panel._scroll.get_global_rect().grow(1.0).encloses(last.get_global_rect()), "the newest line is in view")
 	check(panel.visible, "the conversation goes on")
 	check(panel._offer_box.visible, "the terms stay open after a refusal")
 	check(not panel._propose.disabled, "and you can propose again at once")

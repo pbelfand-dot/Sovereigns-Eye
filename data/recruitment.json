@@ -63,6 +63,7 @@
 
   "ask_lines": {
     "bond":     ["\"Your family has always been fair to mine, {lord}.\"", "\"I'd follow you, {lord}. I've said so before.\""],
+    "bond_wary": ["\"I'd only serve someone I trust, {lord}. Trust is earned.\"", "\"Show me you're worth following, {lord}, and I'll follow.\""],
     "money":    ["\"Truth be told, {lord}, we owe the miller more than we can pay.\"", "\"A steady wage... that would change everything for us.\""],
     "home":     ["\"Five of us under one roof, and the roof leaks.\"", "\"If my children had a proper home, I'd go anywhere.\""],
     "career":   ["\"I'm wasted here. I could do so much more, if someone gave me the chance.\"", "\"Teach me, {lord}, and you won't regret it.\""],
@@ -70,6 +71,8 @@
     "ties":     ["\"My whole life is here, {lord}. My work, my friends.\"", "\"Who would keep the business going if I left?\""],
     "risk":     ["\"I don't like changes, {lord}. Things are fine as they are.\"", "\"Safer to stay put, I think.\""]
   },
+  "_bond_fond_at": "Below this opinion of you, someone who values fondness answers with a 'bond_wary' line.",
+  "bond_fond_at": 15.0,
   "nothing_more": "\"That's all there is to tell, {lord}.\"",
 
   "reason_lines": {

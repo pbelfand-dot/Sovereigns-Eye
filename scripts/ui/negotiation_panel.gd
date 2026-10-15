@@ -75,6 +75,9 @@ func _ready() -> void:
 	_log.add_theme_constant_override("separation", 3)
 	_log.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_log)
+	# New lines are laid out after they're added: follow the scroll bar as
+	# it grows, so the newest line (their answer) is always in view.
+	_scroll.get_v_scroll_bar().changed.connect(_scroll_down)
 	var right := PanelContainer.new()
 	right.add_theme_stylebox_override("panel", UITheme.box(Color("#2a2018c0"), UITheme.GOLD_DIM, 1, 6, 8))
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -302,7 +305,8 @@ func _show_next() -> void:
 
 
 func _scroll_down() -> void:
-	_scroll.scroll_vertical = int(_scroll.get_v_scroll_bar().max_value)
+	var bar := _scroll.get_v_scroll_bar()
+	_scroll.scroll_vertical = int(bar.max_value - bar.page)
 
 
 ## Shows everything still waiting (clicking hurries the talk along).

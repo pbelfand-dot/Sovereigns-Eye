@@ -324,6 +324,32 @@ func test_asking_reveals_motives_strongest_first() -> void:
 	check_eq(done["motive"], "", "then there's nothing more to tell")
 
 
+## Someone who values fondness only says they'd follow you if they're fond
+## of you; wary, they say trust must be earned.
+func test_what_they_say_of_fondness_fits_how_they_feel() -> void:
+	var st := _world("recruit-bond-line")
+	var c := _find(st, 0)
+	if c == null:
+		check(false, "found someone")
+		return
+	var fond: Array = Recruitment.cfg()["ask_lines"]["bond"]
+	var wary: Array = Recruitment.cfg()["ask_lines"]["bond_wary"]
+	c.traits = ["loyal"] as Array[String]
+	for opinion: float in [-30.0, 60.0]:
+		c.player_opinion = opinion
+		c.known_motives.clear()
+		for id: String in Recruitment.ranked_motives(st, c):
+			if id != "bond":
+				c.known_motives.append(id)
+		var r := Recruitment.ask(st, c)
+		check_eq(r["motive"], "bond", "they speak of fondness")
+		var pool := wary if opinion < 0.0 else fond
+		var said := false
+		for line: String in pool:
+			said = said or Recruitment._fill(line, st) == str(r["line"])
+		check(said, "at opinion %d they say a fitting line: %s" % [roundi(opinion), r["line"]])
+
+
 func test_answers_are_plain_words_and_deterministic() -> void:
 	var st := _world("recruit-words")
 	var n := 0
