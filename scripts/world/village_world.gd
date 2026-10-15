@@ -967,7 +967,7 @@ func try_talk(character_id: int) -> bool:
 	talking_to = character_id
 	_set_focus(target)
 	var cam_cfg := StrategyCamera.cfg()
-	camera_rig.close_in(float(cam_cfg.get("talk_distance", 7.0)), float(cam_cfg.get("talk_shift", -1.5)))
+	camera_rig.close_in(float(cam_cfg.get("talk_distance", 7.0)), float(cam_cfg.get("talk_shift", -1.15)))
 	var result := Discovery.meet(state, target.character)
 	Audio.play("card_open")
 	conversation_started.emit(character_id, result)

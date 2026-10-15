@@ -21,7 +21,7 @@
     "pitch_bias_max": 22.0,
     "orbit_speed": 2.2,
     "talk_distance": 7.0,
-    "talk_shift": -1.5,
+    "talk_shift": -1.15,
     "lift_max": 66.0,
     "fade_alpha": 0.72,
     "overview_distance": 62.0
