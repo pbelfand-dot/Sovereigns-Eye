@@ -89,8 +89,9 @@ func refresh() -> void:
 		var focus := CourtSystem.focus_of(c)
 		var cur := c.get_current(focus)
 		var pot := c.get_potential(focus)
-		var text := "%s, %d  -  %s  -  %s %d/%d (%s potential)  -  loyalty %d" % [
-			c.display_name(), c.age, CourtSystem.role_name(st, c), CourtSystem.attr_name(focus), cur, pot, Appraisal.rank_id(pot), roundi(c.loyalty)]
+		var pot_text := "%d (%s potential)" % [pot, Appraisal.rank_id(pot)] if c.appraised else "? (not seen with the Eye)"
+		var text := "%s, %d  -  %s  -  %s %d/%s  -  loyalty %d" % [
+			c.display_name(), c.age, CourtSystem.role_name(st, c), CourtSystem.attr_name(focus), cur, pot_text, roundi(c.loyalty)]
 		var b := _person_button(c, text)
 		if c.loyalty < float(CourtSystem.section("loyalty").get("warning_below", 30)):
 			b.add_theme_color_override("font_color", UITheme.BAD)

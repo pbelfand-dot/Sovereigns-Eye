@@ -18,6 +18,8 @@ var _anim_mode := "idle"
 var _anim_phase := 0.0
 var _lane := 0.0
 var _speed_factor := 1.0
+## Walking faster than usual (the heir on an errand).
+var hurry := 1.0
 var _face_target: Variant = null
 var hovered := false
 var selected := false
@@ -207,7 +209,7 @@ func tick(delta: float, time_scale: float) -> void:
 		return
 	var moving := false
 	if time_scale > 0.0 and is_moving():
-		var step := BASE_WALK_SPEED * _speed_factor * time_scale * delta
+		var step := BASE_WALK_SPEED * _speed_factor * hurry * time_scale * delta
 		while step > 0.0 and _path_index < _path.size():
 			var target := _path[_path_index]
 			var to := target - global_position

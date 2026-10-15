@@ -1,0 +1,95 @@
+{
+  "_comment": "The Sovereign's Eye reveal. A person's tier comes from their greatest potential; each tier plays its own timeline of steps (seconds). The same steps drive every tier, so new reveals only need data. Tiers are told apart by name, crest shape, pips and frame pattern as well as color, never by color alone.",
+
+  "_steps": "dim {to, time} | focus {distance, time} (camera, parallel) | heartbeat {beats, time} | eye {open, time, rays, spin} | card_back {time} | sweep {time} | clue {kind: role|gift|silhouette|motto, time} | shake {strength, time} | flash {time} | sting {file, fade, time} | flip {time} | card_front {time} | particles {amount} | stats {mode: together|ascending, time} | stamp {time} | sound {event, caption} (instant) | wait {time}. Any step may carry sound + caption. Reduced motion drops focus, shake and spins, swaps flips for fades and scales times by reduced_motion_time. Reduce flashes drops flash steps and dims light sweeps.",
+
+  "reduced_motion_time": 0.7,
+  "caption_seconds": 1.8,
+
+  "tiers": [
+    {
+      "id": "ordinary", "name": "Ordinary", "min": 0,
+      "crest": "none", "pips": 1, "frame": "plain",
+      "colors": { "main": "#9a9488", "accent": "#5e584e", "glow": "#e8e0cc", "ink": "#2b2219" },
+      "steps": [
+        { "type": "dim", "to": 0.35, "time": 0.2 },
+        { "type": "eye", "open": 0.55, "time": 0.35, "rays": 0.0, "sound": "eye_soft", "caption": "[A soft chime]" },
+        { "type": "card_front", "time": 0.3 },
+        { "type": "stats", "mode": "together", "time": 0.45 }
+      ]
+    },
+    {
+      "id": "skilled", "name": "Skilled", "min": 65,
+      "crest": "shield", "pips": 2, "frame": "single",
+      "colors": { "main": "#c9d3df", "accent": "#5f7590", "glow": "#e6f0ff", "ink": "#22262c" },
+      "steps": [
+        { "type": "dim", "to": 0.5, "time": 0.25 },
+        { "type": "eye", "open": 0.85, "time": 0.5, "rays": 0.4, "sound": "eye_open", "caption": "[A low bell]" },
+        { "type": "card_back", "time": 0.3 },
+        { "type": "sweep", "time": 0.45, "sound": "eye_sweep", "caption": "[A bright shimmer]" },
+        { "type": "flip", "time": 0.3, "sound": "eye_flip" },
+        { "type": "particles", "amount": 24 },
+        { "type": "stats", "mode": "together", "time": 0.6 },
+        { "type": "stamp", "time": 0.25, "sound": "eye_stamp_light" }
+      ]
+    },
+    {
+      "id": "exceptional", "name": "Exceptional", "min": 100,
+      "crest": "sun", "pips": 3, "frame": "double",
+      "colors": { "main": "#e9bf62", "accent": "#2c3e7a", "glow": "#fff1c4", "ink": "#2a1d0c" },
+      "steps": [
+        { "type": "dim", "to": 0.68, "time": 0.35 },
+        { "type": "focus", "distance": 18.0, "time": 0.6 },
+        { "type": "eye", "open": 1.0, "time": 0.7, "rays": 1.0, "sound": "eye_open", "caption": "[A deep bell rings out]" },
+        { "type": "card_back", "time": 0.3 },
+        { "type": "clue", "kind": "role", "time": 0.5 },
+        { "type": "clue", "kind": "gift", "time": 0.6, "sound": "eye_shimmer", "caption": "[Rising chimes]" },
+        { "type": "shake", "strength": 4.0, "time": 0.3, "sound": "eye_seal", "caption": "[The seal cracks]" },
+        { "type": "flash", "time": 0.2 },
+        { "type": "flip", "time": 0.35, "sound": "eye_flip" },
+        { "type": "particles", "amount": 60 },
+        { "type": "stats", "mode": "ascending", "time": 1.0 },
+        { "type": "stamp", "time": 0.4, "sound": "eye_stamp", "caption": "[A bell strikes]" }
+      ]
+    },
+    {
+      "id": "legendary", "name": "Legendary", "min": 120,
+      "crest": "crown", "pips": 4, "frame": "filigree",
+      "colors": { "main": "#f2c14e", "accent": "#8e1b2c", "glow": "#ffe6a8", "ink": "#2a0d10" },
+      "steps": [
+        { "type": "dim", "to": 0.86, "time": 0.5 },
+        { "type": "focus", "distance": 12.0, "time": 1.2 },
+        { "type": "heartbeat", "beats": 2, "time": 0.8, "sound": "eye_heartbeat", "caption": "[A slow heartbeat]" },
+        { "type": "eye", "open": 1.0, "time": 1.0, "rays": 1.0, "spin": true, "sound": "eye_open", "caption": "[A great bell tolls]" },
+        { "type": "card_back", "time": 0.3 },
+        { "type": "clue", "kind": "silhouette", "time": 0.7 },
+        { "type": "clue", "kind": "role", "time": 0.45 },
+        { "type": "clue", "kind": "motto", "time": 0.5, "sound": "eye_shimmer", "caption": "[Chimes climb higher]" },
+        { "type": "shake", "strength": 7.0, "time": 0.45, "sound": "eye_seal", "caption": "[The seal bursts]" },
+        { "type": "flash", "time": 0.25 },
+        { "type": "sting", "file": "res://audio/music/randommind-medieval/victory.ogg", "fade": 4.5, "time": 0.0, "caption": "[Trumpets and drums: a legend]" },
+        { "type": "flip", "time": 0.4, "sound": "eye_flip" },
+        { "type": "particles", "amount": 140 },
+        { "type": "stats", "mode": "ascending", "time": 1.3 },
+        { "type": "stamp", "time": 0.55, "sound": "eye_stamp", "caption": "[A bell strikes twice]" }
+      ]
+    }
+  ],
+
+  "compact": {
+    "steps": [
+      { "type": "dim", "to": 0.3, "time": 0.12 },
+      { "type": "card_front", "time": 0.2, "sound": "appraise" },
+      { "type": "stats", "mode": "instant", "time": 0.0 }
+    ]
+  },
+
+  "mottos": {
+    "leadership": "Others will follow where this one leads.",
+    "combat": "A blade the songs will remember.",
+    "intelligence": "A mind sharper than any in the realm.",
+    "politics": "Words that could move kings.",
+    "administration": "A keeper of kingdoms, not ledgers.",
+    "ambition": "A hunger that could reshape the realm."
+  }
+}

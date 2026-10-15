@@ -136,6 +136,9 @@ func _run() -> void:
 			best = npc
 	if best:
 		world.paused = true
+		# As if the heir had talked to them and used the Eye already.
+		best.character.met = true
+		best.character.appraised = true
 		world.select_character(best.character.id, true)
 		world.camera_rig.look_at_point(best.global_position, 16.0, true)
 		await _wait(30)
@@ -471,6 +474,8 @@ func _growth_shots() -> void:
 		if lead:
 			world.camera_rig.set_yaw(0.3, true)
 			world.camera_rig.look_at_point(lead.global_position, 16.0, true)
+			lead.character.met = true
+			lead.character.appraised = true
 			world.select_character(lead.character.id)
 			await _wait(25)
 			await _shot("36_settlers_arriving.png")

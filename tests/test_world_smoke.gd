@@ -64,10 +64,11 @@ func test_world_boots_and_villagers_live() -> void:
 		var picked := world.pick_npc(screen)
 		check(picked == target, "clicking a villager selects them")
 		world._on_clicked(screen)
-		check(target.character.appraised, "selecting appraises")
+		check(not target.character.appraised, "selecting someone doesn't reveal them")
 		check(world.ui._card.visible, "character card opens")
 		check_eq(world.ui._card._name_label.text, target.character.full_name(), "card shows the right person")
-		check(world.ui._card._appraisal_box.get_child_count() >= 7, "appraisal rows are built")
+		check(not world.ui._card._banner.visible, "no talent banner before the Eye")
+		check(world.ui._card._appraisal_box.get_child_count() >= 2, "the unseen card explains how to learn more")
 		check(world.ui._card._history_box.get_child_count() >= 1, "history rows are built")
 
 	world.ui.toggle_ledger()
@@ -212,5 +213,58 @@ func test_buildings_can_be_clicked() -> void:
 	world.deselect()
 	check(not world.ui.is_building_card_open(), "deselecting closes it")
 	check(world.pick_building(cam.unproject_position(world.state.layout.square_center)) == -1, "the empty square picks nothing")
+	world.queue_free()
+	await frames(2)
+
+
+func test_talk_then_eye_in_the_live_world() -> void:
+	var world: VillageWorld = await _boot("smoke-eye")
+	var st := world.state
+	GameSettings.memory_only = true
+	GameSettings.set_bool("eye/seen_ordinary", true)
+	GameSettings.set_bool("eye/seen_skilled", true)
+	GameSettings.set_bool("eye/seen_exceptional", true)
+	GameSettings.set_bool("eye/seen_legendary", true)
+	var heir := world.player_npc()
+	var target: NPC = null
+	for npc: NPC in world.npcs.values():
+		if npc != heir and npc.visible and not CourtSystem.is_kin(st, npc.character) and npc.character.age >= 16:
+			target = npc
+			break
+	check(target != null and heir != null, "found the heir and a villager")
+	if target == null or heir == null:
+		world.queue_free()
+		return
+	var c := target.character
+	check(not c.met and not c.appraised, "a stranger at first")
+	check(not Discovery.can_use_eye(st, c)["ok"], "the Eye needs a first meeting")
+	world.request_talk(c.id)
+	world.set_speed(2)
+	var opened := false
+	world.conversation_started.connect(func(_id: int, _r: Dictionary) -> void: opened = true)
+	for i in 600:
+		world._process(0.1)
+		if opened or world.talking_to == c.id:
+			break
+	check(world.talking_to == c.id, "the heir walks over and they talk")
+	check(c.met, "they've met")
+	check(heir.global_position.distance_to(target.global_position) <= VillageWorld.TALK_RANGE * 1.6, "the heir stands with them")
+	check(world.ui.is_conversation_open(), "the conversation shows")
+	world.use_eye(c.id)
+	check(world.is_revealing(), "the Eye's reveal plays")
+	check(not world.ui.is_conversation_open(), "the conversation closes for the reveal")
+	check(world.paused, "the world holds still during the reveal")
+	await frames(2)
+	world._reveal._skipping = true
+	for i in 30:
+		await frames(1)
+		if world._reveal.done:
+			break
+	check(world._reveal.done, "a seen reveal can be skipped to the card")
+	check(c.appraised, "they're appraised")
+	world._reveal._finish("close")
+	await frames(1)
+	check(not world.is_revealing(), "the reveal closes")
+	check(not world.paused, "time runs again")
 	world.queue_free()
 	await frames(2)

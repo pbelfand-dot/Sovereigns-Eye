@@ -188,6 +188,10 @@ func _refresh_live() -> void:
 
 func _refresh_banner() -> void:
 	var c := character
+	# Nothing marks a gifted person until the Sovereign's Eye has seen them.
+	_banner.visible = c.appraised
+	if not c.appraised:
+		return
 	var best := c.best_attribute()
 	var p := c.get_potential(best)
 	var color := Appraisal.rank_color(p)
@@ -219,6 +223,9 @@ func _section(box: VBoxContainer, title: String) -> void:
 
 func _build_appraisal() -> void:
 	_clear(_appraisal_box)
+	if not character.appraised:
+		_build_unseen()
+		return
 	var report := Appraisal.appraise(character)
 	var hint := UITheme.label("Current ability / maximum potential", 13, UITheme.TEXT_DIM)
 	_appraisal_box.add_child(hint)
@@ -246,6 +253,11 @@ func _build_appraisal() -> void:
 	var summary := UITheme.label("Untapped potential: %d points across all attributes." % untapped, 14, UITheme.TEXT_DIM)
 	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_appraisal_box.add_child(summary)
+	if not world.state.is_player(character):
+		var again := UITheme.button("Look again with the Sovereign's Eye", func() -> void: world.use_eye(character.id))
+		again.tooltip_text = "A quick look at their card"
+		again.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_appraisal_box.add_child(again)
 	var legend := HFlowContainer.new()
 	legend.add_theme_constant_override("h_separation", 4)
 	for r: Dictionary in GameData.ranks():
@@ -253,6 +265,41 @@ func _build_appraisal() -> void:
 		badge.tooltip_text = "%s: %d+ (%s)" % [r["id"], int(r["min"]), r["title"]]
 		legend.add_child(badge)
 	_appraisal_box.add_child(legend)
+
+
+## Before the Eye: only what anyone could see, and the way to learn more.
+func _build_unseen() -> void:
+	var c := character
+	var st := world.state
+	_section(_appraisal_box, "Unseen")
+	if not c.met:
+		_appraisal_box.add_child(_wrap_label("You haven't spoken with %s yet. Walk over and talk: listen to what they say, and watch how they say it. Then you may look at them with the Sovereign's Eye." % c.first_name, 15, UITheme.TEXT))
+		var go := UITheme.button("Go and talk to %s" % c.first_name, func() -> void: world.request_talk(c.id))
+		go.tooltip_text = "Your heir walks over and speaks with them"
+		go.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_appraisal_box.add_child(go)
+	else:
+		_appraisal_box.add_child(_wrap_label("You have spoken with %s. Use the Sovereign's Eye to see what they could become." % c.first_name, 15, UITheme.TEXT))
+		var eye := UITheme.button("Use the Sovereign's Eye", func() -> void: world.use_eye(c.id))
+		eye.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_appraisal_box.add_child(eye)
+	var rumors: Array[String] = []
+	for h in c.history:
+		if str(h["category"]) == "rumor":
+			rumors.append(str(h["text"]))
+	if not rumors.is_empty():
+		_section(_appraisal_box, "What people say")
+		for r in rumors:
+			_appraisal_box.add_child(_wrap_label("\"%s\"" % r, 14, UITheme.TEXT_DIM))
+	if st.house and not c.met and st.is_player(c) == false:
+		_appraisal_box.add_child(_wrap_label("Tip: select your heir and right-click the ground to walk them anywhere.", 13, UITheme.TEXT_DIM))
+
+
+## Opens a tab by name ("appraisal", "court", "personality", ...).
+func show_tab(tab_name: String) -> void:
+	for i in _tabs.get_tab_count():
+		if _tabs.get_tab_title(i).to_lower() == tab_name.to_lower():
+			_tabs.current_tab = i
 
 
 # --- Court tab (Phase 2) ----------------------------------------------------------------------
@@ -282,8 +329,7 @@ func _build_court() -> void:
 	row.add_child(op_box)
 	var talk := CourtSystem.can_talk(st, c)
 	var tb := UITheme.button("Talk", _on_talk)
-	tb.disabled = not talk["ok"]
-	tb.tooltip_text = str(talk["reason"]) if not talk["ok"] else "Spend some time with them: raises their opinion of you.\nOnce a day. Your Politics makes you better company."
+	tb.tooltip_text = "Your heir walks over and talks with them. Once a day it raises their opinion of you\n(your Politics makes you better company). " + ("" if talk["ok"] else str(talk["reason"]))
 	row.add_child(tb)
 	var gift := CourtSystem.can_gift(st, c)
 	var gb := UITheme.button("Gift (%d gold)" % CourtSystem.gift_cost(c), _on_gift)
@@ -425,7 +471,10 @@ func _focus_picker(c: CharacterData) -> OptionButton:
 	opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var current := CourtSystem.focus_of(c)
 	for a: String in CourtSystem.TRAINABLE:
-		opt.add_item("%s  %d / %d  (%s)" % [CourtSystem.attr_name(a), c.get_current(a), c.get_potential(a), Appraisal.rank_id(c.get_potential(a))])
+		if c.appraised:
+			opt.add_item("%s  %d / %d  (%s)" % [CourtSystem.attr_name(a), c.get_current(a), c.get_potential(a), Appraisal.rank_id(c.get_potential(a))])
+		else:
+			opt.add_item("%s  %d / ?" % [CourtSystem.attr_name(a), c.get_current(a)])
 		if a == current:
 			opt.selected = opt.item_count - 1
 	opt.tooltip_text = "Which talent to develop each day. Growth slows as they near their potential."
@@ -440,7 +489,7 @@ func _training_lines(c: CharacterData) -> void:
 		return
 	for a: String in rates:
 		var line := HBoxContainer.new()
-		var text := "   %s  %d / %d" % [CourtSystem.attr_name(a), c.get_current(a), c.get_potential(a)]
+		var text := "   %s  %d / %s" % [CourtSystem.attr_name(a), c.get_current(a), str(c.get_potential(a)) if c.appraised else "?"]
 		var m := CourtSystem.mentor_for(st, c, a)
 		if m["mentor"]:
 			text += "  (mentored by %s)" % (m["mentor"] as CharacterData).first_name
@@ -512,7 +561,7 @@ func _after_action(result: Dictionary, good: bool = true) -> void:
 
 
 func _on_talk() -> void:
-	_after_action(CourtSystem.talk(world.state, character, _day_rng("talk")))
+	world.request_talk(character.id)
 
 
 func _on_gift() -> void:
@@ -592,7 +641,7 @@ func _build_personality() -> void:
 	_meter("Loyalty", c.loyalty, MoodSystem.loyalty_label(c.loyalty), Color("#6fa8e6"))
 	_meter("Stress", c.stress, MoodSystem.stress_label(c.stress), Color("#e07a6a"))
 	var amb := c.get_current("ambition")
-	_meter("Ambition", minf(amb, 100.0), "%s (ceiling %d)" % [MoodSystem.ambition_label(amb), c.get_potential("ambition")], Color("#e9bf62"))
+	_meter("Ambition", minf(amb, 100.0), "%s (ceiling %d)" % [MoodSystem.ambition_label(amb), c.get_potential("ambition")] if c.appraised else MoodSystem.ambition_label(amb), Color("#e9bf62"))
 
 	_section(_personality_box, "Why they feel this way")
 	_factor_list("Happiness", MoodSystem.happiness_factors(c, world.state), MoodSystem.happiness_target(c, world.state))

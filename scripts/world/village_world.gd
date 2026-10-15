@@ -15,6 +15,12 @@ signal territory_changed
 signal placing_changed(type: String)
 ## A building (or building site) was clicked; -1 = none.
 signal building_selected(building_id: int)
+## The heir reached someone and they talk: {lines, first, opinion}.
+signal conversation_started(character_id: int, result: Dictionary)
+signal conversation_ended
+
+## How close the heir must be to speak with someone (meters).
+const TALK_RANGE := 2.6
 
 ## In-game minutes per real second at 1x speed (1 hour = 40 s, 1 day = 16 min).
 const GAME_MINUTES_PER_SECOND := 1.5
@@ -43,6 +49,10 @@ var _npc_root: Node3D
 ## quarter-turns away from facing the road.
 var placing_type := ""
 var selected_building := -1
+## Who the heir is speaking with (-1 = no one) / walking over to.
+var talking_to := -1
+var _pending_talk := -1
+var _reveal: EyeReveal
 var _over_building := false
 var _hand_cursor := false
 var _selection_frame: Node3D
@@ -81,6 +91,7 @@ func _ready() -> void:
 	add_child(camera_rig)
 	camera_rig.look_at_point(state.layout.square_center + Vector3(0, 0, 6), 62.0, true)
 	camera_rig.clicked.connect(_on_clicked)
+	camera_rig.right_clicked.connect(_on_right_clicked)
 
 	ui = GameUI.new()
 	ui.name = "UI"
@@ -179,10 +190,10 @@ func _process(delta: float) -> void:
 		npc.brain.update(game_minutes)
 		npc.tick(delta, scale_now)
 	sky.set_time(state.minutes)
-	if placing_type.is_empty():
-		_update_hover()
-	else:
+	if not placing_type.is_empty():
 		_update_ghost()
+	elif not is_revealing():
+		_update_hover()
 
 
 func _check_new_day() -> void:
@@ -515,7 +526,23 @@ func _update_hover() -> void:
 		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if hand else Input.CURSOR_ARROW)
 
 
+## Right click with the heir selected: walk there.
+func _on_right_clicked(screen_pos: Vector2) -> void:
+	if is_placing() or selected == null or not state.is_player(selected.character):
+		return
+	var g: Variant = camera_rig.ground_point(screen_pos)
+	if g == null:
+		return
+	if talking_to >= 0 or _pending_talk >= 0:
+		end_conversation()
+	selected.brain.set_errand({"type": "walk", "pos": g, "minutes": 90.0})
+	Audio.play("ui_tick")
+	Game.notify.emit("%s walks over there." % selected.character.first_name, Game.COLOR_INFO)
+
+
 func _on_clicked(screen_pos: Vector2) -> void:
+	if is_revealing():
+		return
 	if is_placing():
 		confirm_placement()
 		return
@@ -617,7 +644,6 @@ func select_character(character_id: int, focus_camera: bool = false) -> void:
 	selected = npc_of(character_id)
 	if selected:
 		selected.set_selected(true)
-	appraise(c)
 	if focus_camera:
 		focus_on(character_id)
 	selection_changed.emit(c)
@@ -649,18 +675,126 @@ func focus_on(character_id: int) -> void:
 		camera_rig.look_at_point(b.position if b else npc.global_position, 32.0)
 
 
-## Uses the Appraisal skill on a character. The first appraisal of someone
-## exceptional is announced: that discovery is the heart of the game.
-func appraise(c: CharacterData) -> void:
-	if c.appraised:
+# --- Meeting people & the Sovereign's Eye ----------------------------------------------------
+
+func player_npc() -> NPC:
+	return npc_of(state.player_id)
+
+
+## Sends the heir to speak with someone. They walk over; the conversation
+## opens when they arrive (at once if they're already standing together).
+func request_talk(character_id: int) -> void:
+	var c := state.get_character(character_id)
+	var heir := player_npc()
+	var target := npc_of(character_id)
+	if c == null or heir == null or target == null or state.is_player(c):
 		return
-	c.appraised = true
-	Audio.play("talent_found" if Appraisal.is_exceptional(c) else "appraise")
-	if Appraisal.is_exceptional(c):
+	if talking_to >= 0:
+		end_conversation()
+	_pending_talk = character_id
+	heir.brain.set_errand({"type": "talk", "target": character_id})
+	var near := heir.visible and target.visible and heir.global_position.distance_to(target.global_position) <= TALK_RANGE * 1.5
+	if near:
+		heir_arrived(character_id)
+		return
+	Game.notify.emit("%s sets off to speak with %s.%s" % [heir.character.first_name, c.first_name, "  (Unpause to let them walk.)" if time_scale() <= 0.0 else ""], Game.COLOR_INFO)
+	camera_rig.follow_target = heir
+
+
+## The heir reached the person: both stop and the conversation opens.
+func heir_arrived(character_id: int) -> void:
+	if _pending_talk != character_id:
+		return
+	_pending_talk = -1
+	var heir := player_npc()
+	var target := npc_of(character_id)
+	if heir == null or target == null:
+		return
+	if target.character.inside_building_id >= 0:
+		target.brain._leave_building()
+	heir.brain.set_errand({"type": "hold", "face": target.global_position})
+	target.brain.set_errand({"type": "hold", "face": heir.global_position})
+	talking_to = character_id
+	camera_rig.follow_target = null
+	camera_rig.look_at_point((heir.global_position + target.global_position) * 0.5, minf(camera_rig.view_distance(), 18.0))
+	var result := Discovery.meet(state, target.character)
+	Audio.play("card_open")
+	conversation_started.emit(character_id, result)
+	court_changed(character_id)
+
+
+## Ends the conversation; both go back to their day.
+func end_conversation() -> void:
+	if _pending_talk >= 0:
+		var heir := player_npc()
+		if heir:
+			heir.brain.set_errand({})
+		_pending_talk = -1
+	if talking_to < 0:
+		return
+	var target := npc_of(talking_to)
+	if target:
+		target.brain.set_errand({})
+	var heir2 := player_npc()
+	if heir2:
+		heir2.brain.set_errand({})
+	talking_to = -1
+	conversation_ended.emit()
+
+
+func is_revealing() -> bool:
+	return _reveal != null and is_instance_valid(_reveal)
+
+
+## Looks at someone with the Sovereign's Eye: the full reveal the first
+## time, a quick card after that.
+func use_eye(character_id: int) -> void:
+	var c := state.get_character(character_id)
+	if c == null or is_revealing():
+		return
+	var check := Discovery.can_use_eye(state, c)
+	if not check["ok"]:
+		Audio.play("ui_error")
+		Game.notify.emit(str(check["reason"]), Game.COLOR_BAD)
+		return
+	if talking_to >= 0:
+		end_conversation()
+	var first := not c.appraised
+	_reveal = EyeReveal.new()
+	add_child(_reveal)
+	_reveal.finished.connect(_on_reveal_finished.bind(c.id, first))
+	_reveal.play(self, c, not first)
+	appraise(c)
+
+
+func _on_reveal_finished(action: String, character_id: int, first: bool) -> void:
+	_reveal = null
+	var c := state.get_character(character_id)
+	if c == null:
+		return
+	if first and Appraisal.is_exceptional(c):
 		var best := c.best_attribute()
 		var p := c.get_potential(best)
 		Game.notify.emit("Exceptional talent discovered! %s - %s %s (%d)" % [
 			c.full_name(), GameData.attribute_def(best).get("name", best), Appraisal.rank_id(p), p], Game.COLOR_TALENT)
+	match action:
+		"recruit", "appoint":
+			select_character(character_id)
+			ui.show_card_tab("court")
+		"follow":
+			select_character(character_id, true)
+		"card":
+			select_character(character_id)
+	if ui:
+		ui.refresh()
+
+
+## Marks a person appraised (their gifts are now known to the player).
+func appraise(c: CharacterData) -> void:
+	if c.appraised:
+		return
+	c.appraised = true
+	c.met = true
 
 
 func appraised_count() -> int:
@@ -698,6 +832,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("debug_reveal_all"):
 		for c in state.characters:
 			c.appraised = true
+			c.met = true
 		Game.notify.emit("Debug: every villager appraised.", Game.COLOR_INFO)
 		ui.refresh()
 	else:

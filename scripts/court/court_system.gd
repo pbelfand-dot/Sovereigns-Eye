@@ -65,11 +65,20 @@ static func initialize(state: WorldState) -> void:
 	var rng := Seeds.rng(state.world_seed, "court")
 	for c in state.characters:
 		c.player_opinion = roll_opinion(state, c, rng)
+	initialize_meetings(state)
 	var p := state.player()
 	if p:
 		p.player_opinion = 100.0
 		p.appraised = true  # you know yourself
 	state.house.log_event(state.day(), "%s takes up the running of %s's household." % [p.full_name() if p else "The heir", house_name(state)], "house")
+
+
+## The heir has always known their own family (they still need the Eye to
+## see their gifts). Safe to call again on loaded games.
+static func initialize_meetings(state: WorldState) -> void:
+	for c in state.characters:
+		if c.family_id == state.ruling_family_id or state.is_player(c):
+			c.met = true
 
 
 ## Someone's starting opinion of the player (-100..100): a roll, kinship,
@@ -265,7 +274,7 @@ static func recruit_check(state: WorldState, c: CharacterData) -> Dictionary:
 	if absf(loyal) >= 0.01:
 		factors.append({"label": "Loyalty to %s" % house_name(state), "value": loyal})
 	if MoodSystem.wasted_talent_penalty(c) < 0.0:
-		factors.append({"label": "Feels their talents are wasted", "value": float(cfg.get("overlooked_bonus", 0.18))})
+		factors.append({"label": "Feels their talents are wasted" if c.appraised else "Restless in their work", "value": float(cfg.get("overlooked_bonus", 0.18))})
 	var mods: Dictionary = cfg.get("traits", {})
 	for t in c.traits:
 		if mods.has(t):

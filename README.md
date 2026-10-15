@@ -63,8 +63,8 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 1-2 | Launch & start a new game | Main menu → **New Game** → leave the seed blank (random) or type one → **Begin** |
 | 3 | Explore the village | Drag with the mouse, WASD, pinch/scroll to zoom, Q/E to rotate |
 | 4 | NPCs walking around | Speed up time with **2**, **3**, **4**: people go to work, the tavern, the chapel and home to bed |
-| 5-7 | Click an NPC → character card | Left-click anyone. That **appraises** them and opens their card |
-| 8 | Find exceptional talent | Press **L** for the Village Ledger, sort by *Greatest talent*. Read *History* tabs for "Rumor has it…" clues |
+| 5-7 | Meet people | Click anyone to open their card. It shows only what anyone could see. Choose **Go and talk** (or **Talk**): your heir walks over and you hear what they have to say |
+| 8 | Use the Sovereign's Eye | After a first talk, **Use the Sovereign's Eye**. The reveal grows grander the rarer the person (Ordinary → Skilled → Exceptional → Legendary). Talk and gossip are clues, never proof. See [docs/ROADMAP.md](docs/ROADMAP.md) |
 | 9 | Happiness, loyalty, personality | Card → **Personality** tab, including *why* they feel that way |
 | 10 | Build your household | Card → **Court**: talk, give gifts, and recruit willing villagers. Children aged 10–15 can join as pages with a parent's approval |
 | 11 | Develop retainers | Choose a training focus, appoint a Steward, Marshal, Chancellor, or Court Scholar, and knight proven servants |
@@ -134,7 +134,8 @@ new floors rise inside scaffolding.
 
 | Action | Mouse / trackpad | Keys |
 |---|---|---|
-| Select & appraise | Left-click a villager | — |
+| Select a villager (their card) | Left-click | — |
+| Walk your heir somewhere | Select your heir, then right-click the ground | — |
 | Pan | Left-drag or right-drag · two-finger scroll | WASD / arrows (Shift = fast) |
 | Zoom | Scroll wheel · pinch | R / F, + / − |
 | Rotate | Middle-drag · Option + left-drag | Q / E |

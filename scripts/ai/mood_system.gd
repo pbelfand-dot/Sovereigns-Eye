@@ -47,7 +47,8 @@ static func happiness_factors(c: CharacterData, world: WorldState) -> Array[Dict
 		out.append({"label": "Rivals (%d)" % rivals, "value": -3.0 * rivals})
 	var wasted := wasted_talent_penalty(c)
 	if wasted < 0.0:
-		out.append({"label": "Talents go unused", "value": wasted})
+		# Before the Eye, all anyone can see is restlessness.
+		out.append({"label": "Talents go unused" if c.appraised else "Restless in their work", "value": wasted})
 	if c.stress > 60.0:
 		out.append({"label": "Overworked", "value": -(c.stress - 60.0) / 3.0})
 	if world != null and c.home_building_id >= 0:

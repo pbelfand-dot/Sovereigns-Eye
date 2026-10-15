@@ -68,6 +68,7 @@ static func load_state(slot: String) -> WorldState:
 	CourtSystem.initialize(state)
 	# Saves from before Phase 3 have no stores yet.
 	TerritorySystem.initialize(state)
+	CourtSystem.initialize_meetings(state)
 	return state
 
 
@@ -91,6 +92,12 @@ static func migrate(data: Dictionary) -> Dictionary:
 		# v4 (Phase 3 step 2) adds home levels and the settler bar. Missing
 		# fields default to a first-level home and an empty bar.
 		data["save_version"] = 4
+		version = 4
+	if version == 4:
+		# v5 (the Sovereign's Eye) adds "met" and "remembered" on characters.
+		# Anyone already appraised counts as met (CharacterData.from_dict);
+		# the ruling family knows each other (CourtSystem.initialize_meetings).
+		data["save_version"] = 5
 	return data
 
 

@@ -39,8 +39,12 @@ var history: Array[Dictionary] = []
 ## references a mesh, so any future art pipeline can interpret it.
 var appearance: Dictionary = {}
 
-## True once the player has used Appraisal on this person.
+## True once the player has used the Sovereign's Eye on this person.
 var appraised: bool = false
+## True once the heir has spoken with them (the Eye needs a first meeting).
+var met: bool = false
+## Pinned by the player after a reveal ("Remember"), for the ledger.
+var remembered: bool = false
 
 # --- Court (Phase 2) ---------------------------------------------------------
 ## Sworn to the player's house.
@@ -257,6 +261,8 @@ func to_dict() -> Dictionary:
 		"history": history.duplicate(true),
 		"appearance": appearance.duplicate(true),
 		"appraised": appraised,
+		"met": met,
+		"remembered": remembered,
 		"position": [snappedf(position.x, 0.01), snappedf(position.y, 0.01), snappedf(position.z, 0.01)],
 		"facing": snappedf(facing, 0.001),
 		"inside": inside_building_id,
@@ -311,6 +317,8 @@ static func from_dict(d: Dictionary) -> CharacterData:
 		c.history.append({"year": int(h["year"]), "season": str(h.get("season", "")), "category": str(h["category"]), "text": str(h["text"])})
 	c.appearance = _clean_appearance(d.get("appearance", {}))
 	c.appraised = bool(d.get("appraised", false))
+	c.met = bool(d.get("met", c.appraised))
+	c.remembered = bool(d.get("remembered", false))
 	var p: Array = d.get("position", [0, 0, 0])
 	c.position = Vector3(float(p[0]), float(p[1]), float(p[2]))
 	c.facing = float(d.get("facing", 0.0))

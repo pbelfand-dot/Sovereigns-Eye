@@ -8,9 +8,11 @@ extends Node3D
 ## Keyboard:  WASD / arrows = pan | Q/E = rotate | R/F or +/- = zoom |
 ##            Shift = faster
 ##
-## A plain left click (no drag) emits `clicked` so the world can select NPCs.
+## A plain left click (no drag) emits `clicked` so the world can select NPCs;
+## a plain right click emits `right_clicked` (orders, e.g. "walk here").
 
 signal clicked(screen_position: Vector2)
+signal right_clicked(screen_position: Vector2)
 
 @export var min_distance := 9.0
 @export var max_distance := 150.0
@@ -32,6 +34,8 @@ var _distance := 70.0
 
 var _left_down := false
 var _left_press_pos := Vector2.ZERO
+var _right_press_pos := Vector2.ZERO
+var _right_dragged := false
 var _drag_mode := ""  # "", "pan", "rotate"
 var _last_mouse := Vector2.ZERO
 const DRAG_THRESHOLD := 6.0
@@ -186,6 +190,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			MOUSE_BUTTON_RIGHT:
 				_drag_mode = "pan" if mb.pressed else ""
 				_last_mouse = mb.position
+				if mb.pressed:
+					_right_press_pos = mb.position
+					_right_dragged = false
+				elif not _right_dragged and mb.position.distance_to(_right_press_pos) <= DRAG_THRESHOLD:
+					right_clicked.emit(mb.position)
 			MOUSE_BUTTON_MIDDLE:
 				_drag_mode = "rotate" if mb.pressed else ""
 				_last_mouse = mb.position
@@ -193,6 +202,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mm := event as InputEventMouseMotion
 		if _left_down and _drag_mode.is_empty() and mm.position.distance_to(_left_press_pos) > DRAG_THRESHOLD:
 			_drag_mode = "rotate" if mm.alt_pressed else "pan"
+		if _drag_mode == "pan" and mm.position.distance_to(_right_press_pos) > DRAG_THRESHOLD:
+			_right_dragged = true
 		match _drag_mode:
 			"pan":
 				_pan_drag(_last_mouse, mm.position)

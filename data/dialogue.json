@@ -1,0 +1,90 @@
+{
+  "_comment": "What villagers say when the heir comes to talk. Lines never name ranks or numbers. Each person talks about something that interests them; the stronger their gift, the more often their talk turns to it and the more striking it sounds, but boasting and modesty bend that (a braggart oversells, a humble or shy person undersells), so a talk is a clue, never proof. {lord} = my lord / my lady.",
+
+  "intensity": {
+    "_comment": "score = potential + noise + trait bias; striking >= striking, keen >= keen, else mild.",
+    "noise": 26,
+    "keen": 68,
+    "striking": 100,
+    "traits": { "arrogant": 40, "ambitious": 20, "deceitful": 20, "gregarious": 8, "humble": -26, "shy": -22, "content": -10 }
+  },
+  "topic_weight_power": 3.0,
+
+  "greetings": {
+    "noble":    ["{lord}. You honour me.", "Cousin. What brings you out of the hall?"],
+    "knight":   ["{lord}. At your service, as ever.", "{lord}! Here to see how the garrison fares?"],
+    "retainer": ["{lord}. How may I serve?", "Good day, {lord}."],
+    "clergy":   ["Peace be with you, {lord}.", "Welcome, child of the manor."],
+    "burgher":  ["{lord}! Come to see an honest trade at work?", "Good day, {lord}. Trade is steady, thank the saints."],
+    "commoner": ["Good day to you, {lord}.", "{lord}! I didn't expect to see you down here."],
+    "peasant":  ["Good day, {lord}.", "{lord}. Mind the mud, it's been a wet week."],
+    "child":    ["Are you really from the manor?", "Hello! Is that a real ring?"],
+    "elder":    ["Ah, the young {title}. I remember your grandfather at your age.", "Sit a while, {lord}. My knees won't let me stand long."]
+  },
+
+  "topics": {
+    "leadership": [
+      ["I keep the lads in line when the work gets heavy.", "The young ones listen to me, mostly."],
+      ["When the barn caught fire last spring, folk looked to me to tell them what to do.", "Somehow I'm always the one who ends up organising the harvest crews."],
+      ["People just... follow, when I start something. I've never understood why.", "Give me twenty men and a reason, and I'd hold the ford against anyone."]
+    ],
+    "combat": [
+      ["I can hold my own at the harvest wrestling.", "I like the sound of a good axe on wood."],
+      ["The old soldiers say I've a quick eye with a stick.", "I beat the smith's boy at quarterstaff three summers running."],
+      ["I've never lost a bout. Not once.", "Bandits came through the woods last winter. They didn't come back."]
+    ],
+    "intelligence": [
+      ["I like to know how things work.", "I've been watching the miller fix his gears."],
+      ["I taught myself my letters from the chapel's old books.", "The priest says I ask too many questions."],
+      ["Why does the river run faster after a storm? I've been working it out on the barn wall.", "I read the herbalist's book twice. Then I found three mistakes in it."]
+    ],
+    "politics": [
+      ["I hear all the gossip at the well.", "Everyone tells me their troubles, for some reason."],
+      ["Both families came to me to settle the quarrel over the fence.", "The merchant gave me a better price than he gives anyone. I asked nicely."],
+      ["Give me an hour with the miller and he'd sell me the mill and thank me for it.", "I could tell you which of your father's men are loyal, and which only smile."]
+    ],
+    "administration": [
+      ["I keep a tally of what we owe.", "I like things counted and in their place."],
+      ["I know what every household in the lane has put by for winter.", "The steward asks me to check his sums, sometimes."],
+      ["Every debt in this village is in my head, to the penny.", "I could run the granary with half the waste. I've worked out how."]
+    ],
+    "ambition": [
+      ["I'd like a bigger plot one day.", "Maybe I'll have my own workshop, someday."],
+      ["I won't be hauling sacks forever.", "There's more to the world than this village, isn't there?"],
+      ["One day I'll stand in the king's own hall. You'll see.", "Mark me, {lord}: people will know my name."]
+    ]
+  },
+
+  "traits": {
+    "shy": "(They study their boots while they speak.)",
+    "gregarious": "(They laugh easily and ask after your family.)",
+    "cynical": "\"Folk from the manor only come down here when they want something.\"",
+    "cheerful": "(They can't stop smiling.)",
+    "melancholic": "(Their voice is quiet, and their eyes drift to the hills.)",
+    "arrogant": "(They look you over as if weighing your worth.)",
+    "humble": "\"But who am I to say, {lord}.\"",
+    "devout": "\"The saints keep us all.\"",
+    "brave": "(They meet your eyes without a flicker.)",
+    "craven": "(They flinch when a cart rattles past.)",
+    "curious": "\"Is it true the manor has a room full of books?\"",
+    "greedy": "(Their eyes linger on your rings.)",
+    "kind": "\"Is there anything we can do for you, {lord}?\"",
+    "lazy": "(They lean on the fence as though it's holding them up.)",
+    "diligent": "(They keep working with their hands as they talk.)",
+    "patient": "(They wait for you to finish every sentence.)",
+    "wrathful": "(Something in their voice is wound tight.)",
+    "ambitious": "(They watch you closely, as if this meeting matters.)",
+    "loyal": "\"Your family has been good to mine. I won't forget it.\""
+  },
+
+  "moods": {
+    "low": "\"Times are hard, {lord}. Harder than you'd know.\"",
+    "high": "\"It's a fine season, isn't it?\""
+  },
+
+  "again": [
+    "\"Back again, {lord}?\"",
+    "\"Good to see you again, {lord}.\"",
+    "\"{lord}! Twice in one season. People will talk.\""
+  ]
+}

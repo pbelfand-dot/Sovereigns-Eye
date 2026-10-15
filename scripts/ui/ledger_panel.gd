@@ -12,6 +12,7 @@ var _list: VBoxContainer
 var _summary: Label
 var _sort: OptionButton
 var _only_appraised: CheckBox
+var _only_remembered: CheckBox
 var _only_talent: CheckBox
 var _only_household: CheckBox
 
@@ -47,6 +48,11 @@ func _ready() -> void:
 	_only_appraised.text = "Appraised only"
 	_only_appraised.toggled.connect(func(_on: bool) -> void: refresh())
 	controls.add_child(_only_appraised)
+	_only_remembered = CheckBox.new()
+	_only_remembered.text = "Remembered"
+	_only_remembered.tooltip_text = "Only people you chose to remember after the Sovereign's Eye"
+	_only_remembered.toggled.connect(func(_on: bool) -> void: refresh())
+	controls.add_child(_only_remembered)
 	_only_talent = CheckBox.new()
 	_only_talent.text = "Talents (A+)"
 	_only_talent.toggled.connect(func(_on: bool) -> void: refresh())
@@ -100,6 +106,8 @@ func refresh() -> void:
 			exceptional_found += 1
 		if _only_appraised.button_pressed and not c.appraised:
 			continue
+		if _only_remembered.button_pressed and not c.remembered:
+			continue
 		if _only_talent.button_pressed and not (c.appraised and Appraisal.is_notable(c)):
 			continue
 		if _only_household.button_pressed and not c.retainer:
@@ -139,8 +147,8 @@ func _make_row(c: CharacterData) -> Button:
 	b.custom_minimum_size.y = 30
 	b.pressed.connect(func() -> void: character_chosen.emit(c.id))
 	var role := CourtSystem.role_name(world.state, c) if world.state.house else c.occupation_name()
-	var row := _row_layout(c.display_name(), str(c.age), role, "")
-	if c.retainer or world.state.is_player(c):
+	var row := _row_layout(("• " if c.remembered else "") + c.display_name(), str(c.age), role, "")
+	if c.retainer or world.state.is_player(c) or c.remembered:
 		(row.get_child(0) as Label).add_theme_color_override("font_color", UITheme.ACCENT)
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	row.offset_left = 8
@@ -165,5 +173,5 @@ func _make_row(c: CharacterData) -> Button:
 	else:
 		talent_cell.text = "  ?"
 		talent_cell.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-		b.tooltip_text = "Not yet appraised"
+		b.tooltip_text = "Not yet seen with the Sovereign's Eye" + ("" if c.met else " (talk to them first)")
 	return b

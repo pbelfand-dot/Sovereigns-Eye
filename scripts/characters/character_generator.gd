@@ -709,12 +709,22 @@ func _write_hidden_talent_hints(c: CharacterData) -> void:
 		"administration": "Somehow remembers every debt owed in the village",
 		"ambition": "Swears to one day see the royal capital",
 	}
+	var hinted := false
 	for attr_id: String in GameData.attribute_ids():
 		var potential := c.get_potential(attr_id)
 		if potential < Appraisal.exceptional_threshold():
 			continue
 		if c.get_current(attr_id) > potential * 0.45 or rng_story.randf() > 0.55:
 			continue
+		var text: String = hints[attr_id]
+		if text.contains("%s"):
+			text = text % _pronoun(c)
+		c.add_history(_event_year(c, rng_story.randi_range(mini(6, c.age), c.age)), _season(), "rumor", text)
+		hinted = true
+	# Gossip isn't proof: braggarts and dreamers get talked about too, so a
+	# rumor makes someone worth meeting, never certain.
+	if not hinted and c.age >= 8 and (c.has_trait("arrogant") or c.has_trait("ambitious") or c.has_trait("gregarious")) and rng_story.randf() < 0.3:
+		var attr_id := c.best_attribute()
 		var text: String = hints[attr_id]
 		if text.contains("%s"):
 			text = text % _pronoun(c)

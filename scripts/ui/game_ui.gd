@@ -18,6 +18,7 @@ var _ledger: LedgerPanel
 var _court: CourtPanel
 var _build: BuildPanel
 var _building_card: BuildingCard
+var _conversation: ConversationPanel
 var _stores_row: HBoxContainer
 var _stores_key := ""
 var _place_hint: PanelContainer
@@ -43,6 +44,7 @@ func setup(owner_world: VillageWorld) -> void:
 	_build_court()
 	_build_build_panel()
 	_build_building_card()
+	_build_conversation()
 	_build_stores_bar()
 	_build_place_hint()
 	_build_toasts()
@@ -54,12 +56,14 @@ func setup(owner_world: VillageWorld) -> void:
 	world.territory_changed.connect(_on_territory_changed)
 	world.placing_changed.connect(_on_placing_changed)
 	world.building_selected.connect(_on_building_selected)
+	world.conversation_started.connect(_on_conversation_started)
+	world.conversation_ended.connect(func() -> void: _conversation.visible = false)
 	_on_speed_changed(world.time_scale())
 	var p := world.state.player()
 	if p:
-		Game.notify.emit("You are %s, heir of %s. Appraise villagers to find hidden talent (gold crest = you)." % [p.full_name(), CourtSystem.house_name(world.state)], UITheme.TEXT)
+		Game.notify.emit("You are %s, heir of %s (gold crest). Walk among your people and talk to them; then use the Sovereign's Eye to see who they could become." % [p.full_name(), CourtSystem.house_name(world.state)], UITheme.TEXT)
 	else:
-		Game.notify.emit("Welcome to %s. Click any villager to appraise them." % world.state.village_name, UITheme.TEXT)
+		Game.notify.emit("Welcome to %s. Talk to villagers, then use the Sovereign's Eye on them." % world.state.village_name, UITheme.TEXT)
 
 
 # --- Top bar -------------------------------------------------------------------------
@@ -319,6 +323,38 @@ func refresh() -> void:
 
 # --- Building (Phase 3) -------------------------------------------------------------------
 
+func _build_conversation() -> void:
+	_conversation = ConversationPanel.new()
+	_conversation.anchor_left = 0.5
+	_conversation.anchor_right = 0.5
+	_conversation.anchor_top = 1.0
+	_conversation.anchor_bottom = 1.0
+	_conversation.offset_bottom = -16
+	_conversation.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_conversation.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_conversation.visible = false
+	_root.add_child(_conversation)
+	_conversation.farewell.connect(world.end_conversation)
+	_conversation.eye_requested.connect(world.use_eye)
+
+
+func _on_conversation_started(character_id: int, result: Dictionary) -> void:
+	var c := world.state.get_character(character_id)
+	if c:
+		_help.visible = false
+		_conversation.open(c, result, c.appraised)
+
+
+func is_conversation_open() -> bool:
+	return _conversation != null and _conversation.visible
+
+
+## Selects a tab of the character card (after an Eye reveal's choices).
+func show_card_tab(tab_name: String) -> void:
+	if _card.visible:
+		_card.show_tab(tab_name)
+
+
 func _build_building_card() -> void:
 	_building_card = BuildingCard.new()
 	_building_card.world = world
@@ -503,7 +539,8 @@ func _build_help() -> void:
 	_help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_help.add_theme_stylebox_override("panel", UITheme.box(Color("#1c1510d0"), UITheme.GOLD_DIM, 1, 6, 10))
 	var text := UITheme.label(
-		"Click a villager - appraise & open their card\n" +
+		"Click a villager - their card    Talk, then use the Sovereign's Eye\n" +
+		"Select your heir, right-click the ground - walk there\n" +
 		"Card > Court tab - talk, give gifts, recruit, appoint, train\n" +
 		"Drag (left/right mouse) or WASD - move camera\n" +
 		"Wheel / pinch / R,F - zoom    Q,E or middle-drag - rotate\n" +
@@ -553,6 +590,7 @@ func _build_pause_menu() -> void:
 	col.add_child(UITheme.button("Quit to Desktop", Game.quit_game))
 	col.add_child(HSeparator.new())
 	col.add_child(SoundSettings.new())
+	col.add_child(AccessibilitySettings.new())
 
 	_slots = SaveSlotDialog.new()
 	_slots.visible = false
@@ -616,6 +654,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_on_slots_cancelled()
 			else:
 				close_pause_menu()
+		elif _conversation.visible:
+			world.end_conversation()
 		elif _card.visible or _building_card.visible:
 			world.deselect()
 		elif _ledger.visible:
