@@ -388,7 +388,7 @@ static func evaluate(state: WorldState, c: CharacterData, offer: Dictionary) -> 
 		total += v
 	parts["ties"] = -float(w["ties"])
 	parts["risk"] = -float(w["risk"])
-	parts["trade"] = -float(rc.get("trade_cost", 0.45)) if is_craftsperson(c) and pos != "workplace" else 0.0
+	parts["trade"] = -trade_cost() if is_craftsperson(c) and pos != "workplace" else 0.0
 	total += parts["ties"] + parts["risk"] + parts["trade"]
 	var rep := ((state.house.standing if state.house else 50.0) - 50.0) / 50.0 * float(rc.get("reputation", {}).get("weight", 0.5))
 	parts["reputation"] = rep
@@ -398,7 +398,7 @@ static func evaluate(state: WorldState, c: CharacterData, offer: Dictionary) -> 
 		"reasons": _reasons(state, c, offer, w, sat, parts, accept), "insulted": total < float(rc.get("insult_below", 0.25))}
 
 
-static func rc_trade_cost() -> float:
+static func trade_cost() -> float:
 	return float(cfg().get("trade_cost", 0.45))
 
 
@@ -459,7 +459,7 @@ static func _reasons(state: WorldState, c: CharacterData, offer: Dictionary, w: 
 	if float(parts["trade"]) < 0.0:
 		add.call("trade_neg", false, -float(parts["trade"]))
 	elif is_craftsperson(c):
-		add.call("trade_pos", true, float(rc_trade_cost()))
+		add.call("trade_pos", true, trade_cost())
 	if float(w["ties"]) >= 0.25:
 		add.call("ties_neg", false, float(w["ties"]))
 	if float(w["risk"]) >= 0.2:
