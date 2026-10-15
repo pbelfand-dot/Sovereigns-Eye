@@ -269,7 +269,7 @@ func _talk_shots() -> void:
 	var target: NPC = null
 	for npc: NPC in world.npcs.values():
 		var c := npc.character
-		if npc != heir and not CourtSystem.is_kin(st, c) and c.age >= 18 and npc.inside_building_id < 0:
+		if npc != heir and not CourtSystem.is_kin(st, c) and c.age >= 18 and c.inside_building_id < 0 and npc.visible:
 			var d := heir.global_position.distance_to(npc.global_position)
 			if target == null or d < heir.global_position.distance_to(target.global_position):
 				target = npc
