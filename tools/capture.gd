@@ -291,16 +291,16 @@ func _talk_shots() -> void:
 	c.player_opinion = -30.0
 	world.try_talk(c.id)
 	var panel := world.ui.conversation_panel()
-	await _wait(10)
+	await _wait(3)
 	panel._on_ask()
 	panel.flush()
 	panel._on_make()
 	panel._set_wage(1)
-	await _wait(30)
+	await _wait(4)
 	await _shot("30_offer_terms.png")
 	panel._on_propose()
 	panel.flush()
-	await _wait(20)
+	await _wait(4)
 	await _shot("31_offer_refused.png")
 	c.player_opinion = 70.0
 	panel._set_wage(Recruitment.wage_need(c) + 1)
@@ -308,10 +308,10 @@ func _talk_shots() -> void:
 	if not c.retainer and not panel.counter.is_empty():
 		panel._on_agree()
 	panel.flush()
-	await _wait(20)
+	await _wait(4)
 	await _shot("32_offer_accepted.png")
 	panel._on_make()
-	await _wait(20)
+	await _wait(4)
 	await _shot("33_new_terms.png")
 
 
