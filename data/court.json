@@ -7,7 +7,9 @@
     "base_income": 14,
     "_income": "Gold per day from rents and dues before the Steward's bonus.",
     "retainer_cap_base": 4,
-    "renown_per_extra_retainer": 15
+    "renown_per_extra_retainer": 15,
+    "_over_cap": "Your renown supports a household of retainer_cap_base + renown / renown_per_extra_retainer (+ the charter's places). You may keep more: each retainer beyond that costs over_cap_upkeep gold a day.",
+    "over_cap_upkeep": 2
   },
 
   "player": {

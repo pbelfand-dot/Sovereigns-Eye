@@ -59,8 +59,6 @@ var player_opinion: float = 0.0
 var training_progress: Dictionary = {}
 ## Day index of the last conversation with the player (-1 = never).
 var last_talk_day: int = -1
-## Day index before which a refused offer can't be repeated.
-var recruit_retry_day: int = -1
 ## Status and workplace before joining the house (restored on dismissal).
 var former_status: String = ""
 var former_work: int = -1
@@ -285,7 +283,6 @@ func to_dict() -> Dictionary:
 		"player_opinion": snappedf(player_opinion, 0.01),
 		"training_progress": _snapped_progress(),
 		"last_talk_day": last_talk_day,
-		"recruit_retry_day": recruit_retry_day,
 		"former_status": former_status,
 		"former_work": former_work,
 		"joined_day": joined_day,
@@ -348,7 +345,6 @@ static func from_dict(d: Dictionary) -> CharacterData:
 	for k: String in progress:
 		c.training_progress[k] = float(progress[k])
 	c.last_talk_day = int(d.get("last_talk_day", -1))
-	c.recruit_retry_day = int(d.get("recruit_retry_day", -1))
 	c.former_status = str(d.get("former_status", ""))
 	c.former_work = int(d.get("former_work", -1))
 	c.joined_day = int(d.get("joined_day", -1))

@@ -8,10 +8,10 @@ playable build. Numbers and content live in `data/*.json`.
 | 1 | Village, people, Appraisal (current vs. hidden potential) | Done |
 | 2 | Noble society: the heir, retainers, offices, training, knighthood | Done |
 | Art | Kit buildings, meadow, outfits, nature, props, sound | Done |
-| 3.1 | Territory: stores, Build menu, construction sites, Master of Works | Done (on the preview build) |
-| 3.2 | Growth: settlers, homes that build and upgrade themselves | Done (on the preview build) |
+| 3.1 | Territory: stores, Build menu, construction sites, Master of Works | Done |
+| 3.2 | Growth: settlers, homes that build and upgrade themselves | Done |
 | **Eye** | **On foot: scan first, then talk and persuade** (below) | **In progress: gameplay video waiting for approval** |
-| 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done (on the preview build) |
+| 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done |
 | 4+ | Dynasties (ageing, marriage, children, succession), wider realm, military | Later |
 
 ## Charters (Phase 3.3)
@@ -124,6 +124,13 @@ every day; a home must be free (or promised: keep it within 6 days or lose
 trust, standing, and possibly the person); a job needs a workplace with
 room; offices must be vacant. **Answers are in plain words:** they accept,
 name their terms (a counteroffer you can agree to), or refuse and say why.
+**An offer can always be made**, since offers are what the conversation
+is for: a refusal never closes the door (improve the terms and propose
+again; only an insulting lowball costs a little opinion), a household
+larger than your renown supports only costs upkeep (2 gold a day per extra
+retainer), and your own retainers hear **new terms** (taken if they're no
+worse by their own motives, raising loyalty; worse terms are turned down).
+Only you, your own family and children under 10 can't be asked.
 
 Different people, different paths (each one is a test in
 `tests/test_recruitment.gd`):

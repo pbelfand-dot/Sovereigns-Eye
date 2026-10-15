@@ -36,6 +36,8 @@ var _propose: Button
 var _agree: Button
 var _ask: Button
 var _make: Button
+## Why no offer can be made (only for you, your family, small children).
+var _blocked: Label
 var _gift: Button
 var _eye: Button
 var _homes: Array[int] = []
@@ -73,6 +75,9 @@ func _ready() -> void:
 	_log.add_theme_constant_override("separation", 3)
 	_log.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_log)
+	# New lines are laid out after they're added: follow the scroll bar as
+	# it grows, so the newest line (their answer) is always in view.
+	_scroll.get_v_scroll_bar().changed.connect(_scroll_down)
 	var right := PanelContainer.new()
 	right.add_theme_stylebox_override("panel", UITheme.box(Color("#2a2018c0"), UITheme.GOLD_DIM, 1, 6, 8))
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -103,6 +108,10 @@ func _ready() -> void:
 			eye_requested.emit(character.id))
 	row.add_child(_eye)
 	row.add_child(UITheme.button("Farewell", farewell.emit))
+	_blocked = UITheme.label("", 14, UITheme.TEXT_DIM)
+	_blocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_blocked.visible = false
+	col.add_child(_blocked)
 
 
 func _build_offer_box() -> void:
@@ -167,7 +176,10 @@ func open(owner_world: VillageWorld, c: CharacterData, result: Dictionary) -> vo
 	world = owner_world
 	character = c
 	counter = {}
-	offer = {"wage": Recruitment.wage_need(Recruitment.decider(world.state, c)), "home": -1, "position": "household", "appeal": false}
+	if c.retainer:
+		offer = Recruitment.current_terms(world.state, c)
+	else:
+		offer = {"wage": Recruitment.wage_need(Recruitment.decider(world.state, c)), "home": -1, "position": "household", "appeal": false}
 	for child in _log.get_children():
 		_log.remove_child(child)
 		child.queue_free()
@@ -199,9 +211,14 @@ func refresh() -> void:
 	_gift.text = "Gift (%d gold)" % CourtSystem.gift_cost(c)
 	_gift.disabled = not gift["ok"]
 	_gift.tooltip_text = str(gift["reason"]) if not gift["ok"] else "A gift raises their opinion of you (more for the greedy)."
-	var can := Recruitment.eligible(st, c)
+	# An offer can always be made, except to yourself, your own family and
+	# small children; then the panel says why.
+	var can := Recruitment.can_offer(st, c)
 	_make.disabled = not can["ok"]
-	_make.tooltip_text = str(can["reason"]) if not can["ok"] else "Offer them a place in your house."
+	_make.text = "Offer new terms..." if c.retainer else "Make an offer..."
+	_make.tooltip_text = str(can["reason"]) if not can["ok"] else ("Change the terms they serve on: wage, home, place." if c.retainer else "Offer them a place in your house.")
+	_blocked.text = str(can["reason"])
+	_blocked.visible = not can["ok"]
 	if not can["ok"]:
 		_offer_box.visible = false
 	_refresh_known()
@@ -288,7 +305,8 @@ func _show_next() -> void:
 
 
 func _scroll_down() -> void:
-	_scroll.scroll_vertical = int(_scroll.get_v_scroll_bar().max_value)
+	var bar := _scroll.get_v_scroll_bar()
+	_scroll.scroll_vertical = int(bar.max_value - bar.page)
 
 
 ## Shows everything still waiting (clicking hurries the talk along).
@@ -373,12 +391,15 @@ func _refresh_offer() -> void:
 		var oid := str(o["id"])
 		var holder := st.get_character(st.house.holder_of(oid))
 		var why := ""
-		if holder:
+		if holder and holder != c:
 			why = "Held by %s." % holder.first_name
 		elif c.age < 16:
 			why = "Too young to hold an office (16+)."
 		_add_pos("Office: %s" % str(o["name"]), {"position": "office", "office": oid}, why)
 	var shops := Recruitment.open_workplaces(st)
+	var own := st.get_building(int(c.terms.get("workplace", -1))) if c.retainer else null
+	if own and not shops.has(own):
+		shops.insert(0, own)
 	for b in shops:
 		_add_pos("Workplace: %s" % b.name, {"position": "workplace", "workplace": b.id}, "")
 	if shops.is_empty():
@@ -405,11 +426,16 @@ func _refresh_offer() -> void:
 	_appeal.set_pressed_no_signal(bool(offer.get("appeal", false)))
 
 	var net := CourtSystem.daily_income(st) - CourtSystem.daily_wages(st)
-	_treasury.text = "Treasury %d gold, %+d a day now; %+d a day with this wage. Your word: %s." % [
-		st.house.gold, net, net - wage, Recruitment.standing_label(st.house.standing)]
+	var now_paid := CourtSystem.wage(c) if c.retainer else 0
+	var upkeep := 0 if c.retainer else CourtSystem.household_upkeep(st, 1) - CourtSystem.household_upkeep(st)
+	var after := net - (wage - now_paid) - upkeep
+	var text := "Treasury %d gold, %+d a day now; %+d a day with these terms." % [st.house.gold, net, after]
+	if upkeep > 0:
+		text += " Your household is beyond what your renown supports (%d): another place adds %d gold a day in upkeep." % [CourtSystem.retainer_cap(st), upkeep]
+	_treasury.text = text + " Your word: %s." % Recruitment.standing_label(st.house.standing)
 	var problem := Recruitment.offer_problem(st, c, offer)
 	_propose.disabled = not problem.is_empty()
-	_propose.tooltip_text = problem if not problem.is_empty() else "Make this offer. They'll answer yes, with their own terms, or no."
+	_propose.tooltip_text = problem if not problem.is_empty() else ("Offer these terms. Better terms raise their loyalty; worse ones they'll turn down." if c.retainer else "Make this offer. They'll answer yes, with their own terms, or no: you can always improve it and ask again.")
 
 
 func _add_home(text: String, id: int, disabled: bool, tip: String) -> void:
@@ -431,17 +457,19 @@ func _add_pos(text: String, fields: Dictionary, why: String) -> void:
 
 
 func _on_propose() -> void:
-	_answer(Recruitment.propose(world.state, character, offer))
+	var was_retainer := character.retainer
+	_answer(Recruitment.propose(world.state, character, offer), was_retainer)
 
 
 func _on_agree() -> void:
 	if counter.is_empty():
 		return
 	offer = counter.duplicate()
-	_answer(Recruitment.propose(world.state, character, offer))
+	var was_retainer := character.retainer
+	_answer(Recruitment.propose(world.state, character, offer), was_retainer)
 
 
-func _answer(r: Dictionary) -> void:
+func _answer(r: Dictionary, was_retainer: bool) -> void:
 	flush()
 	_say("You offer %s." % Recruitment.describe(world.state, offer), "you")
 	_say(str(r["text"]), "note" if r["result"] == "invalid" else "")
@@ -454,14 +482,18 @@ func _answer(r: Dictionary) -> void:
 		"accept":
 			Audio.play("court_good")
 			_offer_box.visible = false
-			Game.notify.emit("%s swears service to %s." % [character.full_name(), CourtSystem.house_name(world.state)], Game.COLOR_GOOD)
+			if was_retainer:
+				Game.notify.emit("%s now serves on new terms." % character.full_name(), Game.COLOR_GOOD)
+			else:
+				Game.notify.emit("%s swears service to %s." % [character.full_name(), CourtSystem.house_name(world.state)], Game.COLOR_GOOD)
 			world.recruited(character.id)
 		"counter":
 			Audio.play("ui_tick")
 			_agree.grab_focus.call_deferred()
 		"refuse":
+			# The door stays open: change the offer and propose again.
 			Audio.play("court_bad")
-			_offer_box.visible = false
+			_say("(Change your offer and propose again.)", "note")
 			world.court_changed(character.id)
 		_:
 			Audio.play("ui_error")

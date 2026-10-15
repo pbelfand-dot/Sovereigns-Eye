@@ -171,7 +171,6 @@ func test_parent_joins_for_a_family_home() -> void:
 	check(wage_only["result"] != "accept", "a wage alone isn't enough for a parent")
 	if wage_only["result"] == "counter":
 		check(int(wage_only["counter"].get("home", -1)) != -1, "their counteroffer asks for a home")
-	c.recruit_retry_day = -1
 	var r := Recruitment.propose(st, c, {"wage": 1, "home": home.id})
 	check_eq(r["result"], "accept", "a home and a modest wage win them over")
 	for p in family_before:
@@ -193,7 +192,6 @@ func test_prosperous_citizen_answers_duty_not_money() -> void:
 	var money := Recruitment.propose(st, c, {"wage": 8})
 	check(money["result"] != "accept", "money doesn't move them")
 	check(_texts(money["reasons"]).contains("respect, not coin"), "they want respect, not coin: " + _texts(money["reasons"]))
-	c.recruit_retry_day = -1
 	check(not Recruitment.evaluate(st, c, {"wage": 0, "appeal": true})["accept"], "fine words alone aren't enough")
 	var office := Recruitment.vacant_office_for(st, c)
 	check_eq(office, "steward", "the office that suits an administrator")
@@ -326,6 +324,32 @@ func test_asking_reveals_motives_strongest_first() -> void:
 	check_eq(done["motive"], "", "then there's nothing more to tell")
 
 
+## Someone who values fondness only says they'd follow you if they're fond
+## of you; wary, they say trust must be earned.
+func test_what_they_say_of_fondness_fits_how_they_feel() -> void:
+	var st := _world("recruit-bond-line")
+	var c := _find(st, 0)
+	if c == null:
+		check(false, "found someone")
+		return
+	var fond: Array = Recruitment.cfg()["ask_lines"]["bond"]
+	var wary: Array = Recruitment.cfg()["ask_lines"]["bond_wary"]
+	c.traits = ["loyal"] as Array[String]
+	for opinion: float in [-30.0, 60.0]:
+		c.player_opinion = opinion
+		c.known_motives.clear()
+		for id: String in Recruitment.ranked_motives(st, c):
+			if id != "bond":
+				c.known_motives.append(id)
+		var r := Recruitment.ask(st, c)
+		check_eq(r["motive"], "bond", "they speak of fondness")
+		var pool := wary if opinion < 0.0 else fond
+		var said := false
+		for line: String in pool:
+			said = said or Recruitment._fill(line, st) == str(r["line"])
+		check(said, "at opinion %d they say a fitting line: %s" % [roundi(opinion), r["line"]])
+
+
 func test_answers_are_plain_words_and_deterministic() -> void:
 	var st := _world("recruit-words")
 	var n := 0
@@ -343,17 +367,119 @@ func test_answers_are_plain_words_and_deterministic() -> void:
 	check(n > 10, "many people were asked")
 
 
-func test_refusal_makes_them_wait_before_asking_again() -> void:
-	var st := _world("recruit-retry")
+## Making an offer is what talking is for: a "no" never closes the door.
+func test_a_refusal_never_closes_the_door() -> void:
+	var st := _world("recruit-craft")
+	var c := _find(st, 2)
+	if c == null:
+		check(false, "found someone")
+		return
+	_shape(c, "commoner", "carpenter", ["diligent"], 0.0, "administration", 60, 92, 60)
+	var r := Recruitment.propose(st, c, {"wage": Recruitment.wage_need(c)})
+	check(r["result"] != "accept", "pay alone isn't enough for them")
+	check(Recruitment.can_offer(st, c)["ok"], "you can make another offer at once")
+	var home := _empty_cottage(st)
+	var shop: BuildingData = Recruitment.open_workplaces(st)[0]
+	var better := Recruitment.propose(st, c, {"wage": Recruitment.wage_need(c), "home": home.id, "position": "workplace", "workplace": shop.id})
+	check_eq(better["result"], "accept", "a better offer right after is accepted (%s)" % better["text"])
+
+
+func test_a_full_household_costs_upkeep_not_offers() -> void:
+	var st := _world("recruit-full")
+	var cap := CourtSystem.retainer_cap(st)
+	var taken: Array = []
+	for i in cap:
+		var p := _find(st, 0, taken)
+		taken.append(p)
+		Recruitment.accept(st, p, {"wage": 1})
+	check_eq(CourtSystem.household_upkeep(st), 0, "no upkeep while within what your renown supports")
+	var extra := _find(st, 0, taken)
+	check(Recruitment.can_offer(st, extra)["ok"], "a full household doesn't stop an offer")
+	var bill := CourtSystem.daily_wages(st)
+	_shape(extra, "peasant", "woodcutter", ["loyal", "kind"], 45.0, "combat", 30, 50)
+	extra.add_relationship(st.player_id, "friend", 60)
+	var r := Recruitment.propose(st, extra, {"wage": 1})
+	check_eq(r["result"], "accept", "they can join beyond the limit")
+	var upkeep := int(CourtSystem.section("house")["over_cap_upkeep"])
+	check_eq(CourtSystem.household_upkeep(st), upkeep, "one place beyond the limit costs upkeep")
+	check_eq(CourtSystem.daily_wages(st), bill + 1 + upkeep, "paid from the treasury with the wages")
+
+
+func test_retainers_hear_new_terms() -> void:
+	var st := _world("recruit-terms")
 	var c := _find(st, 0)
 	if c == null:
 		check(false, "found someone")
 		return
-	_shape(c, "burgher", "merchant", ["cynical"], -40.0, "politics", 40, 60)
-	var r := Recruitment.propose(st, c, {"wage": 0})
-	check_eq(r["result"], "refuse", "a cold offer is refused")
-	check(not Recruitment.eligible(st, c)["ok"], "they won't hear another offer at once")
-	check(Recruitment.propose(st, c, {"wage": 8})["result"] == "invalid", "even a better one")
+	_shape(c, "commoner", "herbalist", [], 20.0, "administration", 50, 80)
+	Recruitment.accept(st, c, {"wage": 2})
+	check(Recruitment.can_offer(st, c)["ok"], "you can always offer your own retainer new terms")
+	var now := Recruitment.current_terms(st, c)
+	check_eq(int(now["wage"]), 2, "their current terms are known")
+	var loyalty := c.loyalty
+	var raise := now.duplicate()
+	raise["wage"] = 5
+	var r := Recruitment.propose(st, c, raise)
+	check_eq(r["result"], "accept", "a raise is taken")
+	check_eq(CourtSystem.wage(c), 5, "and paid")
+	check(c.loyalty > loyalty, "it raises their loyalty (%d -> %d)" % [roundi(loyalty), roundi(c.loyalty)])
+	var cut := Recruitment.current_terms(st, c)
+	cut["wage"] = 0
+	loyalty = c.loyalty
+	var r2 := Recruitment.propose(st, c, cut)
+	check_eq(r2["result"], "refuse", "worse terms are turned down")
+	check_eq(CourtSystem.wage(c), 5, "and nothing changes")
+	check(c.loyalty < loyalty, "it stings a little")
+	var office := Recruitment.current_terms(st, c)
+	office["position"] = "office"
+	office["office"] = "steward"
+	var r3 := Recruitment.propose(st, c, office)
+	check_eq(r3["result"], "accept", "an office is welcome")
+	check_eq(st.house.holder_of("steward"), c.id, "they take it up")
+	check_eq(Recruitment.current_terms(st, c)["position"], "office", "and serve as steward now")
+	var same := Recruitment.current_terms(st, c)
+	same["wage"] = 6
+	check_eq(Recruitment.propose(st, c, same)["result"], "accept", "keeping their office with a raise is fine")
+	check_eq(st.house.holder_of("steward"), c.id, "they keep the office")
+	# Giving up an office for less is a step down they won't take.
+	var school := {"wage": 8, "home": -1, "position": "training", "focus": "administration", "appeal": false}
+	check_eq(Recruitment.propose(st, c, school)["result"], "refuse", "a steward won't give up the office for training")
+	check_eq(st.house.holder_of("steward"), c.id, "and stays steward")
+	# A politician made steward moves gladly to the chancellor's seat,
+	# leaving the steward's office free.
+	var d := _find(st, 0, [c])
+	if d == null:
+		check(false, "found a second retainer")
+		return
+	_shape(d, "commoner", "scribe", [], 20.0, "politics", 50, 80)
+	Recruitment.accept(st, d, {"wage": 2})
+	CourtSystem.vacate(st, "steward")
+	Recruitment.propose(st, d, {"wage": 2, "home": -1, "position": "office", "office": "steward", "appeal": false})
+	check_eq(st.house.holder_of("steward"), d.id, "they take the steward's office")
+	var seat := {"wage": 2, "home": -1, "position": "office", "office": "chancellor", "appeal": false}
+	check_eq(Recruitment.propose(st, d, seat)["result"], "accept", "the office that suits them is welcome")
+	check_eq(st.house.holder_of("chancellor"), d.id, "they're chancellor now")
+	check_eq(st.house.holder_of("steward"), -1, "and the steward's office is free again")
+	check_eq(Recruitment.current_terms(st, d)["office"], "chancellor", "their terms say so")
+
+
+func test_only_you_your_family_and_small_children_cant_be_asked() -> void:
+	var st := _world("recruit-who")
+	check(not Recruitment.can_offer(st, st.player())["ok"], "not yourself")
+	for c in st.characters:
+		if CourtSystem.is_kin(st, c) and not st.is_player(c):
+			check(str(Recruitment.can_offer(st, c)["reason"]).contains("family"), "not your own family: %s" % Recruitment.can_offer(st, c)["reason"])
+			break
+	for c in st.characters:
+		if c.age < 10 and not CourtSystem.is_kin(st, c):
+			check(not Recruitment.can_offer(st, c)["ok"], "not small children")
+			break
+	var asked := 0
+	for c in st.characters:
+		if c.age >= 10 and not CourtSystem.is_kin(st, c) and not st.is_player(c):
+			check(Recruitment.can_offer(st, c)["ok"], "%s can always be asked" % c.first_name)
+			asked += 1
+	check(asked > 20, "everyone else can be asked")
 
 
 func test_children_join_with_a_parent_deciding() -> void:

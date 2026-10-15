@@ -56,6 +56,9 @@ func refresh() -> void:
 	if h.in_debt:
 		_body.add_child(_wrap("Your coffers are empty and wages go unpaid. Loyalty is falling every day.", 14, UITheme.BAD))
 	_body.add_child(UITheme.label("Renown %d   -   Household %d / %d (more renown, more retainers)" % [h.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)], 15))
+	var upkeep := CourtSystem.household_upkeep(st)
+	if upkeep > 0:
+		_body.add_child(_wrap("Your household is larger than your renown supports: %d gold a day in upkeep (in the wages above)." % upkeep, 14, UITheme.TEXT_DIM))
 
 	_heading("Offices")
 	for o: Dictionary in CourtSystem.offices():
