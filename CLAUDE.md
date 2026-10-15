@@ -10,7 +10,8 @@ skill (current vs. hidden potential). Read `docs/ARCHITECTURE.md` first.
 - Screenshots (needs a display): `godot --path . res://tools/capture.tscn -- <seed> <out_dir>`
 - One test suite: `TEST_FILTER=recruitment tools/run_tests.sh`
 - Who'd join for what (tuning `data/recruitment.json`): `godot --headless --path . --script res://tools/recruit_report.gd -- <seed>`
-- Gameplay video (needs a display): `godot --path . --resolution 1280x720 --write-movie out.avi --fixed-fps 30 res://tools/gameplay_demo.tscn -- <seed>`
+- Gameplay video (needs a display): `godot --path . --resolution 1280x720 --write-movie out.avi --fixed-fps 30 res://tools/gameplay_demo.tscn -- <seed>` (charters: `tools/charter_demo.tscn`)
+- Charter pacing (steward bot, data only): `godot --headless --path . --script res://tools/charter_sim.gd -- <seed> [days]`
 
 ## Rules
 - Keep data and presentation separate: game state lives in `CharacterData`,
