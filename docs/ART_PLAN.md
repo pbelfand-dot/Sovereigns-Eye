@@ -138,7 +138,7 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
   - manor: cauldron
   - cottages: a bucket or barrel
 - **Merging.** All props in a 64 m chunk merge into one mesh with one surface per kit material (4 trim materials plus vertex-colored variants). The whole village's props cost a handful of draw calls.
-- **Still simple shapes** (no Standard model): well, haystack, lumber pile, signpost, banner pole.
+- **Still simple shapes** (no Standard model): haystack, lumber pile. The well, charter banners and signposts are now original models in three charter tiers (`3D/props/village-commons/`); the next original families are in `3D/BACKLOG.md`.
 - **No collisions yet.** Props get no collision proxies because nothing collides with them (villagers follow the road graph). Add simple boxes when navmesh pathing arrives.
 - `tools/prefab_gallery.tscn -- <dir> props` renders every prop; `tools/capture.tscn -- <seed> <dir> art` includes stall, smithy and tavern close-ups.
 - Showcase: `docs/screenshots/props_showcase.jpg`.
@@ -154,7 +154,7 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 
 | Stage | Readiness | What carries it | What it still needs |
 |---|---|---|---|
-| **Tiny town** (Phase 1, now) | **Playable** | Village kit prefabs, outfit sampler (Peasant/Ranger), Nature MegaKit trees and ground cover, Fantasy Props stalls and trade dressing, 84 clips | Outfit Source for nobles, knights and clergy; well, haystack and signpost models |
+| **Tiny town** (Phase 1, now) | **Playable** | Village kit prefabs, outfit sampler (Peasant/Ranger), Nature MegaKit trees and ground cover, Fantasy Props stalls and trade dressing, 84 clips | Outfit Source for nobles, knights and clergy; haystack and lumber models (well, banners, signposts: done, original) |
 | **Large village** | Mostly | Larger recipes plus markets, workshop equipment, furniture, and dressing props | Interiors; crops, population variety |
 | **Town / city districts** | Partial | Dense multi-story blocks from the same modules. Prefabs + MultiMesh instancing for repeated houses | Civic landmarks, wealth tiers, signage, plazas; district streaming (§4) |
 | **Kingdom / capital** | Missing | Residential/commercial districts only | Palace/keep, monumental walls and gates, towers, barracks, temples, throne room, bridges |
@@ -175,7 +175,7 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 | **Clothing variety.** The free sampler is integrated, but it only has Peasant and Ranger sets. Nobles wear fine leather, priests wear peasant clothes with a hood, and soldiers wear leather with shoulder armor. There are no gowns, robes, plate armor or crowns. | **Modular Character Outfits – Fantasy Source**: 12 outfits from 62 parts. The publisher preview shows a crowned queen in a gown, a noble's coat, plate armor and a mage's robes. | **Standard: integrated**; Source $20 | **1 — buy Source for nobles, knights and clergy** |
 | **Body variety.** Only "Superhero" proportions, so children look like small adults | **Universal Base Characters Source**: 6 bodies (Superhero, Regular, Teen × male/female), 20 hairstyles, eye and skin color shaders | $19.99 (we have the free Standard) | 2 |
 | **More nature variety.** The free Standard (68 of 116 models) is integrated. It lacks the kit's extra plants, rocks and stylized foliage shaders. | **Stylized Nature MegaKit** Pro/Source | **Standard: integrated**; Pro $9.99; Source $14.99 | 6 — nice to have |
-| **Well, haystack, lumber, signpost, bread oven, tavern sign.** The free props (stalls, anvil, benches, barrels, crates, tables, tools) are integrated; these few have no Standard model | **Fantasy Props MegaKit** Pro/Source (200+ props, worn variants, collisions) or custom | **Standard: integrated**; Pro $9.99; Source $14.99 | 5 |
+| **Haystack, lumber, bread oven, tavern sign.** The free props (stalls, anvil, benches, barrels, crates, tables, tools) are integrated; the well, banners and signposts are original models (`3D/props/village-commons/`) | **Fantasy Props MegaKit** Pro/Source (200+ props, worn variants, collisions) or custom | **Standard: integrated**; Pro $9.99; Source $14.99 | 5 |
 | More village modules (304 vs 176) and ready-made collisions | Medieval Village MegaKit Source | Pro $9.99 / Source $14.99 | 5 |
 | **Windmill.** Kit tower plus simple boards in the kit's wood material | Ultimate Fantasy RTS (selected landmarks) or a custom model | free / custom | 6 |
 | **Chapel / temple.** Built from village walls and a tower roof | Church/temple pieces: custom, or a future Quaternius kit | — | 6 |

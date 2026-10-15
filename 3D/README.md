@@ -22,6 +22,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `environments/quaternius-medieval-village-standard/` | Textured modular village architecture and props | 176 |
 | `environments/quaternius-stylized-nature-standard/` | Trees, plants, grass, flowers, rocks, and stone path pieces | 68 |
 | `props/quaternius-fantasy-props-standard/` | Furniture, market goods, workshop equipment, weapons, books, potions, lighting, and small props | 94 |
+| `props/village-commons/` | **Original:** wells, charter banners and signposts in three charter tiers each, on the village kit's trim sheets | 9 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
 | `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |
@@ -35,7 +36,11 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,404 glTF 2.0 model files** (1,042 GLB + 362 JSON glTF).
+Total: **1,413 glTF 2.0 model files** (1,051 GLB + 362 JSON glTF).
+
+Original asset families made for the game, and what comes next, are tracked in
+[`BACKLOG.md`](BACKLOG.md). Each has its own README with budgets, contact sheets
+and validation.
 
 The original blocky set and three Kenney alternatives remain available for comparison,
 but the five KayKit collections in [`alternatives/`](alternatives/) are the recommended

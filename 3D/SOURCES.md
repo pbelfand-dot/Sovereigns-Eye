@@ -22,6 +22,7 @@ Retrieved on 2026-10-13 from the original publishers, Kenney, KayKit, and Quater
 | Medieval Village MegaKit | [quaternius.com/packs/medievalvillagemegakit.html](https://quaternius.com/packs/medievalvillagemegakit.html) | Standard (free) | CC0 1.0 | 176 JSON glTF models + shared textures |
 | Stylized Nature MegaKit | [quaternius.com/packs/stylizednaturemegakit.html](https://quaternius.com/packs/stylizednaturemegakit.html) | Standard (free) | CC0 1.0 | 68 JSON glTF models + shared textures |
 | Fantasy Props MegaKit | [quaternius.com/packs/fantasypropsmegakit.html](https://quaternius.com/packs/fantasypropsmegakit.html) | Standard (free) | CC0 1.0 | 94 JSON glTF models + shared textures |
+| Village Commons (original) | Made for Sovereign's Eye: [`props/village-commons/`](props/village-commons/) | 1.0 | CC0 1.0 | 9 GLB models + 1 texture (uses the Medieval Village MegaKit's trim sheets) |
 
 The repository includes a single glTF 2.0 version of each model, all required PNG
 textures, and available previews. Duplicate FBX and OBJ versions from the source

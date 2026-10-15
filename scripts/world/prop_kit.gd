@@ -11,14 +11,69 @@ extends RefCounted
 
 static var _available := -1
 static var _parts: Dictionary = {}  # model -> [[Mesh, Transform3D], ...]
+static var _banner_material: ShaderMaterial
+
+const COMMONS := "commons:"
 
 
 static func config() -> Dictionary:
 	return GameData.load_file("props")
 
 
+## A kit model's file. "commons:NAME" is one of the Village Commons
+## (3D/props/village-commons), the rest come from the Fantasy Props kit.
 static func model_path(model: String) -> String:
+	if model.begins_with(COMMONS):
+		return str(config().get("commons_root", "")) + model.substr(COMMONS.length()) + ".glb"
 	return str(config().get("root", "")) + model + ".gltf"
+
+
+## The Village Commons model for a layout prop under a charter (the well,
+## banners and signposts grow finer as the settlement does), or "" if the
+## type has none or its file is missing.
+static func commons_model(type: String, charter: int) -> String:
+	var by: Dictionary = config().get("by_charter", {})
+	var list: Array = by.get(type, [])
+	if list.is_empty():
+		return ""
+	var model := str(list[clampi(charter, 0, list.size() - 1)])
+	return model if ResourceLoader.exists(model_path(model)) else ""
+
+
+## A whole model as its own node (keeps the mesh's automatic LODs; used for
+## one-off centrepieces like the well). Its collision proxy is kept on the
+## buildings' layer and never queried by walking (WorldGeometry does that).
+static func instance(model: String) -> Node3D:
+	var path := model_path(model)
+	if not ResourceLoader.exists(path):
+		return null
+	var node := (load(path) as PackedScene).instantiate() as Node3D
+	for body: CollisionObject3D in node.find_children("*", "CollisionObject3D", true, false):
+		body.collision_layer = 2
+		body.collision_mask = 0
+	for mi: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		_runtime_materials(mi)
+	return node
+
+
+## The banner cloth sways in the wind (shaders/banner_wind.gdshader).
+static func runtime_material(mat: Material) -> Material:
+	if mat == null or mat.resource_name != "MI_Commons_Banner" or not mat is BaseMaterial3D:
+		return mat
+	if _banner_material == null:
+		_banner_material = ShaderMaterial.new()
+		_banner_material.resource_name = "MI_Commons_Banner_Wind"
+		_banner_material.shader = load("res://shaders/banner_wind.gdshader")
+		_banner_material.set_shader_parameter("albedo_texture", (mat as BaseMaterial3D).albedo_texture)
+	return _banner_material
+
+
+static func _runtime_materials(mi: MeshInstance3D) -> void:
+	for s in mi.mesh.get_surface_count():
+		var mat := mi.mesh.surface_get_material(s)
+		var rt := runtime_material(mat)
+		if rt != mat:
+			mi.set_surface_override_material(s, rt)
 
 
 static func available() -> bool:
@@ -82,7 +137,7 @@ static func add_merged(parent: Node3D, items: Array) -> int:
 		keys.sort()
 		for key: String in keys:
 			var st: SurfaceTool = tools[key]
-			st.set_material(materials[key])
+			st.set_material(runtime_material(materials[key]))
 			st.commit(merged)
 		var mi := MeshInstance3D.new()
 		mi.name = "Props %d,%d" % [cell.x, cell.y]

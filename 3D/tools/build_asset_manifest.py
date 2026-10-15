@@ -103,6 +103,11 @@ COLLECTIONS = {
         "license": "characters/quaternius-modular-outfits-fantasy-standard/LICENSE.txt",
         "preview_root": "characters/quaternius-modular-outfits-fantasy-standard/previews",
     },
+    "village-commons": {
+        "source": "original (Sovereign's Eye): props/village-commons/source/build_commons.py",
+        "license": "props/village-commons/LICENSE.txt",
+        "preview_root": "props/village-commons/previews",
+    },
 }
 
 
@@ -230,6 +235,11 @@ def collection_for(path: Path) -> tuple[str, str]:
         return "quaternius-stylized-nature-standard", stylized_nature_category(
             path.stem
         )
+    if relative.parts[:2] == ("props", "village-commons"):
+        for prefix, category in (("SE_Well_", "wells"), ("SE_Banner_", "banners"), ("SE_Signpost_", "signposts")):
+            if path.stem.startswith(prefix):
+                return "village-commons", category
+        return "village-commons", "commons"
     if relative.parts[:2] == ("props", "quaternius-fantasy-props-standard"):
         return "quaternius-fantasy-props-standard", fantasy_props_category(
             path.stem
