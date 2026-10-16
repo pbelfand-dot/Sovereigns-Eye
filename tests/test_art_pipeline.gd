@@ -176,9 +176,12 @@ func test_props_kit_sets_and_dressing() -> void:
 		for set_name: String in cfg["replace"][type]:
 			check(sets.has(set_name), "%s props use known set %s" % [type, set_name])
 	for type: String in cfg.get("dressing", {}):
+		if type.begins_with("_"):
+			continue
 		check(not GameData.building_type(type).is_empty(), "dressing is for a real building type (%s)" % type)
 		for e: Array in cfg["dressing"][type]:
-			check(sets.has(str(e[0])), "%s dressing uses known set %s" % [type, e[0]])
+			# "NAME@tier" names a set per home level (NAME_0, NAME_1...): at least one.
+			check(sets.has(PropKit.dressing_set(str(e[0]), 9)), "%s dressing uses known set %s" % [type, e[0]])
 	var w := WorldGenerator.generate("props-seed")
 	var b := VillageBuilder.new()
 	b.build(w.layout)

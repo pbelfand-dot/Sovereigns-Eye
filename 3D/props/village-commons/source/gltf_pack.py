@@ -100,6 +100,7 @@ def pack(src, dst, own=None):
     with open(os.path.join(os.path.dirname(os.path.abspath(src)), buf["uri"]), "rb") as f:
         bin_data = f.read()
     del buf["uri"]
+    bin_data = canonical_triangles(doc, bin_data)
     buf["byteLength"] = len(bin_data)
     doc.setdefault("asset", {})["generator"] = "Sovereign's Eye village-commons (Blender 4.2 + gltf_pack.py)"
     js = json.dumps(doc, separators=(",", ":")).encode("utf-8")
@@ -113,6 +114,38 @@ def pack(src, dst, own=None):
         f.write(struct.pack("<II", len(bin_data), 0x004E4942))
         f.write(bin_data)
     return sorted(used)
+
+
+def canonical_triangles(doc, bin_data):
+    """Writes each primitive's triangles in one fixed order (each starting at
+    its lowest index, winding kept, then sorted). Some bmesh operators hand
+    faces back in an order that changes from run to run; the triangles are
+    the same, and this keeps the GLB's bytes the same too."""
+    data = bytearray(bin_data)
+    fmt = {5121: "B", 5123: "H", 5125: "I"}
+    done = set()
+    for mesh in doc.get("meshes", []):
+        for prim in mesh.get("primitives", []):
+            if prim.get("mode", 4) != 4 or "indices" not in prim or prim["indices"] in done:
+                continue
+            done.add(prim["indices"])
+            acc = doc["accessors"][prim["indices"]]
+            view = doc["bufferViews"][acc["bufferView"]]
+            code = fmt[acc["componentType"]]
+            size = struct.calcsize(code)
+            start = view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+            count = acc["count"]
+            idx = struct.unpack_from("<%d%s" % (count, code), data, start)
+            tris = []
+            for t in range(0, count - count % 3, 3):
+                a, b, c = idx[t:t + 3]
+                k = min(range(3), key=lambda i: (a, b, c)[i])
+                tris.append(((a, b, c)[k], (a, b, c)[(k + 1) % 3], (a, b, c)[(k + 2) % 3]))
+            tris.sort()
+            flat = [i for tri in tris for i in tri] + list(idx[count - count % 3:])
+            struct.pack_into("<%d%s" % (count, code), data, start, *flat)
+            assert size * count <= view["byteLength"]
+    return bytes(data)
 
 
 def read_glb_json(path):

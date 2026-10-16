@@ -25,6 +25,7 @@ Retrieved on 2026-10-13 from the original publishers, Kenney, KayKit, and Quater
 | Village Commons (original) | Made for Sovereign's Eye: [`props/village-commons/`](props/village-commons/) | 1.0 | CC0 1.0 | 9 GLB models + 1 texture (uses the Medieval Village MegaKit's trim sheets) |
 | Farm & Field (original) | Made for Sovereign's Eye: [`props/farm-field/`](props/farm-field/) | 1.0 | CC0 1.0 | 16 GLB models + 1 texture (uses the Medieval Village MegaKit's trim sheets) |
 | Market Square (original) | Made for Sovereign's Eye: [`props/market-square/`](props/market-square/) | 1.0 | CC0 1.0 | 7 GLB models (uses the Medieval Village MegaKit's trim sheets and the Village Commons banner atlas) |
+| Home Yard (original) | Made for Sovereign's Eye: [`props/home-yard/`](props/home-yard/) | 1.0 | CC0 1.0 | 10 GLB models and one 512 atlas (uses the Medieval Village MegaKit's trim sheets and the Farm & Field atlas) |
 | Smithy (original) | Made for Sovereign's Eye: [`props/smithy/`](props/smithy/) | 1.0 | CC0 1.0 | 8 GLB models (uses the Medieval Village MegaKit's trim sheets) |
 
 The repository includes a single glTF 2.0 version of each model, all required PNG

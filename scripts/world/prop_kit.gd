@@ -129,6 +129,21 @@ static func available() -> bool:
 	return _available == 1
 
 
+## The set a dressing entry draws: "NAME@tier" is the set for a home's
+## level, NAME_<t> for the highest t up to `tier` that exists (an empty set
+## means none at that level). "" when there is none.
+static func dressing_set(entry_name: String, tier: int) -> String:
+	if not entry_name.ends_with("@tier"):
+		return entry_name
+	var base := entry_name.trim_suffix("@tier")
+	var sets: Dictionary = config().get("sets", {})
+	for t in range(tier, -1, -1):
+		var set_name := "%s_%d" % [base, t]
+		if sets.has(set_name):
+			return set_name
+	return ""
+
+
 ## The models of a set placed at `origin`: [[model, Transform3D], ...].
 static func set_items(set_name: String, origin: Transform3D) -> Array:
 	var out := []

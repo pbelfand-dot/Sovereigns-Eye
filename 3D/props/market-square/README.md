@@ -59,7 +59,7 @@ The square's rim used to be a flat grey band.
 - **Collision.**
   - The crosses and troughs carry simple convex proxies (`-convcolonly`). Kerbs have none; people step over them.
   - Walking collision in the game is analytic (`WorldGeometry`, radii in `data/controls.json`: `market_cross` 1.5 m, `trough` 0.95 m). `tests/test_square.gd` checks that they cover each footing.
-- **Build.** The build is deterministic: the script pins Python's hash seed (see `farm-field/README.md`).
+- **Build.** The build is deterministic: the same source gives byte-identical GLBs (see `farm-field/README.md`).
 
 ## Rebuilding
 

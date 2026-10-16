@@ -416,6 +416,43 @@ static func _yard_clear(l: VillageLayout, owner: BuildingData, center: Vector3, 
 	return true
 
 
+## Is a home yard's footprint (`center`, `rot`, `half`) clear? Clear of other
+## buildings, the square, roads, fields and trees (as a forge yard must be),
+## of the farm and forge yards (their whole footprints), and of `others`
+## (rects already taken: {"center", "rot", "half"}).
+static func dressing_clear(l: VillageLayout, owner: BuildingData, center: Vector3, rot: float, half: Vector2, others: Array) -> bool:
+	if not _yard_clear(l, owner, center, rot, half, false):
+		return false
+	var rect := {"center": center, "rot": rot, "half": half}
+	for o: Dictionary in others:
+		if rects_overlap(rect, o, 0.3):
+			return false
+	for p: Dictionary in l.props:
+		if YARD_HALF.has(p["type"]) and rects_overlap(rect, {"center": p["pos"], "rot": float(p["rot"]), "half": YARD_HALF[p["type"]]}, 0.3):
+			return false
+	return true
+
+
+## Do two rectangles on the ground ({"center": Vector3, "rot": yaw, "half":
+## Vector2}) come within `margin` of each other? (Separating axes.)
+static func rects_overlap(a: Dictionary, b: Dictionary, margin: float) -> bool:
+	var d := Vector2((b["center"] as Vector3).x - (a["center"] as Vector3).x, (b["center"] as Vector3).z - (a["center"] as Vector3).z)
+	var axes: Array[Vector2] = []
+	for r: Dictionary in [a, b]:
+		var yaw := float(r["rot"])
+		axes.append(Vector2(cos(yaw), -sin(yaw)))
+		axes.append(Vector2(sin(yaw), cos(yaw)))
+	for n in axes:
+		var reach := 0.0
+		for r: Dictionary in [a, b]:
+			var yaw := float(r["rot"])
+			var h: Vector2 = r["half"]
+			reach += h.x * absf(Vector2(cos(yaw), -sin(yaw)).dot(n)) + h.y * absf(Vector2(sin(yaw), cos(yaw)).dot(n))
+		if absf(d.dot(n)) > reach + margin:
+			return false
+	return true
+
+
 ## The market cross's spot (it stands once the Crown grants a market) and
 ## the trough beside the well, as layout props; both are drawn by charter
 ## (data/props.json "by_charter"). No randomness, so loading an older save

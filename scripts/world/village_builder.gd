@@ -17,6 +17,9 @@ var layout: VillageLayout
 ## Stores and building sites (Phase 3), set before build(): sites wear the
 ## ground, felled trees are skipped. Optional (tools build bare layouts).
 var territory: TerritoryData
+## The home yards drawn by the last dressing pass (for checks and captures):
+## [{"set", "building", "center", "rot", "half"}].
+var yard_rects: Array[Dictionary] = []
 var building_nodes: Dictionary = {}
 var site_nodes: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
@@ -739,28 +742,66 @@ func _arm_blocked(at: Vector3, basis: Basis) -> bool:
 	return false
 
 
-## Extra kit props around buildings by type (data/props.json "dressing"):
-## [[model, Transform3D], ...]. Spots on roads, in fields or inside another
-## building are skipped; chances are rolled per building so it's stable.
+## Extra props around buildings by type (data/props.json "dressing"):
+## [[model, Transform3D], ...]. Chances are rolled per building so it's
+## stable. A home's yard sets follow its level ("@tier") and need their whole
+## footprint ("yard_half") clear, of each other too; other spots on roads,
+## in fields or inside another building are skipped. Also notes the solid
+## pieces for walking (layout.dressing_obstacles).
 func dressing_items() -> Array:
 	var cfg := PropKit.config()
 	var dressing: Dictionary = cfg.get("dressing", {})
+	var sets: Dictionary = cfg.get("sets", {})
+	var yard_half: Dictionary = cfg.get("yard_half", {})
+	var solid: Dictionary = WorldGeometry.cfg().get("dressing", {})
 	var clearance := float(cfg.get("road_clearance", 0.8))
 	var out := []
+	var taken := []
+	if territory:
+		for site in territory.sites:
+			if not site.is_upgrade():  # a new building going up (an upgrade keeps its footprint)
+				var sb := site.building
+				taken.append({"center": sb.position, "rot": sb.rotation, "half": sb.footprint * 0.5 + Vector2(0.4, 0.4)})
+	layout.dressing_obstacles.clear()
+	yard_rects.clear()
 	for b in layout.buildings:
 		var list: Array = dressing.get(b.type, [])
+		var placed := {}  # a set listed again is a second choice of spot
 		for i in list.size():
 			var e: Array = list[i]
 			var roll := float(absi(hash("%d:%d" % [b.id, i])) % 1000) / 1000.0
 			if roll >= float(e[6]):
 				continue
+			var set_name := PropKit.dressing_set(str(e[0]), b.tier)
+			if set_name == "" or placed.has(set_name) or (sets.get(set_name, []) as Array).is_empty():
+				continue
 			var local := Vector3(float(e[1]) * b.footprint.x * 0.5 + float(e[3]), 0, float(e[2]) * b.footprint.y * 0.5 + float(e[4]))
 			var pos := b.position + b.basis() * local
-			if road_clearance(Vector2(pos.x, pos.z)) < clearance or _blocked_for_props(pos, b):
+			var rot := b.rotation + deg_to_rad(float(e[5]))
+			if yard_half.has(set_name):
+				var h: Array = yard_half[set_name]
+				var half := Vector2(float(h[0]), float(h[1]))
+				if not VillageLayoutGenerator.dressing_clear(layout, b, pos, rot, half, taken):
+					continue
+				taken.append({"center": pos, "rot": rot, "half": half})
+				yard_rects.append({"set": set_name, "building": b.id, "center": pos, "rot": rot, "half": half})
+			elif road_clearance(Vector2(pos.x, pos.z)) < clearance or _blocked_for_props(pos, b) or _in_taken(pos, taken):
 				continue
-			var origin := Transform3D(Basis(Vector3.UP, b.rotation + deg_to_rad(float(e[5]))), TerrainHeight.on_ground(pos))
-			out.append_array(PropKit.set_items(str(e[0]), origin))
+			var items := PropKit.set_items(set_name, Transform3D(Basis(Vector3.UP, rot), TerrainHeight.on_ground(pos)))
+			for it: Array in items:
+				if solid.has(it[0]):
+					var o: Vector3 = (it[1] as Transform3D).origin
+					layout.dressing_obstacles.append(Vector3(o.x, o.z, float(solid[it[0]])))
+			out.append_array(items)
+			placed[set_name] = true
 	return out
+
+
+func _in_taken(pos: Vector3, taken: Array) -> bool:
+	for r: Dictionary in taken:
+		if VillageLayoutGenerator._point_in_rect(pos, r, 0.3):
+			return true
+	return false
 
 
 ## Distance from a point to the nearest road edge (negative = on the road).

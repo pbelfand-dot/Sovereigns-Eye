@@ -123,7 +123,7 @@ python3 source/make_sheets.py CYCLES_DIR GAME_DIR previews stats.json PATCH_DIR 
 python3 3D/tools/build_asset_manifest.py                                      # manifest + VALIDATION.json
 ```
 
-`source/farm_field.blend` holds every asset, editable. The build is deterministic: the same source gives byte-identical GLBs (the script pins Python's hash seed, which otherwise changes the triangle order of some exports from run to run).
+`source/farm_field.blend` holds every asset, editable. The build is deterministic: the same source gives byte-identical GLBs. Three things make it so, in every family's build: the script pins Python's hash seed; it seeds Python's random module per model, for helpers called without a generator of their own; and `gltf_pack.py` writes each primitive's triangles in a fixed order, because some bmesh operators hand faces back in an order that changes from run to run.
 
 ## Folder
 

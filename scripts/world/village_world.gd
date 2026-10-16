@@ -311,6 +311,7 @@ func _finish_site(site: ConstructionSite) -> void:
 	builder.remove_site(b.id)
 	if site.is_upgrade():
 		builder.replace_building_node(b)
+		builder.refresh_props()  # the home's yard grows with its level
 	else:
 		builder.add_building_node(b)
 		for f in state.layout.fields_of_building(b.id):
