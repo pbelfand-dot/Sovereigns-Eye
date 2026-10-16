@@ -33,6 +33,7 @@ var home_only := false
 var thatch_only := false
 var training_only := false
 var chapel_only := false
+var castle_only := false
 
 
 func _ready() -> void:
@@ -56,6 +57,7 @@ func _ready() -> void:
 	thatch_only = args.has("thatch")
 	training_only = args.has("training")
 	chapel_only = args.has("chapel")
+	castle_only = args.has("castle")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -126,6 +128,10 @@ func _run() -> void:
 		return
 	if chapel_only:
 		await _chapel_shots()
+		get_tree().quit()
+		return
+	if castle_only:
+		await _castle_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -975,6 +981,117 @@ func _chapel_shots() -> void:
 		await settle.call()
 		await _shot("chapel_close_%s.png" % view[0])
 	world.camera_rig.camera.make_current()
+	cam.queue_free()
+
+
+## The Lord's Castle family (3D/buildings/lords-castle) as two demo castles
+## beside the village (tools/castle_demo.gd): nothing in the game builds
+## castles yet. The hills are levelled for it (the pieces stand on flat ground),
+## the trees in and round the castles' footprints and the scatter in them
+## cleared. Each castle over its walls to the village, from the front, from
+## above, inside, close to its gate and on foot. CASTLE_KINDS=stone takes
+## only that one.
+func _castle_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	Game.state.layout.flat_radius = 400.0
+	var Demo: GDScript = load("res://tools/castle_demo.gd")
+	var st := Game.state
+	var spots: Dictionary = Demo.find_spots(st.layout)
+	if spots.is_empty():
+		push_warning("no room for the demo castles round this village")
+		return
+	for kind: String in spots:
+		for i: int in Demo.trees_in(st.layout, spots[kind], kind):
+			if not st.territory.cleared_trees.has(i):
+				st.territory.cleared_trees.append(i)
+	var world := await _boot_world()
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	# Nothing grows through the walls: scatter in a footprint is put out of sight.
+	for mmi: MultiMeshInstance3D in world.builder.find_children("*", "MultiMeshInstance3D", true, false):
+		var mm := mmi.multimesh
+		for i in mm.instance_count:
+			var xf := mmi.global_transform * mm.get_instance_transform(i)
+			for kind: String in spots:
+				var l: Vector3 = (spots[kind] as Transform3D).affine_inverse() * xf.origin
+				if Demo.footprint(kind).grow(1.0).has_point(Vector2(l.x, l.z)):
+					xf.origin.y -= 200.0
+					mm.set_instance_transform(i, mmi.global_transform.affine_inverse() * xf)
+					break
+	for kind: String in spots:
+		var node: Node3D = Demo.build(kind)
+		node.transform = spots[kind]
+		world.add_child(node)
+	var heir := world.player_npc()
+	var cam := Camera3D.new()
+	cam.fov = 45.0
+	cam.far = 900.0
+	add_child(cam)
+	var settle := func() -> void:
+		for k in 4:
+			world._process(0.05)
+		await _wait(6)
+	# The art views show the castles alone: no interface, the heir out of
+	# them, and no name over anyone (hover goes by the game's own camera,
+	# so that looks at the empty ground under the art camera meanwhile).
+	var view := func(file_name: String, from: Vector3, to: Vector3, fov: float = 45.0) -> void:
+		cam.fov = fov
+		world.ui.visible = false
+		heir.visible = false
+		for npc: NPC in world.npcs.values():
+			npc._label.modulate.a = 0.0
+			npc._ring.transparency = 1.0
+		world.camera_rig.look_at_point(Vector3(to.x, 0, to.z), 12.0, true)
+		cam.global_position = from
+		cam.look_at(to)
+		cam.make_current()
+		await settle.call()
+		await _shot(file_name)
+		world.ui.visible = true
+		heir.visible = true
+		for npc: NPC in world.npcs.values():
+			npc._label.modulate.a = 1.0
+			npc._ring.transparency = 0.0
+	var only := OS.get_environment("CASTLE_KINDS").split(",", false)
+	for kind: String in Demo.KINDS:
+		if not only.is_empty() and not kind in only:
+			continue
+		var xf: Transform3D = spots[kind]
+		var c := func(x: float, y: float, z: float) -> Vector3:
+			return xf * Vector3(x, y, z)
+		var tag := "castle_%s_" % kind
+		# From behind it, over its walls to the village.
+		var away := Vector3(xf.origin.x, 0, xf.origin.z).normalized()
+		await view.call(tag + "village.png", xf.origin + away * 75.0 + Vector3(0, 38, 0), xf.origin.lerp(Vector3.ZERO, 0.45))
+		if kind == "stone":
+			await view.call(tag + "front.png", c.call(0, 12, 72), c.call(0, 7, 0))
+			await view.call(tag + "aerial.png", c.call(52, 48, 58), c.call(0, 3, -2))
+			await view.call(tag + "rear.png", c.call(-46, 26, -60), c.call(0, 6, -4))
+			# From the court's far corner by the gate, a wider lens: the court is small.
+			await view.call(tag + "court.png", c.call(13, 2.0, 12.5), c.call(-4, 8.5, -4), 62.0)
+			await view.call(tag + "gate.png", c.call(7, 3.0, 36), c.call(0, 5.5, 19))
+		else:
+			await view.call(tag + "front.png", c.call(0, 12, 82), c.call(0, 5, 14))
+			await view.call(tag + "aerial.png", c.call(48, 42, 64), c.call(0, 3, 12))
+			await view.call(tag + "motte.png", c.call(24, 9, 24), c.call(0, 6.5, 6))
+			await view.call(tag + "tower.png", c.call(9, 13, 20), c.call(0, 10, 0))
+			await view.call(tag + "gate.png", c.call(7, 3.0, 47), c.call(0, 4.0, 36))
+		# On foot before the gate, the heir looking up at it.
+		world.camera_rig.camera.make_current()
+		world.set_view_mode("walk", true)
+		var gate_z: float = Demo.gate_z(kind)
+		heir.teleport(c.call(1.5, 0, gate_z + 8.0))
+		var to: Vector3 = c.call(0, 0, gate_z) - heir.global_position
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.set_yaw(heir.rotation.y + 0.12, true)
+		world.camera_rig.look_at_point(heir.global_position, 12.0, true)
+		await settle.call()
+		await _shot(tag + "gameplay.png")
+		world.set_view_mode("overview", true)
 	cam.queue_free()
 
 
