@@ -76,6 +76,10 @@ static func resolve(state: WorldState, p: Vector3, radius: float) -> Vector3:
 			if not PropKit.present(str(prop["type"]), charter):
 				continue
 			p = _out_of_circle(Vector2(pp.x, pp.z), float(radii.get(str(prop["type"]), 0.4)) + radius, p)
+		for o in state.layout.dressing_obstacles:
+			if absf(o.x - p.x) > 3.0 or absf(o.y - p.z) > 3.0:
+				continue
+			p = _out_of_circle(Vector2(o.x, o.y), o.z + radius, p)
 	var limit := state.layout.extent - float(c.get("walk", {}).get("edge_margin", 6.0))
 	var flat := Vector2(p.x, p.z)
 	if flat.length() > limit:

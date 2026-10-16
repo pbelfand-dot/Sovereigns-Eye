@@ -29,6 +29,7 @@ var commons_only := false
 var farm_only := false
 var square_only := false
 var smithy_only := false
+var home_only := false
 
 
 func _ready() -> void:
@@ -48,6 +49,7 @@ func _ready() -> void:
 	farm_only = args.has("farm")
 	square_only = args.has("square")
 	smithy_only = args.has("smithy")
+	home_only = args.has("home")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -102,6 +104,10 @@ func _run() -> void:
 		return
 	if smithy_only:
 		await _smithy_shots()
+		get_tree().quit()
+		return
+	if home_only:
+		await _home_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -649,6 +655,80 @@ func _smithy_shots() -> void:
 		await _wait(6)
 		await _shot("smithy_3_night.png")
 		world.set_view_mode("overview", true)
+
+
+## The Home Yard (3D/props/home-yard): one cottage's yard as a Cottage, a
+## Timber House and a Townhouse (every cottage in the village takes the
+## level, so the street matches), from the front, the back and on foot; and
+## a farmhouse's. HOME_TIERS=0,2 limits the levels.
+func _home_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	var heir := world.player_npc()
+	var settle := func() -> void:
+		for k in 4:
+			world._process(0.05)
+		await _wait(4)
+	var set_tier := func(tier: int) -> void:
+		for b in st.layout.buildings:
+			if b.type == "cottage":
+				b.tier = tier
+				world.builder.replace_building_node(b)
+		world.builder.refresh_props()
+		world.territory_changed.emit()
+		await _wait(2)
+	# The cottage with the fullest yard (as a Timber House), and the farmhouse's.
+	await set_tier.call(1)
+	var best: BuildingData = null
+	var farm: BuildingData = null
+	var count := {}
+	for r: Dictionary in world.builder.yard_rects:
+		count[r["building"]] = int(count.get(r["building"], 0)) + 1
+	for b in st.layout.buildings:
+		if b.type == "cottage" and (best == null or int(count.get(b.id, 0)) > int(count.get(best.id, 0))):
+			best = b
+		if b.type == "farmhouse" and (farm == null or int(count.get(b.id, 0)) > int(count.get(farm.id, 0))):
+			farm = b
+	var only := OS.get_environment("HOME_TIERS").split(",", false)
+	for tier in [0, 1, 2]:
+		if not only.is_empty() and not str(tier) in only:
+			continue
+		await set_tier.call(tier)
+		var tag := "home_%d_" % tier
+		var fwd := best.forward()
+		var yaw := atan2(fwd.x, fwd.z)
+		heir.teleport(best.position + fwd * (best.footprint.y * 0.5 + 6.0) + Vector3(fwd.z, 0, -fwd.x) * 4.0)
+		world.set_view_mode("overview", true)
+		world.camera_rig.set_yaw(_clear_yaw(st, best.position, 14.0, yaw + 0.6), true)
+		world.camera_rig.look_at_point(best.position + Vector3(0, 0.8, 0), 15.0, true)
+		await settle.call()
+		await _shot(tag + "front.png")
+		world.camera_rig.set_yaw(_clear_yaw(st, best.position, 14.0, yaw + PI - 0.6), true)
+		world.camera_rig.look_at_point(best.position + Vector3(0, 0.8, 0), 15.0, true)
+		await settle.call()
+		await _shot(tag + "back.png")
+		# On foot: the heir coming up to the door, past the bench.
+		world.set_view_mode("walk", true)
+		heir.teleport(best.door_position() + fwd * 2.5 + Vector3(fwd.z, 0, -fwd.x) * 1.0)
+		heir.rotation.y = atan2(fwd.x, fwd.z)
+		world.camera_rig.set_yaw(_clear_yaw(st, heir.global_position, 9.0, heir.rotation.y + 0.35), true)
+		world.camera_rig.look_at_point(heir.global_position, 7.0, true)
+		await settle.call()
+		await _shot(tag + "gameplay.png")
+		world.set_view_mode("overview", true)
+	if farm and (only.is_empty() or "1" in only):
+		var ffwd := farm.forward()
+		world.camera_rig.set_yaw(_clear_yaw(st, farm.position, 16.0, atan2(ffwd.x, ffwd.z) + PI - 0.7), true)
+		world.camera_rig.look_at_point(farm.position + Vector3(0, 0.8, 0), 18.0, true)
+		await settle.call()
+		await _shot("home_farm.png")
 
 
 ## How far the ground line from `focus` out to a camera `dist` m away along

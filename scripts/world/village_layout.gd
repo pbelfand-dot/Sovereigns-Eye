@@ -25,6 +25,11 @@ var fields: Array[Dictionary] = []
 var trees: Array[Vector4] = []
 ## [{ "type": String, "pos": Vector3, "rot": float }]
 var props: Array[Dictionary] = []
+## Runtime only (not saved): the solid pieces of the house dressing drawn
+## round the buildings (a hen house, a water butt...), as Vector3(x, z,
+## radius). VillageBuilder works them out with the dressing; the heir walks
+## round them (WorldGeometry.resolve).
+var dressing_obstacles: Array[Vector3] = []
 
 var _by_id: Dictionary = {}
 

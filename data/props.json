@@ -7,7 +7,8 @@
     "commons": "res://3D/props/village-commons/models/",
     "farm": "res://3D/props/farm-field/models/",
     "square": "res://3D/props/market-square/models/",
-    "smithy": "res://3D/props/smithy/models/"
+    "smithy": "res://3D/props/smithy/models/",
+    "home": "res://3D/props/home-yard/models/"
   },
   "by_charter": {
     "well": [
@@ -76,6 +77,19 @@
   },
   "_sets": "Each entry: [model, x, y, z, yaw degrees] in the set's local frame (meters; +Z is the front, the side facing the viewer or the square).",
   "sets": {
+    "_home_yards": "Home yards (3D/props/home-yard), by the home's level (NAME_0 Cottage, NAME_1 Timber House, NAME_2 Townhouse; an empty set: none at that level): +Z faces away from the house wall, and each set is centred on its spot so its footprint (\"yard_half\") is a rectangle round it.",
+    "home_door_0": [["home:SE_Bench_Log", 0, 0, 0, 0]],
+    "home_door_1": [["home:SE_Bench", 0, 0, 0, 0]],
+    "home_door_2": [["home:SE_Bench_Painted", 0, 0, 0, 0]],
+    "home_pots_2": [["home:SE_FlowerPots", 0, 0, 0, 0]],
+    "home_garden_0": [["home:SE_Garden_Poor", 0, 0, 0, 0]],
+    "home_garden_1": [["home:SE_Garden", 0, 0, 0, 0]],
+    "home_laundry_0": [["home:SE_LaundryLine", 0, 0, 0, 0]],
+    "home_chores_0": [["home:SE_ChoppingBlock", -0.45, 0, -0.2, 0]],
+    "home_chores_1": [["home:SE_ChoppingBlock", -0.45, 0, -0.2, 0], ["home:SE_WaterButt", 0.95, 0, -0.5, 0]],
+    "home_chores_2": [["home:SE_WaterButt", 0.95, 0, -0.5, 0]],
+    "home_coop_1": [["home:SE_ChickenCoop", 0, 0, -0.45, 0]],
+    "home_coop_2": [],
     "_forge_yards": "Forge yards (3D/props/smithy): +Z is the yard's front, the wall is behind (-Z); the forge backs onto it.",
     "forge_yard_village": [
       ["smithy:SE_Forge_Village", 0.25, 0, -0.55, 0],
@@ -621,39 +635,14 @@
         0.1,
         0
       ]
-    ],
-    "cottage_bits": [
-      [
-        "Bucket_Wooden_1",
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        "Stool",
-        0.6,
-        0,
-        -0.2,
-        20
-      ]
-    ],
-    "cottage_barrel": [
-      [
-        "Barrel",
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        "FarmCrate_Empty",
-        0.65,
-        0,
-        0.2,
-        15
-      ]
     ]
+  },
+  "_yard_half": "A home yard set's footprint, half width (along the wall) and half depth (out from it), metres: the set is placed only where that rectangle is clear of other buildings, the square, roads, fields, trees, farm and forge yards and the other yards already placed.",
+  "yard_half": {
+    "home_door_0": [0.8, 0.25], "home_door_1": [0.8, 0.25], "home_door_2": [0.8, 0.25], "home_pots_2": [0.55, 0.3],
+    "home_garden_0": [1.2, 0.7], "home_garden_1": [1.2, 0.7], "home_laundry_0": [1.5, 0.25],
+    "home_chores_0": [1.45, 0.85], "home_chores_1": [1.45, 0.85], "home_chores_2": [1.45, 0.85],
+    "home_coop_1": [0.75, 1.05]
   },
   "_replace": "Layout prop types drawn from kit sets; one set is picked per prop by its position.",
   "replace": {
@@ -681,7 +670,7 @@
       "cart"
     ]
   },
-  "_dressing": "Extra props around buildings by type: [set, ax, az, dx, dz, yaw degrees, chance]. Position = (ax * half width + dx, az * half depth + dz) in the building's frame (+Z is the door side). Items near a road or inside another building are skipped.",
+  "_dressing": "Extra props around buildings by type: [set, ax, az, dx, dz, yaw degrees, chance]. Position = (ax * half width + dx, az * half depth + dz) in the building's frame (+Z is the door side). A set NAME@tier is the set for the building's level (see \"_cottage\"). Items near a road or inside another building are skipped; a set with a footprint (\"yard_half\") needs all of it clear. A set listed twice for a building type is a second choice of spot, used only when the first doesn't fit (a farmhouse's front is often its road, its back a field).",
   "dressing": {
     "smithy": [
       [
@@ -783,7 +772,17 @@
         1.0,
         0,
         0.9
-      ]
+            ],
+      ["home_door_1", 1, 0.5, 0.35, 0, 90, 1.0],
+      ["home_door_1", -1, 0.5, -0.35, 0, -90, 1.0],
+      ["home_garden_1", -0.5, -1, 0, -1.2, 180, 0.9],
+      ["home_garden_1", 0.5, -1, 0, -1.2, 180, 0.9],
+      ["home_laundry_0", 0.5, -1, 0.15, -1.3, 180, 0.7],
+      ["home_laundry_0", -0.5, -1, -0.15, -1.3, 180, 0.7],
+      ["home_chores_1", -1, 0, -1.0, 0, -90, 0.9],
+      ["home_chores_1", 1, 0, 1.0, 0, 90, 0.9],
+      ["home_coop_1", 1, -0.3, 1.2, 0, 90, 0.85],
+      ["home_coop_1", -1, -0.3, -1.2, 0, -90, 0.85]
     ],
     "workshop": [
       [
@@ -827,25 +826,14 @@
         0.7
       ]
     ],
+    "_cottage": "A home's yard grows with its level ('@tier': the set for the home's level, data/territory.json homes.tiers): a bench by the door (and flower pots across it at a Townhouse), a kitchen garden and the washing behind, the chopping block and a water butt at one side, hens at the other (not at a Townhouse).",
     "cottage": [
-      [
-        "cottage_bits",
-        -1,
-        0.6,
-        -0.9,
-        0,
-        -90,
-        0.5
-      ],
-      [
-        "cottage_barrel",
-        1,
-        0.2,
-        0.9,
-        0,
-        90,
-        0.4
-      ]
+      ["home_door@tier", 0.55, 1, 0, 0.4, 0, 1.0],
+      ["home_pots@tier", -0.55, 1, 0, 0.4, 0, 1.0],
+      ["home_garden@tier", -0.5, -1, 0, -1.6, 180, 0.9],
+      ["home_laundry@tier", 0.5, -1, 0.15, -1.3, 180, 0.7],
+      ["home_chores@tier", -1, 0, -1.0, 0, -90, 0.9],
+      ["home_coop@tier", 1, -0.3, 1.2, 0, 90, 0.6]
     ]
   },
   "chunk": 64.0,
