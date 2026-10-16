@@ -158,6 +158,9 @@ python3 3D/tools/build_asset_manifest.py                                      # 
 - **Fences don't stop anyone.** Walking collision (`WorldGeometry`) covers buildings, trees and props, not fields, so the heir and farmhands step over fences and through crops, and gates don't open. Making fences solid needs gate-aware paths for the farmhands, a gameplay change for a later phase.
 - **No hay cart.** It moves to a later carts & transport family (`3D/BACKLOG.md`).
 - **Coarsest LODs** drop thin parts (stakes, pales), but only at distances where they are a pixel or two.
+- **Rendering paths.** Checked in all three of Godot's renderers on the hamlet and town fields (`previews/_renderers_forward_mobile_compat.jpg`).
+  - Forward+ (desktop) and Mobile (the Android build) look the same; Mobile issues fewer draw calls (about 600 against 1,500 for the same on-foot view).
+  - Compatibility (OpenGL) drew everything with no shader errors, but the whole scene comes out brighter there (deeper grass, paler soil and crops). That is the renderer's colour handling, the same on the meadow and buildings, not something in these models.
 
 ## License
 
