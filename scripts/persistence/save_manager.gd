@@ -134,6 +134,23 @@ static func migrate(data: Dictionary) -> Dictionary:
 				kept.append(p)
 			l["props"] = kept
 		data["save_version"] = 8
+		version = 8
+	if version == 8:
+		# v9 (Market Square) adds the trough beside the well and the market
+		# cross's spot to the square (the cross stands from Market Town on),
+		# found the way the generator finds them for a new village.
+		var l: Dictionary = data.get("layout", {})
+		if not l.is_empty():
+			var props: Array = l.get("props", [])
+			var have := {}
+			for p: Dictionary in props:
+				have[str(p["type"])] = true
+			for p: Dictionary in VillageLayoutGenerator.square_furniture(VillageLayout.from_dict(l)):
+				if not have.has(p["type"]):
+					var pos: Vector3 = p["pos"]
+					props.append({"type": p["type"], "pos": [snappedf(pos.x, 0.01), snappedf(pos.z, 0.01)], "rot": snappedf(float(p["rot"]), 0.0001)})
+			l["props"] = props
+		data["save_version"] = 9
 	return data
 
 

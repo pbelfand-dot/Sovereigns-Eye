@@ -1,11 +1,12 @@
 {
-  "_comment": "Props from the Quaternius Fantasy Props MegaKit (free Standard: 94 models). Sets are small arrangements of kit models; layout props (stalls, benches, barrels...) are drawn from them, and buildings get extra exterior dressing by type. Everything is merged into a few meshes per 64 m chunk (one surface per shared material). The well, charter banners and signposts are Village Commons models (below); rocks keep their simple shapes; haystacks and the lumber pile come from the Farm & Field family (variants).",
+  "_comment": "Props from the Quaternius Fantasy Props MegaKit (free Standard: 94 models). Sets are small arrangements of kit models; layout props (stalls, benches, barrels...) are drawn from them, and buildings get extra exterior dressing by type. Everything is merged into a few meshes per 64 m chunk (one surface per shared material). The well, charter banners and signposts are Village Commons models (below), the market cross, the trough and the square's kerb are Market Square models; rocks keep their simple shapes; haystacks and the lumber pile come from the Farm & Field family (variants).",
   "root": "res://3D/props/quaternius-fantasy-props-standard/models/",
   "_commons": "The Village Commons (3D/props/village-commons): the well, charter banners and signposts are this game's own models and grow finer with the charter (index 0 Hamlet, 1 Village, 2 Market Town, 3 Town). Banners and signposts merge with the props; the well is placed whole so it keeps its LODs. A banner's arm is mirrored when it would reach into a building ('banner_reach' meters).",
   "_roots": "The game's own model families: a model named 'family:NAME' is <root>NAME.glb.",
   "roots": {
     "commons": "res://3D/props/village-commons/models/",
-    "farm": "res://3D/props/farm-field/models/"
+    "farm": "res://3D/props/farm-field/models/",
+    "square": "res://3D/props/market-square/models/"
   },
   "by_charter": {
     "well": [
@@ -25,7 +26,33 @@
       "commons:SE_Signpost_Village",
       "commons:SE_Signpost_Town",
       "commons:SE_Signpost_Town"
+    ],
+    "_market_cross": "The Market Square family (3D/props/market-square): the market cross stands only once the Crown grants a market (an empty entry: not there yet, so it is neither drawn nor in the way); the trough beside the well is a hollowed log, then carved stone.",
+    "market_cross": [
+      "",
+      "",
+      "square:SE_MarketCross",
+      "square:SE_MarketCross_Town"
+    ],
+    "trough": [
+      "square:SE_Trough_Log",
+      "square:SE_Trough_Log",
+      "square:SE_Trough_Stone",
+      "square:SE_Trough_Stone"
     ]
+  },
+  "_whole": "Centrepieces placed as their own node (keeping their automatic LODs) instead of merged with the props.",
+  "whole": ["well", "market_cross"],
+  "_square_edge": "The square's rim: kerb pieces 'segment' m long laid round it by charter (rubble edging, a dressed kerb, two stone steps), left open where a road comes in: the pieces either side stop 'road_gap' m short of the road's edge.",
+  "square_edge": {
+    "by_charter": [
+      "square:SE_Kerb_Rubble",
+      "square:SE_Kerb_Stone",
+      "square:SE_Kerb_Step",
+      "square:SE_Kerb_Step"
+    ],
+    "segment": 1.5,
+    "road_gap": 0.3
   },
   "banner_reach": 1.25,
   "_variants": "Layout props drawn from the game's own models, one look per spot (picked from the prop's position): haystacks are a haycock, a hayrick or stooks; the workshop's lumber is the log pile.",

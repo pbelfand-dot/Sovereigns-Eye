@@ -27,6 +27,7 @@ var charter_only := false
 var talk_only := false
 var commons_only := false
 var farm_only := false
+var square_only := false
 
 
 func _ready() -> void:
@@ -44,6 +45,7 @@ func _ready() -> void:
 	talk_only = args.has("talk")
 	commons_only = args.has("commons")
 	farm_only = args.has("farm")
+	square_only = args.has("square")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -90,6 +92,10 @@ func _run() -> void:
 		return
 	if farm_only:
 		await _farm_shots()
+		get_tree().quit()
+		return
+	if square_only:
+		await _square_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -484,6 +490,88 @@ func _farm_shots() -> void:
 	await _wait(4)
 	await _shot("farm_overview_nofields.png")
 	fields.call().visible = true
+
+
+## The Market Square in the game, for every charter: the square from the
+## map table, its kerb on foot where a road comes in, the trough beside the
+## well, and (from Market Town on) the market cross at 3/4 and on foot.
+## SQUARE_TIERS=0,2 renders only those. Files: square_<tier>_<view>.png.
+func _square_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.5 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	var heir := world.player_npc()
+	var c := st.layout.square_center
+	var r := st.layout.square_radius
+	var cross: Vector3 = st.layout.props_of_type("market_cross")[0]["pos"]
+	var trough: Vector3 = st.layout.props_of_type("trough")[0]["pos"]
+	var mouth := c + Vector3(r, 0, 0)
+	for road: Dictionary in st.layout.roads:
+		if str(road.get("name", "")) == "east":
+			mouth = (road["points"] as PackedVector3Array)[0]
+	var settle := func() -> void:
+		for k in 4:
+			world._process(0.05)
+		await _wait(4)
+	var only := OS.get_environment("SQUARE_TIERS").split(",", false)
+	for tier in CharterSystem.tiers().size():
+		if tier > 0:
+			CharterSystem.raise_banners(st, int(CharterSystem.tier_def(tier).get("banners", 0)) - int(CharterSystem.tier_def(tier - 1).get("banners", 0)))
+		st.territory.charter = tier
+		if not only.is_empty() and not str(tier) in only:
+			continue
+		world.builder.refresh_props()
+		world.builder.refresh_square()
+		world.territory_changed.emit()
+		await _wait(2)
+		var tag := "square_%d_" % tier
+		# The square from the map table.
+		world.set_view_mode("overview", true)
+		heir.teleport(c + Vector3(1.7, 0, 0.9))
+		world.camera_rig.set_yaw(0.6, true)
+		world.camera_rig.look_at_point(c, 32.0, true)
+		await settle.call()
+		await _shot(tag + "square.png")
+		# On foot, coming in from the east road: the kerb either side.
+		world.set_view_mode("walk", true)
+		var inward := (c - mouth).normalized()
+		heir.teleport(mouth - inward * 3.0 + Vector3(inward.z, 0, -inward.x) * 3.2)
+		var to := mouth + Vector3(inward.z, 0, -inward.x) * 4.0 - heir.global_position
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.set_yaw(heir.rotation.y + 0.35, true)
+		world.camera_rig.look_at_point(heir.global_position, 6.5, true)
+		await settle.call()
+		await _shot(tag + "kerb.png")
+		# The trough beside the well.
+		world.set_view_mode("overview", true)
+		var tr_out := (trough - c).normalized()
+		world.camera_rig.set_yaw(_clear_yaw(st, trough, 9.5 * 0.7, atan2(tr_out.x, tr_out.z) + 0.5), true)
+		world.camera_rig.look_at_point(trough, 9.5, true)
+		await settle.call()
+		await _shot(tag + "trough.png")
+		if PropKit.present("market_cross", tier):
+			var cr_out := (cross - c).normalized()
+			world.camera_rig.set_yaw(atan2(-cr_out.x, -cr_out.z) + 0.55, true)
+			world.camera_rig.look_at_point(cross + Vector3(0, 2.3, 0), 14.0, true)  # the Town cross is 6 m tall
+			await settle.call()
+			await _shot(tag + "cross.png")
+			# On foot: the heir walking up to the cross across the square.
+			world.set_view_mode("walk", true)
+			var approach := cross + (c - cross).normalized() * 4.2 + Vector3(-cr_out.z, 0, cr_out.x) * 1.2
+			heir.teleport(approach)
+			var to_c := cross - approach
+			heir.rotation.y = atan2(-to_c.x, -to_c.z)
+			world.camera_rig.set_yaw(heir.rotation.y, true)
+			world.camera_rig.look_at_point(heir.global_position, 9.0, true)
+			await settle.call()
+			await _shot(tag + "cross_gameplay.png")
+		world.set_view_mode("overview", true)
 
 
 ## How far the ground line from `focus` out to a camera `dist` m away along

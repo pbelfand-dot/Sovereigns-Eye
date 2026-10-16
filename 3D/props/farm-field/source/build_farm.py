@@ -14,6 +14,13 @@ import os
 import random
 import sys
 
+# Python salts string hashes per run, and the glTF export path iterates a set
+# of strings, so triangles came out in a different order from run to run.
+# Pin the seed (re-launching once) so the same source gives the same GLBs.
+if os.environ.get("PYTHONHASHSEED") != "0":
+    os.environ["PYTHONHASHSEED"] = "0"
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 COMMONS_SRC = os.path.join(HERE, "..", "..", "village-commons", "source")
 sys.path.insert(0, COMMONS_SRC)
@@ -294,14 +301,34 @@ def weave_panel(x0, x1, z0, z1, courses, xdiv, stakes, amp=0.024, seed=0, thick=
     return bm
 
 
-def lift_normals(obj, lift=0.8):
-    """Tilts the normals up, as round rods catch the sky and a high sun: a
-    solid hurdle seen from its shaded side would otherwise go near black in
-    game (Cycles hides this; Godot's sky ambient doesn't)."""
-    me = obj.data
-    normals = [(Vector(n.vector) + Vector((0, 0, lift))).normalized() for n in me.corner_normals]
-    me.normals_split_custom_set(normals)
+LIFT = 0.8  # how far a hurdle's normals tilt up (added to the unit normal)
+
+
+def lift_normals(obj):
+    """Marks the faces whose normals tilt up, as round rods catch the sky and
+    a high sun: a solid hurdle seen from its shaded side would otherwise go
+    near black in game (Cycles hides this; Godot's sky ambient doesn't).
+    The tilt is applied in build(), after the weighted-normals pass that
+    would otherwise overwrite it."""
+    attr = obj.data.attributes.new("lift", "BOOLEAN", "FACE")
+    for i in range(len(obj.data.polygons)):
+        attr.data[i].value = True
     return obj
+
+
+def apply_lift(obj):
+    """Tilts the normals of faces marked by lift_normals (see there)."""
+    me = obj.data
+    attr = me.attributes.get("lift")
+    if attr is None:
+        return
+    normals = [Vector(n.vector) for n in me.corner_normals]
+    for poly in me.polygons:
+        if attr.data[poly.index].value:
+            for li in poly.loop_indices:
+                normals[li] = (normals[li] + Vector((0, 0, LIFT))).normalized()
+    me.normals_split_custom_set(normals)
+    me.attributes.remove(attr)
 
 
 def stake(x, y, z_top, r=0.026, seed=0, tilt=0.03):
@@ -674,6 +701,7 @@ def build(only=None):
         if "Sway" in uvs:
             uvs.remove(uvs["Sway"])
         L.weighted_normals(obj)
+        apply_lift(obj)
         built.append(obj)
         print("%s: %d tris, %d materials" % (name, L.tri_count(obj), len(obj.data.materials)))
     return built

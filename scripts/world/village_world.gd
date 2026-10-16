@@ -486,6 +486,7 @@ func petition_charter() -> void:
 		return
 	builder.refresh_props()
 	builder.refresh_fields()
+	builder.refresh_square()
 	Audio.play(str(CharterSystem.cfg().get("ceremony", {}).get("sound", "knighted")))
 	Game.notify.emit(str(result["text"]), Game.COLOR_TALENT)
 	territory_changed.emit()

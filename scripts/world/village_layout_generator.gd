@@ -12,6 +12,10 @@ const CROPS := ["wheat", "barley", "cabbage", "flax", "turnip"]
 ## Half-extents (m) kept clear for the big yard props: any haystack model
 ## turned any way (up to 2.1 m across), and the log pile (2.5 x 1.8 m).
 const YARD_HALF := {"haystack": Vector2(1.15, 1.15), "lumber": Vector2(1.3, 1.3)}
+## Where the market cross stands (x the square's radius from its centre) and
+## how far the trough stands from the well (m).
+const CROSS_AT := 0.42
+const TROUGH_AT := 2.7
 
 var rng: RandomNumberGenerator
 var layout: VillageLayout
@@ -344,6 +348,50 @@ func _place_square_props() -> void:
 		var a: float = angles[i]
 		var dir := Vector3(cos(a), 0, sin(a))
 		_add_prop("bench", layout.square_center + dir * (r - 1.6), _yaw_facing(-dir))
+	layout.props.append_array(square_furniture(layout))
+
+
+## The market cross's spot (it stands once the Crown grants a market) and
+## the trough beside the well, as layout props; both are drawn by charter
+## (data/props.json "by_charter"). No randomness, so loading an older save
+## finds the same spots the generator would (SaveManager.migrate).
+static func square_furniture(l: VillageLayout) -> Array[Dictionary]:
+	var c := l.square_center
+	var cross := square_spot(l, l.square_radius * CROSS_AT)
+	var trough := square_spot(l, TROUGH_AT, [cross])
+	return [
+		{"type": "market_cross", "pos": cross, "rot": _yaw_facing(c - cross)},
+		{"type": "trough", "pos": trough, "rot": _yaw_facing(c - trough)},
+	]
+
+
+## The spot `dist` m from the square's centre that keeps furthest from the
+## stalls, benches and banners, the walk in from each road mouth, and the
+## spots in `taken` (72 angles tried, in order).
+static func square_spot(l: VillageLayout, dist: float, taken: Array = []) -> Vector3:
+	var c := l.square_center
+	var mouths: Array[Vector3] = []
+	for road: Dictionary in l.roads:
+		var pts: PackedVector3Array = road["points"]
+		if not pts.is_empty() and pts[0].distance_to(c) < l.square_radius + 1.0:
+			mouths.append(pts[0])
+	var best := c + Vector3(dist, 0, 0)
+	var best_score := -INF
+	for k in 72:
+		var a := TAU * k / 72.0
+		var p := c + Vector3(cos(a), 0, sin(a)) * dist
+		var score := INF
+		for prop: Dictionary in l.props:
+			if prop["type"] in ["stall", "bench", "banner"]:
+				score = minf(score, p.distance_to(prop["pos"]))
+		for m: Vector3 in mouths:
+			score = minf(score, Geometry3D.get_closest_point_to_segment(p, m, c).distance_to(p) + 1.0)
+		for t: Vector3 in taken:
+			score = minf(score, p.distance_to(t) - 2.0)  # and well clear of the spots taken
+		if score > best_score + 0.001:
+			best_score = score
+			best = p
+	return best
 
 
 func _place_building_props() -> void:
