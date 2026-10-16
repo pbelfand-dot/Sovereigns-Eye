@@ -140,6 +140,7 @@ new floors rise inside scaffolding.
 ![A Town smithy's forge yard: the forge against its wall, anvil, slack tub, coal bin and grindstone](docs/screenshots/smithy.jpg)
 ![A Timber House's yard: the raised bed and the washing behind, the hen house at the side](docs/screenshots/home_yard.jpg)
 ![Villagers in their trade's headwear and aprons: straw hats, felt caps, a baker's cap, circlets and crowns, helmets, veils](docs/screenshots/status_wear.jpg)
+![The same farmhand at 35, 62, 75 and 88, a man and a woman, then four builds from slight to heavy](docs/screenshots/age_build.jpg)
 
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)

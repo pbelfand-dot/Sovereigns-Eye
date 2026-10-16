@@ -72,6 +72,8 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 - Without the pack, the old painted-on clothing (`shaders/human_body.gdshader`) is used automatically.
 - Before/after: `docs/screenshots/outfits_before_after.jpg`.
 
+**Age and build.** `scripts/characters/body_shape.gd` (a `SkeletonModifier3D` laid over the animation) bends an old villager's upper spine forward (from 58, up to 20° at 88, the head lifted back to look ahead) and widens a heavy build's belly (the bone above scaled back so chest, arms and head keep their size). It is tuned in `data/appearance.json` "body_shape", and `tools/prefab_gallery.tscn -- DIR bodies` shows ages and builds side by side. Elders over 65 already walk slower.
+
 **Animation.**
 - Walk, idle, talk and job-specific work clips: farmers harvest, plant and water; woodcutters chop; priests use the spell idle; knights drill with sword combos.
 - Each villager picks from a list by id, so the crowd doesn't move in lockstep.

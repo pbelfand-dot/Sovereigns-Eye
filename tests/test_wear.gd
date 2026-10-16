@@ -186,3 +186,29 @@ func test_robes_gowns_and_coats() -> void:
 		names.append(str(outfit.mesh.surface_get_material(sfc).resource_name))
 	check(names.has("wear:4"), "the gown is drawn in the crimson atlas (%s)" % [names])
 	m.free()
+
+
+func test_age_and_build_shape_the_body() -> void:
+	var young := _villager("farmer", "male", "short", 7900)
+	young.age = 30
+	young.appearance["build"] = 1.0
+	check(BodyShape.for_character(young) == null, "a young villager of middling build is left as modelled")
+	var old := _villager("farmer", "male", "short", 7901)
+	old.age = 70
+	var older := _villager("farmer", "male", "short", 7902)
+	older.age = 88
+	var a := BodyShape.for_character(old)
+	var b := BodyShape.for_character(older)
+	check(a != null and b != null and b.stoop > a.stoop and a.stoop > 0.0, "the old stoop, more with the years")
+	check(rad_to_deg(b.stoop) <= float(GameData.appearance()["body_shape"]["stoop_max_deg"]) + 0.01, "but no more than the most")
+	var heavy := _villager("farmer", "male", "short", 7903)
+	heavy.age = 35
+	heavy.appearance["build"] = 1.2
+	var slight := _villager("farmer", "male", "short", 7904)
+	slight.age = 35
+	slight.appearance["build"] = 0.85
+	check(BodyShape.for_character(heavy).girth > 1.1, "a heavy build is broad in the belly")
+	check(BodyShape.for_character(slight).girth < 1.0, "a slight one narrow")
+	var m := HumanModel.for_character(older)
+	check(m.find_child("BodyShape", true, false) is BodyShape, "the shape rides on the villager's skeleton")
+	m.free()
