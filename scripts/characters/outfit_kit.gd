@@ -1,8 +1,9 @@
 class_name OutfitKit
 extends RefCounted
 ## Real clothes for villagers from the Quaternius Modular Character Outfits
-## (3D/characters/quaternius-modular-outfits-fantasy-standard), configured in
-## data/outfits.json.
+## (3D/characters/quaternius-modular-outfits-fantasy-standard) and the game's
+## own Status Wear (3D/characters/status-wear: headwear and aprons),
+## configured in data/outfits.json.
 ##
 ## look_for() is pure data (character + JSON), so portraits can describe the
 ## same clothes the 3D model wears. dress() turns a look into one merged,
@@ -22,7 +23,12 @@ static func config() -> Dictionary:
 	return GameData.load_file("outfits")
 
 
+## A part's file: "family:NAME" is one of the game's own (data/outfits.json
+## "roots"), anything else the outfit pack's.
 static func part_path(part: String) -> String:
+	if part.contains(":"):
+		var bits := part.split(":", true, 1)
+		return str(config().get("roots", {}).get(bits[0], "")) + "models/%s.glb" % bits[1]
 	return str(config().get("root", "")) + "models/parts/%s.gltf" % part
 
 
@@ -38,8 +44,9 @@ static func available() -> bool:
 	return _available == 1
 
 
-## What a character wears:
-## {"gender", "parts": [part names], "colorways": {set: index}, "hood": bool, "key"}.
+## What a character wears: {"gender", "parts": [part names], "colorways":
+## {set: index}, "hides_hair": bool, "hair": hairstyle to show, "headwear":
+## the headwear shown ("" for none), "apron": its slot ("" for none), "key"}.
 static func look_for(c: CharacterData) -> Dictionary:
 	var cfg := config()
 	var g := "female" if c.gender == "female" else "male"
@@ -57,10 +64,22 @@ static func look_for(c: CharacterData) -> Dictionary:
 		if not sets.has(set_id):
 			sets.append(set_id)
 	var extras: Array = (look.get("extras", []) as Array).duplicate()
+	var apron := ""
+	if bool(look.get("apron", false)):
+		apron = str(cfg.get("aprons", {}).get(c.occupation_id, cfg.get("apron_default", "")))
+		extras.append(apron)
+	var hair := str(c.appearance.get("hair_style", "short"))
 	var headwear := str(c.occupation().get("headwear", ""))
-	var hood := str(cfg.get("headwear", {}).get(headwear, ""))
-	if not hood.is_empty():
-		extras.append(hood)
+	headwear = str(cfg.get("instead", {}).get(g, {}).get(headwear, headwear))
+	var slot := str(cfg.get("headwear", {}).get(headwear, ""))
+	if not slot.is_empty() and (cfg.get("on_hair", []) as Array).has(headwear):
+		var long := (cfg.get("long_hair", []) as Array).has(hair)
+		slot += "_long" if long else "_short"
+		if hair == "bun":
+			hair = "long"  # let down under a hat
+	if not slot.is_empty():
+		extras.append(slot)
+	var hides_hair := (cfg.get("hides_hair", []) as Array).has(headwear) and not slot.is_empty()
 	for extra: String in extras:
 		for set_id: String in parts_cfg:
 			if parts_cfg[set_id].has(extra):
@@ -79,7 +98,8 @@ static func look_for(c: CharacterData) -> Dictionary:
 	var key := g + "|" + ",".join(key_parts)
 	for k in cw_keys:
 		key += "|%s:%d" % [k, colorways[k]]
-	return {"gender": g, "parts": parts, "colorways": colorways, "hood": extras.has("hood"), "key": key}
+	return {"gender": g, "parts": parts, "colorways": colorways, "hides_hair": hides_hair, "hair": hair,
+		"headwear": headwear if not slot.is_empty() else "", "apron": apron, "key": key}
 
 
 ## Plain-language description for portrait prompts ("" if no outfit pack data).
@@ -93,6 +113,9 @@ static func describe(look: Dictionary) -> String:
 			var d := str(variants[i].get("describe", ""))
 			if not d.is_empty() and not bits.has(d):
 				bits.append(d)
+	var apron := str(look.get("apron", ""))
+	if not apron.is_empty():
+		bits.append(str(config().get("apron_describe", {}).get(apron, "an apron")))
 	return " and ".join(bits)
 
 
@@ -217,7 +240,8 @@ static func _material(key: String, src: Material) -> Material:
 		var i := int(bits[1])
 		var m := (src as StandardMaterial3D).duplicate() as StandardMaterial3D
 		if i < variants.size():
-			var tex_path := str(config().get("root", "")) + str(variants[i].get("texture", ""))
+			var root := str(config().get("sets", {}).get(bits[0], {}).get("root", config().get("root", "")))
+			var tex_path := root + str(variants[i].get("texture", ""))
 			if ResourceLoader.exists(tex_path):
 				m.albedo_texture = load(tex_path)
 		m.resource_name = key
@@ -240,11 +264,12 @@ static func _mesh_for(look: Dictionary) -> Dictionary:
 			continue
 		if skin == null:
 			skin = p["skin"]
+		var remap := _bind_remap(p["skin"], skin)
 		for s: Dictionary in p["surfaces"]:
 			var mk := _material_key(s["material"], look["colorways"])
 			if not groups.has(mk):
 				groups[mk] = {"src": s["material"], "chunks": []}
-			groups[mk]["chunks"].append(s["arrays"])
+			groups[mk]["chunks"].append(_remapped(s["arrays"], remap))
 	if groups.is_empty():
 		_meshes[key] = {}
 		return {}
@@ -258,6 +283,34 @@ static func _mesh_for(look: Dictionary) -> Dictionary:
 	importer.generate_lods(25.0, 60.0, [])
 	var out := {"mesh": importer.get_mesh(), "skin": skin}
 	_meshes[key] = out
+	return out
+
+
+## Bind index in `from` -> bind index in `to`, matched by bone name ({} when
+## they already agree, as every part on this rig does).
+static func _bind_remap(from: Skin, to: Skin) -> Dictionary:
+	if from == null or to == null or from == to:
+		return {}
+	var index := {}
+	for i in to.get_bind_count():
+		index[to.get_bind_name(i)] = i
+	var out := {}
+	var same := from.get_bind_count() == to.get_bind_count()
+	for i in from.get_bind_count():
+		var j := int(index.get(from.get_bind_name(i), i))
+		out[i] = j
+		same = same and j == i
+	return {} if same else out
+
+
+static func _remapped(arrays: Array, remap: Dictionary) -> Array:
+	if remap.is_empty():
+		return arrays
+	var out := arrays.duplicate()
+	var bones: PackedInt32Array = (arrays[Mesh.ARRAY_BONES] as PackedInt32Array).duplicate()
+	for i in bones.size():
+		bones[i] = int(remap.get(bones[i], bones[i]))
+	out[Mesh.ARRAY_BONES] = bones
 	return out
 
 

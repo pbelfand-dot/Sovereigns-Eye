@@ -95,11 +95,13 @@ static func build(c: CharacterData, world_seed: int) -> Dictionary:
 	var primary := _color_name(str(ap.get("primary", "#7a6248")), cloth_names)
 	var secondary := _color_name(str(ap.get("secondary", "#4a3a2a")), cloth_names)
 	# Describe the clothes the 3D model actually wears when the outfit pack is in.
-	var clothes := OutfitKit.describe(OutfitKit.look_for(c)) if OutfitKit.available() else ""
+	var look := OutfitKit.look_for(c) if OutfitKit.available() else {}
+	var clothes := OutfitKit.describe(look) if not look.is_empty() else ""
 	if clothes.is_empty():
 		clothes = "%s %s with %s trim" % [primary, {"tunic": "linen tunic", "robe": "wool robe", "gown": "fine gown", "armor": "chainmail and a tabard", "apron": "work clothes and a leather apron", "fine": "embroidered doublet"}.get(c.outfit(), "clothes"), secondary]
 	parts.append("wearing " + clothes)
-	var headwear := str(occ.get("headwear", ""))
+	# The headwear the model shows (a man listed for a veil wears a cap).
+	var headwear := str(look.get("headwear", "")) if not look.is_empty() else str(occ.get("headwear", ""))
 	if not headwear.is_empty():
 		parts.append({"circlet": "a thin gold circlet", "crown": "a gold crown", "helmet": "a steel nasal helmet", "straw_hat": "a straw hat", "hood": "a hood", "cap": "a cloth cap", "baker_hat": "a baker's cap", "veil": "a linen veil"}.get(headwear, headwear))
 	var mood := "calm expression"

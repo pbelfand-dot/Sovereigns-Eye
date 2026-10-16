@@ -1,6 +1,8 @@
 {
   "_comment": "Real clothes from the Quaternius Modular Character Outfits - Fantasy (free Standard sampler: Peasant and Ranger sets, two colorways each). A villager's occupation outfit style ('tunic', 'apron', 'robe', 'armor', 'fine', 'gown') picks a look; each slot lists the sets it may come from (picked per villager). The colorway of each set is the one whose swatch is closest to the villager's primary clothing color, so portraits and the 3D model agree. Villagers wear only the head of the base body; the outfit pieces bring their own hands.",
   "root": "res://3D/characters/quaternius-modular-outfits-fantasy-standard/",
+  "_roots": "The game's own clothing families: a part named 'family:NAME' is <root>models/NAME.glb (Status Wear: headwear and aprons, 3D/characters/status-wear).",
+  "roots": { "wear": "res://3D/characters/status-wear/" },
 
   "sets": {
     "peasant": {
@@ -8,6 +10,17 @@
       "variants": [
         { "texture": "textures/T_Peasant_BaseColor.png", "swatch": "#8a6a45", "describe": "a cream linen shirt under a brown wool vest" },
         { "texture": "textures/variants/T_Peasant_2_BaseColor.png", "swatch": "#5c5f42", "describe": "an olive linen shirt under a dark wool vest" }
+      ]
+    },
+    "wear": {
+      "material": "MI_Wear",
+      "root": "res://3D/characters/status-wear/",
+      "_variants": "The felt of a cap is dyed per colorway; the rest of the atlas is shared. Gold and steel (MI_Wear_Metal) keep their colour.",
+      "variants": [
+        { "texture": "textures/T_Wear_BaseColor.png", "swatch": "#8a4028" },
+        { "texture": "textures/T_Wear_2_BaseColor.png", "swatch": "#3e567c" },
+        { "texture": "textures/T_Wear_3_BaseColor.png", "swatch": "#425c34" },
+        { "texture": "textures/T_Wear_4_BaseColor.png", "swatch": "#2c2624" }
       ]
     },
     "ranger": {
@@ -24,23 +37,33 @@
     "male": {
       "peasant": { "body": "Male_Peasant_Body", "arms": "Male_Peasant_Arms", "legs": "Male_Peasant_Legs", "feet": "Male_Peasant_Feet" },
       "ranger": { "body": "Male_Ranger_Body", "arms": "Male_Ranger_Arms", "legs": "Male_Ranger_Legs", "feet": "Male_Ranger_Feet_Boots",
-                  "hood": "Male_Ranger_Head_Hood", "pauldrons": "Male_Ranger_Acc_Pauldron" }
+                  "hood": "Male_Ranger_Head_Hood", "pauldrons": "Male_Ranger_Acc_Pauldron" },
+      "wear": {"circlet_short": "wear:SE_Circlet_Short_M", "circlet_long": "wear:SE_Circlet_Long_M", "crown_short": "wear:SE_Crown_Short_M", "crown_long": "wear:SE_Crown_Long_M", "straw_hat_short": "wear:SE_StrawHat_Short_M", "straw_hat_long": "wear:SE_StrawHat_Long_M", "cap_short": "wear:SE_Cap_Short_M", "cap_long": "wear:SE_Cap_Long_M", "baker_hat_short": "wear:SE_BakerHat_Short_M", "baker_hat_long": "wear:SE_BakerHat_Long_M", "helmet": "wear:SE_Helmet_M", "apron_leather": "wear:SE_ApronLeather_M", "apron_linen": "wear:SE_ApronLinen_M"}
     },
     "female": {
       "peasant": { "body": "Female_Peasant_Body", "arms": "Female_Peasant_Arms", "legs": "Female_Peasant_Legs", "feet": "Female_Peasant_Feet" },
       "ranger": { "body": "Female_Ranger_Body", "arms": "Female_Ranger_Arms", "legs": "Female_Ranger_Legs", "feet": "Female_Ranger_Feet",
-                  "hood": "Female_Ranger_Head_Hood", "pauldrons": "Female_Ranger_Acc_Pauldrons" }
+                  "hood": "Female_Ranger_Head_Hood", "pauldrons": "Female_Ranger_Acc_Pauldrons" },
+      "wear": {"circlet_short": "wear:SE_Circlet_Short_F", "circlet_long": "wear:SE_Circlet_Long_F", "crown_short": "wear:SE_Crown_Short_F", "crown_long": "wear:SE_Crown_Long_F", "straw_hat_short": "wear:SE_StrawHat_Short_F", "straw_hat_long": "wear:SE_StrawHat_Long_F", "cap_short": "wear:SE_Cap_Short_F", "cap_long": "wear:SE_Cap_Long_F", "baker_hat_short": "wear:SE_BakerHat_Short_F", "baker_hat_long": "wear:SE_BakerHat_Long_F", "helmet": "wear:SE_Helmet_F", "veil": "wear:SE_Veil_F", "apron_leather": "wear:SE_ApronLeather_F", "apron_linen": "wear:SE_ApronLinen_F"}
     }
   },
 
   "looks": {
     "tunic": { "body": ["peasant"], "arms": ["peasant"], "legs": ["peasant", "peasant", "ranger"], "feet": ["peasant", "peasant", "ranger"] },
-    "apron": { "body": ["peasant"], "arms": ["peasant"], "legs": ["peasant"], "feet": ["peasant", "ranger"] },
+    "apron": { "body": ["peasant"], "arms": ["peasant"], "legs": ["peasant"], "feet": ["peasant", "ranger"], "apron": true },
     "robe": { "body": ["peasant"], "arms": ["peasant"], "legs": ["peasant"], "feet": ["peasant"] },
     "armor": { "body": ["ranger"], "arms": ["ranger"], "legs": ["ranger"], "feet": ["ranger"], "extras": ["pauldrons"] },
     "fine": { "body": ["ranger"], "arms": ["ranger"], "legs": ["ranger"], "feet": ["ranger"], "colorway": 1 },
     "gown": { "body": ["ranger"], "arms": ["ranger"], "legs": ["ranger"], "feet": ["ranger"], "colorway": 1 }
   },
-  "_headwear": "Occupation headwear that the sampler can show (others - caps, hats, crowns, helmets - need the Source edition). A hood hides the hair.",
-  "headwear": { "hood": "hood" }
+  "_headwear": "Occupation headwear -> the part slot that shows it: the pack's ranger hood, or Status Wear's own. A hat that sits on the hair comes in a fit for short and for long hair ('_short'/'_long' is added from the villager's hairstyle); a bun is let down to long hair under one. Headwear with no part for a gender (a man's veil) falls back as listed in 'instead'.",
+  "headwear": { "hood": "hood", "circlet": "circlet", "crown": "crown", "straw_hat": "straw_hat", "cap": "cap", "baker_hat": "baker_hat", "helmet": "helmet", "veil": "veil" },
+  "on_hair": ["circlet", "crown", "straw_hat", "cap", "baker_hat"],
+  "long_hair": ["long", "braid", "bun"],
+  "hides_hair": ["hood", "helmet", "veil"],
+  "instead": { "male": { "veil": "cap" } },
+  "_aprons": "An apron look wears an apron: leather at the forge, the bench and the quarry, linen elsewhere.",
+  "aprons": { "blacksmith": "apron_leather", "carpenter": "apron_leather", "stonecutter": "apron_leather" },
+  "apron_default": "apron_linen",
+  "apron_describe": { "apron_leather": "a heavy leather apron", "apron_linen": "a linen apron" }
 }

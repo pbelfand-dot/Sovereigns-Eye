@@ -100,11 +100,13 @@ func test_outfits_dress_every_villager() -> void:
 		check(not (look["parts"] as Array).is_empty(), "%s wears outfit parts" % c.full_name())
 		for part: String in look["parts"]:
 			check(ResourceLoader.exists(OutfitKit.part_path(part)), "%s: part %s exists" % [c.full_name(), part])
-			check(part.begins_with("Female_" if c.gender == "female" else "Male_"), "%s wears %s-cut %s" % [c.full_name(), c.gender, part])
+			var cut := part.ends_with("_F" if c.gender == "female" else "_M") if part.contains(":") else part.begins_with("Female_" if c.gender == "female" else "Male_")
+			check(cut, "%s wears %s-cut %s" % [c.full_name(), c.gender, part])
 		check_eq(look, OutfitKit.look_for(c), "%s's look is stable" % c.full_name())
 		check(not OutfitKit.describe(look).is_empty(), "%s's clothes can be described" % c.full_name())
 		var headwear := str(c.occupation().get("headwear", ""))
-		check(bool(look["hood"]) == (headwear == "hood"), "%s wears a hood only with hooded jobs" % c.full_name())
+		var hides := headwear in ["hood", "helmet"] or (headwear == "veil" and c.gender == "female")
+		check(bool(look["hides_hair"]) == hides, "%s's hair is hidden only under a hood, helmet or veil" % c.full_name())
 		if c.outfit() == "armor":
 			check(str(look["key"]).contains("Pauldron"), "%s (armor) has shoulder armor" % c.full_name())
 		styles[c.outfit()] = true
