@@ -230,6 +230,7 @@ def market_cross_town():
         outline = [(-0.1, 0.1), (0.1, 0.1), (0.1, -0.02), (0.0, -0.12), (-0.1, -0.02)]
         vs = [sh.verts.new((x, 0.0, zz)) for x, zz in outline]
         sh.faces.new(vs)
+        sh.normal_update()  # solidify offsets along vertex normals: they must exist
         bmesh.ops.solidify(sh, geom=sh.faces[:], thickness=0.012)
         uv = sh.loops.layers.uv["UVMap"]
         for f in sh.faces:

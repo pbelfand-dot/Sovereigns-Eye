@@ -322,6 +322,7 @@ def well_town():
     pts = [(0.0, 0.0), (0.42, 0.0), (0.34, 0.09), (0.42, 0.18), (0.0, 0.18)]
     vv = [vane.verts.new((x, 0.0, z)) for x, z in pts]
     vane.faces.new(vv)
+    vane.normal_update()  # solidify offsets along vertex normals: they must exist
     bmesh.ops.solidify(vane, geom=vane.faces[:], thickness=0.018)
     L.uv_planar_band(vane, list(vane.faces), "wood_dark", Vector((1, 0, 0)), Vector((0, 0, 1)), scale=1.0)
     for f in vane.faces:

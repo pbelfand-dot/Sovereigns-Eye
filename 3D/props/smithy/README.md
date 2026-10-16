@@ -15,8 +15,8 @@ The fire glows, by day and at night. Before this family a smithy was a brick bui
 
 | Model | Yard | What it is | Tris | Materials | Size (W × H × D) |
 | --- | --- | --- | ---: | ---: | --- |
-| `SE_Forge_Village` | Hamlet, Village | A waist-high hearth of field stone with a stone rim and the fire in its firepot, a stone breast, a timber-framed hood narrowing to a short stone flue, leather bellows on a trestle, tongs and a poker | 1,364 | 6 | 2.69 × 3.41 × 1.29 m |
-| `SE_Forge_Town` | Market Town, Town | A dressed-stone forge on a slate plinth with a coped rim and an iron tool rail, a stone hood banded in iron, a tall chimney with a moulded cap, double bellows on a frame worked by a lever with a stone counterweight | 1,550 | 6 | 3.51 × 4.51 × 1.49 m |
+| `SE_Forge_Village` | Hamlet, Village | A waist-high hearth of field stone with a stone rim and the fire in its firepot, a stone breast, a timber-framed hood narrowing to a short stone flue, leather bellows on a trestle with a strapped handle, tongs and a poker | 1,452 | 6 | 2.72 × 3.41 × 1.29 m |
+| `SE_Forge_Town` | Market Town, Town | A dressed-stone forge on a slate plinth with a coped rim and an iron tool rail, a stone hood banded in iron, a tall chimney with a moulded cap, double bellows on a frame worked by a lever (chained to an iron eye) with a stone counterweight | 1,550 | 6 | 3.51 × 4.51 × 1.49 m |
 | `SE_Anvil` | both | A horned anvil on an oak stump, a hammer on its face, a bar glowing from the fire, tongs leaning on the stump | 512 | 3 | 0.87 × 0.88 × 0.71 m |
 | `SE_SlackTub` | both | The quench tub: half a barrel of sooty water with two iron hoops, tongs left in it | 566 | 3 | 0.81 × 0.96 × 0.80 m |
 | `SE_CoalHeap` | Hamlet, Village | Charcoal heaped on the ground, a shovel in it | 320 | 3 | 1.42 × 1.19 × 1.20 m |
@@ -38,6 +38,7 @@ The fire glows, by day and at night. Before this family a smithy was a brick bui
   - A charter swaps the yard (`refresh_props`).
 - **What it replaced.** The kit anvil left the smithy's dressing, and so did the kit building's crate, which stood where the yard goes.
 - **Walking.** The yard is one walking obstacle (`data/controls.json` props `forge`: 2.0 m).
+- **Rendering paths.** Checked in all three of Godot's renderers on the Town yard (`previews/_renderers_forward_mobile_compat.jpg`).
 
 ## Construction
 
@@ -53,7 +54,7 @@ The fire glows, by day and at night. Before this family a smithy was a brick bui
   - **No new textures.**
 - **Budgets.**
   - Forges stay under 2.5k triangles; the other pieces under 1k.
-  - A whole village yard is about 3.5k triangles and a town yard about 4.7k, merged.
+  - A whole village yard is about 3.6k triangles and a town yard about 4.7k, merged.
 - **Collision.**
   - Each GLB carries a simple convex proxy (`-convcolonly`).
   - In the game, the yard is one analytic circle. `tests/test_smithy.gd` checks that every piece of both yards stays inside the yard's footprint.

@@ -144,9 +144,11 @@ def hood(x_bot, y_front, y_back, z_bot, x_top, y_top_front, z_top, thick, band):
     return bm
 
 
-def bellows(at, length, width, z0, z1, yaw=0.0, seed=0):
+def bellows(at, length, width, z0, z1, yaw=0.0, seed=0, handle=True):
     """Leather bellows: two pear-shaped boards with pleated leather between,
-    an iron nozzle at the narrow end (pointing to -X before `yaw`)."""
+    an iron nozzle at the narrow end (pointing to -X before `yaw`) and, when
+    worked by hand, a handle strapped flat on the top board and running out
+    past its round end."""
     rng = random.Random(seed)
     parts = []
 
@@ -166,6 +168,7 @@ def bellows(at, length, width, z0, z1, yaw=0.0, seed=0):
         b = L.new_bm()
         vs = [b.verts.new(p) for p in outline(z)]
         b.faces.new(vs)
+        b.normal_update()  # solidify offsets along vertex normals: they must exist
         bmesh.ops.solidify(b, geom=list(b.faces), thickness=0.03)
         bmesh.ops.recalc_face_normals(b, faces=b.faces)
         L.uv_box_band(b, list(b.faces), "wood_light", u_off=rng.uniform(0, 1))
@@ -179,14 +182,21 @@ def bellows(at, length, width, z0, z1, yaw=0.0, seed=0):
     bmesh.ops.recalc_face_normals(leather, faces=leather.faces)
     nozzle = L.sweep([(-length * 0.5 + 0.02, 0, zm), (-length * 0.5 - 0.16, 0, zm - 0.02)], 0.03, sides=6, rect="iron_bar",
                      radius_fn=lambda t: 1.0 - 0.45 * t)
-    handle = L.beam((length * 0.42, 0, z1 + 0.03), (length * 0.7, 0, z1 + 0.05), 0.05, 0.04, band="wood_dark", rng=rng)
     m = Matrix.Translation(at) @ Matrix.Rotation(yaw, 4, "Z")
-    for bm in (boards, leather, nozzle, handle):
+    for bm in (boards, leather, nozzle):
         L.transform(bm, m)
     parts.append(L.to_object(boards, "bellows_boards", "MI_WoodTrim", smooth_angle=30))
     parts.append(L.to_object(leather, "bellows_leather", LEATHER, smooth_angle=50, recalc=False))
+    if handle:
+        # Resting on the board (its top face is z1), held by two iron straps.
+        grip = L.beam((length * 0.08, 0, z1 + 0.025), (length * 0.74, 0, z1 + 0.025), 0.05, 0.05, band="wood_dark", rng=rng)
+        L.transform(grip, m)
+        parts.append(L.to_object(grip, "bellows_handle", "MI_WoodTrim", smooth_angle=30))
+        for x in (0.18, 0.38):
+            strap = iron_box(length * x - 0.018, length * x + 0.018, -0.034, 0.034, z1 - 0.004, z1 + 0.056)
+            L.transform(strap, m)
+            L.merge_bm(nozzle, strap)
     parts.append(L.to_object(nozzle, "nozzle", "MI_MetalOrnaments", smooth_angle=50, recalc=False))
-    parts.append(L.to_object(handle, "bellows_handle", "MI_WoodTrim", smooth_angle=30))
     return parts
 
 
@@ -233,6 +243,7 @@ def shovel(at, yaw, lean, length=1.05):
     pts = [(-0.11, 0.0, 0.0), (0.11, 0.0, 0.0), (0.12, 0.0, 0.2), (0.0, 0.0, 0.24), (-0.12, 0.0, 0.2)]
     vs = [blade.verts.new(p) for p in pts]
     blade.faces.new(vs)
+    blade.normal_update()
     bmesh.ops.solidify(blade, geom=list(blade.faces), thickness=0.012)
     bmesh.ops.recalc_face_normals(blade, faces=blade.faces)
     L.uv_box_band(blade, list(blade.faces), "wood_dark")
@@ -316,15 +327,16 @@ def forge_town():
         for y in (-0.3, 0.3):
             parts.append(L.to_object(L.beam((x, y, 0.0), (x, y, 0.5), 0.08, 0.08, band="wood_dark", rng=rng), "leg", "MI_WoodTrim", smooth_angle=30))
         parts.append(L.to_object(L.beam((x, -0.36, 0.52), (x, 0.36, 0.52), 0.1, 0.07, band="wood_dark", rng=rng), "frame", "MI_WoodTrim", smooth_angle=30))
-    parts += bellows((1.55, 0.0, 0.0), 1.15, 0.72, 0.56, 0.78, seed=96)
-    parts += bellows((1.55, 0.0, 0.25), 1.15, 0.72, 0.56, 0.74, seed=97)[:2]
+    parts += bellows((1.55, 0.0, 0.0), 1.15, 0.72, 0.56, 0.78, seed=96, handle=False)
+    parts += bellows((1.55, 0.0, 0.25), 1.15, 0.72, 0.56, 0.74, seed=97, handle=False)[:2]
     post = L.beam((2.15, 0.32, 0.0), (2.15, 0.32, 1.85), 0.12, 0.12, band="wood_dark", rng=rng)
     parts.append(L.to_object(post, "lever_post", "MI_WoodTrim", smooth_angle=30))
     lever = L.beam((0.95, 0.32, 1.62), (2.4, 0.32, 1.9), 0.07, 0.08, band="wood_dark", rng=rng)
     parts.append(L.to_object(lever, "lever", "MI_WoodTrim", smooth_angle=30))
     weight = L.stone((2.42, 0.32, 1.72), (0.24, 0.22, 0.2), seed=98, band="rock_slate")
     parts.append(L.to_object(weight, "counterweight", "MI_RockTrim", smooth_angle=60, recalc=False))
-    chain = L.sweep([(1.45, 0.32, 1.68), (1.45, 0.1, 1.3), (1.5, 0.0, 1.06)], 0.009, sides=4, rect="iron_bar")
+    chain = L.sweep([(1.45, 0.32, 1.68), (1.45, 0.1, 1.3), (1.5, 0.0, 1.03)], 0.009, sides=4, rect="iron_bar")
+    L.merge_bm(chain, iron_box(1.46, 1.54, -0.025, 0.025, 0.985, 1.03))  # the eye it hooks, on the top board (z 0.99)
     parts.append(L.to_object(chain, "chain", "MI_MetalOrnaments", smooth_angle=60, recalc=False))
     return parts
 
