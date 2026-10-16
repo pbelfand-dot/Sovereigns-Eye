@@ -48,7 +48,7 @@
     },
     "smithy": {
       "variants": [
-        { "blocks": [ { "cells": [4, 3], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "chimney": "forge", "props": ["crate"] }
+        { "blocks": [ { "cells": [4, 3], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "chimney": "forge" }
       ]
     },
     "bakery": {
@@ -91,12 +91,9 @@
   },
   "missing": {
     "mill": "No windmill in the village kit: the tower is kit-built, the sails are simple boards using the kit's wood texture. Needs a windmill model (Ultimate Fantasy RTS or custom).",
-    "smithy": "No forge, anvil or bellows. Needs Fantasy Props MegaKit (Source) or custom props.",
     "bakery": "No bread oven. Needs Fantasy Props MegaKit or custom prop.",
     "barracks": "No crenellations, weapon racks or training dummies. Needs a castle/military kit in the Quaternius style.",
     "tavern": "No hanging sign, tables or barrels. Needs Fantasy Props MegaKit.",
-    "chapel": "No church/temple pieces (bell, stained glass, altar). Built from village walls + tower roof.",
-    "nature": "Trees, bushes, rocks and grass are still placeholders. Needs Stylized Nature MegaKit.",
-    "crops": "Field crops are placeholders. Needs Stylized Nature MegaKit or custom crops."
+    "chapel": "No church/temple pieces (bell, stained glass, altar). Built from village walls + tower roof."
   }
 }

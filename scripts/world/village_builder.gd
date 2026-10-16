@@ -625,6 +625,10 @@ func _build_props() -> void:
 			if type == "banner" and _arm_blocked(at_c, basis):
 				basis = basis * Basis.from_scale(Vector3(-1, 1, 1))
 			var xf := Transform3D(basis, TerrainHeight.on_ground(at_c))
+			# A set of models (the forge yard), merged with the props.
+			if commons.begins_with("set:"):
+				kit_items.append_array(PropKit.set_items(commons.substr(4), xf))
+				continue
 			if PropKit.placed_whole(type):
 				var centre := PropKit.instance(commons)
 				if centre:
@@ -789,7 +793,7 @@ func _blocked_for_props(pos: Vector3, owner: BuildingData) -> bool:
 			return true
 	var radii: Dictionary = WorldGeometry.cfg().get("props", {})
 	for p in layout.props:
-		if p["type"] in ["haystack", "lumber", "cart"] and Vector2(pos.x - p["pos"].x, pos.z - p["pos"].z).length() < float(radii.get(p["type"], 1.0)) + 0.6:
+		if p["type"] in ["haystack", "lumber", "cart", "forge"] and Vector2(pos.x - p["pos"].x, pos.z - p["pos"].z).length() < float(radii.get(p["type"], 1.0)) + 0.6:
 			return true
 	return false
 

@@ -151,6 +151,30 @@ static func migrate(data: Dictionary) -> Dictionary:
 					props.append({"type": p["type"], "pos": [snappedf(pos.x, 0.01), snappedf(pos.z, 0.01)], "rot": snappedf(float(p["rot"]), 0.0001)})
 			l["props"] = props
 		data["save_version"] = 9
+		version = 9
+	if version == 9:
+		# v10 (Smithy) gives each smithy its forge yard against a side wall,
+		# where the generator would put it now, moving the smithy's barrels
+		# and crates out of the way.
+		var l: Dictionary = data.get("layout", {})
+		if not l.is_empty():
+			var layout := VillageLayout.from_dict(l)
+			var props: Array = l.get("props", [])
+			if not props.any(func(p: Dictionary) -> bool: return str(p["type"]) == "forge"):
+				for b in layout.buildings:
+					if b.type != "smithy":
+						continue
+					var yard := VillageLayoutGenerator.smithy_yard(layout, b, true)
+					if yard.is_empty():
+						continue
+					var rect := {"center": yard["pos"], "rot": yard["rot"], "half": VillageLayoutGenerator.YARD_HALF["forge"]}
+					props = props.filter(func(p: Dictionary) -> bool:
+						var at := Vector3(float(p["pos"][0]), 0, float(p["pos"][1]))
+						return not (str(p["type"]) in ["barrel", "crate"] and VillageLayoutGenerator._point_in_rect(at, rect, 0.5)))
+					var pos: Vector3 = yard["pos"]
+					props.append({"type": "forge", "pos": [snappedf(pos.x, 0.01), snappedf(pos.z, 0.01)], "rot": snappedf(float(yard["rot"]), 0.0001)})
+			l["props"] = props
+		data["save_version"] = 10
 	return data
 
 

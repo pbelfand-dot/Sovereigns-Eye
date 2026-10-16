@@ -137,6 +137,7 @@ new floors rise inside scaffolding.
 
 ![Fields on foot: a wheat field behind town pales, cabbages in front](docs/screenshots/farm_fields.jpg)
 ![A Town's square: the lantern cross, a stepped edge, the well and its trough](docs/screenshots/market_square.jpg)
+![A Town smithy's forge yard: the forge against its wall, anvil, slack tub, coal bin and grindstone](docs/screenshots/smithy.jpg)
 
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
