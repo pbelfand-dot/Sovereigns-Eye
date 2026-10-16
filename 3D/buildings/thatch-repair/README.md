@@ -52,7 +52,7 @@ like a small town. Now a home's roof and walls follow its level:
   - Roofs are merged into the building's shell, one surface per material.
   - Patches and shutters join the details, hidden beyond `detail_range` like the kit's shutters.
 - **Saving.** Nothing new is saved: the look follows the home's type, variant and level.
-- **Rendering paths.** Checked in all three of Godot's renderers on a poor cottage (`previews/_renderers_forward_mobile_compat.jpg`); the thatch's normal map holds up in Compatibility.
+- **Rendering paths.** Checked in all three of Godot's renderers, on a Cottage and a farmhouse (`tools/prefab_gallery.tscn`) and a poor cottage in the village (`previews/_renderers_forward_mobile_compat.jpg`). The textures, the thatch's relief and the shutters look the same in each. Compatibility is a little brighter and Mobile a little darker, as they are for the kit (`THATCH_VIEWS=cottage` takes only the close-up, for the slow Mobile renderer).
 
 ## Construction
 
