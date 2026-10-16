@@ -43,16 +43,30 @@ static func parts(model: String) -> Array:
 	return _model_parts(model)
 
 
-## The Village Commons model for a layout prop under a charter (the well,
-## banners and signposts grow finer as the settlement does), or "" if the
-## type has none or its file is missing.
+## The model for a layout prop under a charter (data/props.json
+## "by_charter": the well, banners, signposts, trough and market cross grow
+## finer as the settlement does), or "" if the type has none at this
+## charter or its file is missing.
 static func commons_model(type: String, charter: int) -> String:
 	var by: Dictionary = config().get("by_charter", {})
 	var list: Array = by.get(type, [])
 	if list.is_empty():
 		return ""
 	var model := str(list[clampi(charter, 0, list.size() - 1)])
-	return model if ResourceLoader.exists(model_path(model)) else ""
+	return model if not model.is_empty() and ResourceLoader.exists(model_path(model)) else ""
+
+
+## False for a prop whose "by_charter" entry at this charter is empty (the
+## market cross before the Crown grants a market): its spot is kept, but
+## nothing stands there yet, so it is neither drawn nor in anyone's way.
+static func present(type: String, charter: int) -> bool:
+	var list: Array = config().get("by_charter", {}).get(type, [])
+	return list.is_empty() or not str(list[clampi(charter, 0, list.size() - 1)]).is_empty()
+
+
+## Centrepieces placed as their own node, keeping their LODs (data/props.json "whole").
+static func placed_whole(type: String) -> bool:
+	return type in config().get("whole", ["well"])
 
 
 ## A whole model as its own node (keeps the mesh's automatic LODs; used for

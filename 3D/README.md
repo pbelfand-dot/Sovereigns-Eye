@@ -24,6 +24,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `props/quaternius-fantasy-props-standard/` | Furniture, market goods, workshop equipment, weapons, books, potions, lighting, and small props | 94 |
 | `props/village-commons/` | **Original:** wells, charter banners and signposts in three charter tiers each, on the village kit's trim sheets | 9 |
 | `props/farm-field/` | **Original:** five crops, field fences and gates in three charter tiers, haystacks, a log pile and a scarecrow; one farm atlas plus the village kit's trim sheets | 16 |
+| `props/market-square/` | **Original:** the square's kerb in three charter tiers, the market cross (Market Town and Town) and the trough beside the well, on the village kit's trim sheets | 7 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
 | `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |

@@ -68,9 +68,12 @@ static func resolve(state: WorldState, p: Vector3, radius: float) -> Vector3:
 				continue
 			p = _out_of_circle(Vector2(t.x, t.y), tr * maxf(t.z, 0.6) + radius, p)
 		var radii: Dictionary = c.get("props", {})
+		var charter := state.territory.charter if state.territory else 0
 		for prop: Dictionary in state.layout.props:
 			var pp: Vector3 = prop["pos"]
 			if absf(pp.x - p.x) > 3.0 or absf(pp.z - p.z) > 3.0:
+				continue
+			if not PropKit.present(str(prop["type"]), charter):
 				continue
 			p = _out_of_circle(Vector2(pp.x, pp.z), float(radii.get(str(prop["type"]), 0.4)) + radius, p)
 	var limit := state.layout.extent - float(c.get("walk", {}).get("edge_margin", 6.0))

@@ -211,7 +211,12 @@ func _build_square() -> void:
 	add_child(holder)
 	var c := layout.square_center
 	var r := layout.square_radius
-	Mats.cylinder(holder, r + 0.5, r + 0.5, 0.14, c + Vector3(0, 0.04, 0), Mats.hex("#7d7262"), 40)
+	# The rim: the charter's kerb (Market Square models), or a flat stone band.
+	var kerb := _square_edge()
+	if kerb:
+		holder.add_child(kerb)
+	else:
+		Mats.cylinder(holder, r + 0.5, r + 0.5, 0.14, c + Vector3(0, 0.04, 0), Mats.hex("#7d7262"), 40)
 	var paving := VillageKit.ground_material("square")
 	if paving:
 		# Kit brick paving with a darker cobbled ring.
@@ -228,6 +233,75 @@ func _build_square() -> void:
 		var a := _rng.randf() * TAU
 		var d := sqrt(_rng.randf()) * (r - 0.8)
 		Mats.cylinder(holder, 0.35, 0.35, 0.03, c + Vector3(cos(a) * d, 0.15, sin(a) * d), Mats.hex("#9a8e78"), 6, Vector3(0, _rng.randf() * TAU, 0))
+
+
+## The kerb round the square for the current charter, as one MultiMesh
+## (data/props.json "square_edge"), or null without the models.
+func _square_edge() -> MultiMeshInstance3D:
+	var list: Array = PropKit.config().get("square_edge", {}).get("by_charter", [])
+	if list.is_empty():
+		return null
+	var model := str(list[clampi(territory.charter if territory else 0, 0, list.size() - 1)])
+	if not ResourceLoader.exists(PropKit.model_path(model)):
+		return null
+	var parts := PropKit.parts(model)
+	if parts.is_empty():
+		return null
+	var xforms := square_edge_transforms()
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = parts[0][0]
+	mm.instance_count = xforms.size()
+	for i in xforms.size():
+		mm.set_instance_transform(i, xforms[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.name = "Kerb"
+	mmi.multimesh = mm
+	return mmi
+
+
+## Where the kerb pieces lie round the square's rim: each piece's local +X
+## runs along the edge and +Z points out of the square, its inner edge on
+## the paving's rim. Pieces are stretched to the chord between their ends;
+## where a road comes in, the pieces either side are cut short to stop just
+## clear of it, so each opening is the road's width.
+func square_edge_transforms() -> Array[Transform3D]:
+	var cfg: Dictionary = PropKit.config().get("square_edge", {})
+	var seg := float(cfg.get("segment", 1.5))
+	var gap := float(cfg.get("road_gap", 0.3))
+	var c := layout.square_center
+	var r := layout.square_radius
+	var n := maxi(8, roundi(TAU * r / seg))
+	var step := TAU / n
+	const SAMPLES := 12
+	var out: Array[Transform3D] = []
+	for k in n:
+		# Walk the piece from its a1 end back to a0, keeping the longest clear run.
+		var a1 := (k + 1) * step
+		var best := Vector2i(-1, -1)
+		var run_start := -1
+		for i in SAMPLES + 1:
+			var a := a1 - step * i / SAMPLES
+			var p := c + Vector3(cos(a), 0, sin(a)) * (r + 0.25)
+			var clear := road_clearance(Vector2(p.x, p.z)) >= gap
+			if clear and run_start < 0:
+				run_start = i
+			if run_start >= 0 and (not clear or i == SAMPLES):
+				var run_end := i if clear else i - 1
+				if run_end - run_start > best.y - best.x:
+					best = Vector2i(run_start, run_end)
+				run_start = -1
+		if best.x < 0 or (best.y - best.x) * step * r / SAMPLES < 0.4:
+			continue
+		var b1 := a1 - step * best.x / SAMPLES
+		var b0 := a1 - step * best.y / SAMPLES
+		var mid := (b0 + b1) * 0.5
+		var sx := 2.0 * r * sin((b1 - b0) * 0.5) / seg
+		var outward := Vector3(cos(mid), 0, sin(mid))
+		var along := Vector3(sin(mid), 0, -cos(mid))  # from b1 back to b0, so +Z comes out outward
+		var origin := c + Vector3(cos(b1), 0, sin(b1)) * r
+		out.append(Transform3D(Basis(along * sx, Vector3.UP, outward), TerrainHeight.on_ground(origin)))
+	return out
 
 
 # --- Fields ------------------------------------------------------------------------------
@@ -535,12 +609,15 @@ func _build_props() -> void:
 	var kit_items := []
 	for p in layout.props:
 		var type := str(p["type"])
+		# Kept spots with nothing there yet (the market cross before a market).
+		if not PropKit.present(type, charter):
+			continue
 		# Haystacks and the log pile: the Farm & Field models, one look per spot.
 		var variant := PropKit.variant_model(type, p["pos"])
 		if not variant.is_empty():
 			kit_items.append([variant, Transform3D(Basis(Vector3.UP, float(p["rot"])), TerrainHeight.on_ground(p["pos"]))])
 			continue
-		# The Village Commons (well, banners, signposts) follow the charter.
+		# The well, banners, signposts, trough and market cross follow the charter.
 		var commons := PropKit.commons_model(type, charter)
 		if not commons.is_empty():
 			var at_c: Vector3 = p["pos"]
@@ -548,10 +625,10 @@ func _build_props() -> void:
 			if type == "banner" and _arm_blocked(at_c, basis):
 				basis = basis * Basis.from_scale(Vector3(-1, 1, 1))
 			var xf := Transform3D(basis, TerrainHeight.on_ground(at_c))
-			if type == "well":
+			if PropKit.placed_whole(type):
 				var centre := PropKit.instance(commons)
 				if centre:
-					centre.name = "Well"
+					centre.name = type.to_pascal_case()
 					centre.transform = xf
 					holder.add_child(centre)
 					continue
@@ -824,6 +901,11 @@ func refresh_props() -> void:
 ## Redraws the fields (a new charter brings a new kind of fence).
 func refresh_fields() -> void:
 	_replace_holder("Fields", _build_fields)
+
+
+## Redraws the square (a new charter brings a finer kerb).
+func refresh_square() -> void:
+	_replace_holder("Square", _build_square)
 
 
 func _replace_holder(holder_name: String, build_fn: Callable) -> void:
