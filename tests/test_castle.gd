@@ -11,79 +11,21 @@ const BUDGETS := {"SE_Curtain_Wall": 300, "SE_Curtain_Stair": 900, "SE_Curtain_C
 	"SE_Palisade_Gate": 1400, "SE_Timber_Tower": 3200, "SE_Motte": 1000, "SE_Motte_Bridge": 1600}
 const SEEDS := ["9", "12345", "1", "7", "42", "2026"]
 
-var _cache := {}
+var _probe = preload("res://tests/mesh_probe.gd").new(DIR)
 
 
-## Every triangle of a model (three corners each), in its own frame.
 func _tris(model: String) -> PackedVector3Array:
-	if _cache.has(model):
-		return _cache[model]
-	var out := PackedVector3Array()
-	var root := (load(DIR + model + ".glb") as PackedScene).instantiate()
-	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
-		for s in mi.mesh.get_surface_count():
-			var arrays := mi.mesh.surface_get_arrays(s)
-			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-			for i: int in arrays[Mesh.ARRAY_INDEX]:
-				out.append(mi.transform * verts[i])
-	root.free()
-	_cache[model] = out
-	return out
+	return _probe.tris(model)
 
 
-## Where a model's surfaces cut the level plane at height h: a segment
-## [from, to] for each triangle crossing it.
-func _segments(model: String, h: float) -> Array:
-	var t := _tris(model)
-	var out := []
-	for i in range(0, t.size(), 3):
-		var pts: Array[Vector3] = []
-		for k in 3:
-			var a := t[i + k]
-			var b := t[i + (k + 1) % 3]
-			if (a.y - h) * (b.y - h) < 0.0:
-				pts.append(a.lerp(b, (h - a.y) / (b.y - a.y)))
-		if pts.size() == 2:
-			out.append(pts)
-	return out
-
-
-## The points of those segments.
 func _section(model: String, h: float) -> PackedVector3Array:
-	var out := PackedVector3Array()
-	for seg: Array in _segments(model, h):
-		out.append_array(PackedVector3Array(seg))
-	return out
+	return _probe.section(model, h)
 
 
 ## How far a model reaches along `axis` (0 = x, 2 = z) at height h, within
-## |other axis| <= band (the band the wall's thickness takes, where pieces
-## meet): the segments clipped to the band.
+## the band the wall's thickness takes (where pieces meet).
 func _extent(model: String, h: float, axis: int, band: float = 1.2) -> Vector2:
-	var other := 2 - axis
-	var lo := INF
-	var hi := -INF
-	for seg: Array in _segments(model, h):
-		var a: Vector3 = seg[0]
-		var b: Vector3 = seg[1]
-		var t0 := 0.0
-		var t1 := 1.0
-		var d := b[other] - a[other]
-		if absf(d) < 1e-6:
-			if absf(a[other]) > band:
-				continue
-		else:
-			var ta := (-band - a[other]) / d
-			var tb := (band - a[other]) / d
-			t0 = maxf(t0, minf(ta, tb))
-			t1 = minf(t1, maxf(ta, tb))
-			if t0 > t1:
-				continue
-		for t in [t0, t1]:
-			var v := a.lerp(b, t)
-			lo = minf(lo, v[axis])
-			hi = maxf(hi, v[axis])
-	return Vector2(lo, hi)
+	return _probe.extent(model, h, axis, band)
 
 
 ## A model's extent along its wall line (x) at height h, where it meets its neighbours.
@@ -94,13 +36,7 @@ func _span(model: String, h: float) -> Vector2:
 ## A placed piece's ground plan (x, z) in the castle's frame: its section
 ## at height h, or (h = NAN) everything it has.
 func _plan(piece: Array, h: float = NAN) -> Rect2:
-	var xf := Transform3D(Basis(Vector3.UP, float(piece[2])), piece[1])
-	var pts := _tris(str(piece[0])) if is_nan(h) else _section(str(piece[0]), h)
-	var r := Rect2()
-	for i in pts.size():
-		var w := xf * pts[i]
-		r = Rect2(w.x, w.z, 0, 0) if i == 0 else r.expand(Vector2(w.x, w.z))
-	return r
+	return _probe.plan(piece, h)
 
 
 func test_every_castle_model_loads_within_budget() -> void:

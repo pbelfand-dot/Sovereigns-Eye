@@ -148,6 +148,11 @@ COLLECTIONS = {
         "license": "buildings/thatch-repair/LICENSE.txt",
         "preview_root": "buildings/thatch-repair/previews",
     },
+    "harbour": {
+        "source": "original (Sovereign's Eye): props/harbour/source/build_harbour.py",
+        "license": "props/harbour/LICENSE.txt",
+        "preview_root": "props/harbour/previews",
+    },
     "lords-castle": {
         "source": "original (Sovereign's Eye): buildings/lords-castle/source/build_castle.py",
         "license": "buildings/lords-castle/LICENSE.txt",
@@ -319,6 +324,12 @@ def collection_for(path: Path) -> tuple[str, str]:
             if path.stem.startswith(prefix):
                 return "thatch-repair", category
         return "thatch-repair", "repair"
+    if relative.parts[:2] == ("props", "harbour"):
+        if path.stem.startswith(("SE_Boat_Rowing", "SE_Boat_Fishing", "SE_Ship_")):
+            return "harbour", "craft"
+        if path.stem.startswith(("SE_Net_", "SE_Boat_Ashore")):
+            return "harbour", "shore"
+        return "harbour", "waterfront"
     if relative.parts[:2] == ("buildings", "lords-castle"):
         timber = ("SE_Motte", "SE_Palisade", "SE_Timber_")
         return "lords-castle", "timber" if path.stem.startswith(timber) else "stone"
