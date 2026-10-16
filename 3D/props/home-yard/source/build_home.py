@@ -577,6 +577,7 @@ def build(only=None):
     for name, fn in BUILDERS.items():
         if only and name not in only:
             continue
+        random.seed(name)  # helpers called without an rng of their own draw from here: same source, same GLBs
         objs = fn()
         for o in objs:  # apply placement (farm plants are placed by transform)
             if o.scale != Vector((1, 1, 1)) or o.rotation_euler.z != 0:
@@ -655,13 +656,15 @@ def save_blend(objs, path):
 
 
 # The yards as laid out in game round a 6 x 4 m cottage (data/props.json
-# "dressing": cottage), by home tier. Blender frame: front (door side) -Y.
+# "dressing": cottage, and the home_* sets), by home level. Blender frame:
+# front (door side) -Y; a set's yaw is the same as in game.
 YARDS = {
-    0: [("SE_Bench_Log", 1.65, -2.4, 0), ("SE_Garden_Poor", -1.5, 3.6, 180), ("SE_LaundryLine", 1.6, 3.3, 180), ("SE_ChoppingBlock", -3.9, -0.2, -90)],
-    1: [("SE_Bench", 1.65, -2.4, 0), ("SE_Garden", -1.5, 3.6, 180), ("SE_LaundryLine", 1.6, 3.3, 180), ("SE_ChoppingBlock", -3.9, -0.2, -90),
-        ("SE_WaterButt", -3.55, -1.4, -90), ("SE_ChickenCoop", 4.1, 0.6, 90)],
-    2: [("SE_Bench_Painted", 1.65, -2.4, 0), ("SE_FlowerPots", 2.7, -2.45, 0), ("SE_Garden", -1.5, 3.6, 180), ("SE_LaundryLine", 1.6, 3.3, 180),
-        ("SE_WaterButt", -3.55, -1.4, -90), ("SE_FlowerPots", -3.4, -0.5, 30)],
+    0: [("SE_Bench_Log", 1.65, -2.4, 0), ("SE_Garden_Poor", -1.5, 3.6, 180), ("SE_LaundryLine", 1.65, 3.3, 180),
+        ("SE_ChoppingBlock", -3.8, 0.45, -90)],
+    1: [("SE_Bench", 1.65, -2.4, 0), ("SE_Garden", -1.5, 3.6, 180), ("SE_LaundryLine", 1.65, 3.3, 180),
+        ("SE_ChoppingBlock", -3.8, 0.45, -90), ("SE_WaterButt", -3.5, -0.95, -90), ("SE_ChickenCoop", 3.75, 0.6, 90)],
+    2: [("SE_Bench_Painted", 1.65, -2.4, 0), ("SE_FlowerPots", -1.65, -2.4, 0), ("SE_Garden", -1.5, 3.6, 180),
+        ("SE_LaundryLine", 1.65, 3.3, 180), ("SE_WaterButt", -3.5, -0.95, -90)],
 }
 
 
