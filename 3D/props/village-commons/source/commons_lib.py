@@ -126,7 +126,8 @@ def to_object(bm, name, mat_name, smooth_angle=35.0, collection=None, recalc=Tru
     bm.free()
     obj = bpy.data.objects.new(name, me)
     (collection or bpy.context.scene.collection).objects.link(obj)
-    me.materials.append(material(mat_name) if not mat_name.startswith("MI_Commons") else bpy.data.materials[mat_name])
+    # A family's own materials are created up front; kit ones on demand.
+    me.materials.append(bpy.data.materials.get(mat_name) or material(mat_name))
     if smooth_angle is not None:
         me.shade_smooth()
         me.set_sharp_from_angle(angle=math.radians(smooth_angle))

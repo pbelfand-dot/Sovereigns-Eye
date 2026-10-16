@@ -64,6 +64,17 @@ func market_spots() -> Array[Vector3]:
 	return out
 
 
+## True if a yard prop (haystack, log pile) with walking radius `radius` at
+## `pos` keeps clear of every building's footprint.
+func yard_spot_clear(pos: Vector3, radius: float) -> bool:
+	for b in buildings:
+		var local := b.basis().inverse() * (pos - b.position)
+		var out := Vector2(maxf(absf(local.x) - b.footprint.x * 0.5, 0.0), maxf(absf(local.z) - b.footprint.y * 0.5, 0.0))
+		if out.length() < radius:
+			return false
+	return true
+
+
 func props_of_type(type: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for p in props:

@@ -13,19 +13,34 @@ static var _available := -1
 static var _parts: Dictionary = {}  # model -> [[Mesh, Transform3D], ...]
 static var _banner_material: ShaderMaterial
 
-const COMMONS := "commons:"
-
-
 static func config() -> Dictionary:
 	return GameData.load_file("props")
 
 
-## A kit model's file. "commons:NAME" is one of the Village Commons
-## (3D/props/village-commons), the rest come from the Fantasy Props kit.
+## A kit model's file. "family:NAME" is one of the game's own families
+## (data/props.json "roots": commons, farm...), the rest come from the
+## Fantasy Props kit.
 static func model_path(model: String) -> String:
-	if model.begins_with(COMMONS):
-		return str(config().get("commons_root", "")) + model.substr(COMMONS.length()) + ".glb"
+	var colon := model.find(":")
+	if colon > 0:
+		var roots: Dictionary = config().get("roots", {})
+		return str(roots.get(model.left(colon), "")) + model.substr(colon + 1) + ".glb"
 	return str(config().get("root", "")) + model + ".gltf"
+
+
+## A layout prop drawn from the game's own models, one look per spot
+## (data/props.json "variants": haystacks, the log pile), or "".
+static func variant_model(type: String, at: Vector3) -> String:
+	var list: Array = config().get("variants", {}).get(type, [])
+	if list.is_empty():
+		return ""
+	var model := str(list[absi(hash(Vector2i(roundi(at.x * 10.0), roundi(at.z * 10.0)))) % list.size()])
+	return model if ResourceLoader.exists(model_path(model)) else ""
+
+
+## A model's meshes with their transforms inside its file (cached).
+static func parts(model: String) -> Array:
+	return _model_parts(model)
 
 
 ## The Village Commons model for a layout prop under a charter (the well,

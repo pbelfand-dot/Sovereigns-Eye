@@ -1,0 +1,26 @@
+{
+  "_comment": "Farm & Field (3D/props/farm-field): how fields are drawn. Models are 'farm:NAME' (see data/props.json 'roots'). Crops are instanced in rows (grain: 2 m segments, neighbours touching so the field reads as one crop) or on a grid (heads). Crops cast no shadows and fade out beyond crop_visibility_range meters; the furrowed bed carries the read from far away.",
+
+  "crops": {
+    "wheat":   { "model": "farm:SE_Crop_Wheat",   "layout": "rows", "row_spacing": 0.6, "segment": 2.0, "height": [0.92, 1.08], "shade": 0.1 },
+    "barley":  { "model": "farm:SE_Crop_Barley",  "layout": "rows", "row_spacing": 0.6, "segment": 2.0, "height": [0.9, 1.06],  "shade": 0.1 },
+    "flax":    { "model": "farm:SE_Crop_Flax",    "layout": "rows", "row_spacing": 0.6, "segment": 2.0, "height": [0.92, 1.1],  "shade": 0.08 },
+    "cabbage": { "model": "farm:SE_Crop_Cabbage", "layout": "grid", "spacing": 0.85, "jitter": 0.1, "scale": [0.85, 1.15], "shade": 0.14 },
+    "turnip":  { "model": "farm:SE_Crop_Turnip",  "layout": "grid", "spacing": 0.72, "jitter": 0.1, "scale": [0.85, 1.2],  "shade": 0.12 }
+  },
+  "margin": 0.45,
+  "crop_visibility_range": 170.0,
+
+  "_bed": "The field's soil: a raised bed with sloped edges and furrows between the rows (vertex colours, no texture).",
+  "bed": { "height": 0.1, "furrow": 0.045, "edge": 0.4, "sink": 0.03, "soil": "#6f5134", "soil_dark": "#4a3523", "soil_light": "#8a6a46" },
+
+  "_fence": "Field fences follow the charter (index 0 Hamlet .. 3 Town): woven wattle hurdles, split rails, paled fencing. Segments are 2 m, stretched a little to fit each side; the gate stands on the side facing the farmhouse.",
+  "fence": {
+    "by_charter": ["farm:SE_Fence_Wattle", "farm:SE_Fence_Rail", "farm:SE_Fence_Rail", "farm:SE_Fence_Paled"],
+    "gates":      ["farm:SE_Gate_Wattle",  "farm:SE_Gate_Rail",  "farm:SE_Gate_Rail",  "farm:SE_Gate_Paled"],
+    "segment": 2.0,
+    "offset": 0.45
+  },
+
+  "scarecrow": { "model": "farm:SE_Scarecrow", "chance": 0.4 }
+}

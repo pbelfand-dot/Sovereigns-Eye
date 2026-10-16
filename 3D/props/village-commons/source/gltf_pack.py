@@ -46,7 +46,9 @@ def rel_uri(out_dir, image_path):
     return os.path.relpath(image_path, out_dir).replace(os.sep, "/")
 
 
-def pack(src, dst):
+def pack(src, dst, own=None):
+    """`own`: extra family materials {name: spec} (same shape as OWN, with
+    "dir" giving their texture folder)."""
     with open(src) as f:
         doc = json.load(f)
     out_dir = os.path.dirname(os.path.abspath(dst))
@@ -63,7 +65,7 @@ def pack(src, dst):
     used = set()
     for i, m in enumerate(doc.get("materials", [])):
         name = m.get("name", "")
-        spec = KIT.get(name) or OWN.get(name)
+        spec = KIT.get(name) or OWN.get(name) or (own or {}).get(name)
         if spec is None:
             raise SystemExit("%s: material %r is not a kit or commons material" % (src, name))
         used.add(name)
