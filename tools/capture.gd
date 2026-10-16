@@ -30,6 +30,7 @@ var farm_only := false
 var square_only := false
 var smithy_only := false
 var home_only := false
+var thatch_only := false
 
 
 func _ready() -> void:
@@ -50,6 +51,7 @@ func _ready() -> void:
 	square_only = args.has("square")
 	smithy_only = args.has("smithy")
 	home_only = args.has("home")
+	thatch_only = args.has("thatch")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -108,6 +110,10 @@ func _run() -> void:
 		return
 	if home_only:
 		await _home_shots()
+		get_tree().quit()
+		return
+	if thatch_only:
+		await _thatch_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -729,6 +735,91 @@ func _home_shots() -> void:
 		world.camera_rig.look_at_point(farm.position + Vector3(0, 0.8, 0), 18.0, true)
 		await settle.call()
 		await _shot("home_farm.png")
+
+
+## Thatch & Repair (3D/buildings/thatch-repair): the same street with every
+## cottage a Cottage (weathered thatch, patched walls, plank shutters), a
+## Timber House (neat thatch) and a Townhouse (tiles); a poor cottage close
+## to and on foot; a farmhouse; and the whole village from above.
+func _thatch_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	var heir := world.player_npc()
+	var settle := func() -> void:
+		for k in 4:
+			world._process(0.05)
+		await _wait(4)
+	var set_tier := func(tier: int) -> void:
+		for b in st.layout.buildings:
+			if b.type == "cottage":
+				b.tier = tier
+				world.builder.replace_building_node(b)
+		world.builder.refresh_props()
+		world.territory_changed.emit()
+		await _wait(2)
+	# The cottage that best shows its repairs: wattle showing on its front
+	# (+z, the door side) or the front half of its right (+x) wall, which the
+	# close-up sees (a cottage is 6 x 4 m); else any patch there.
+	var poor: BuildingData = null
+	var farm: BuildingData = null
+	var best := -1
+	for b in st.layout.buildings:
+		if b.type == "farmhouse" and farm == null:
+			farm = b
+		if b.type != "cottage":
+			continue
+		var score := 0
+		for part: Array in VillageKit.prefab(b.type, b.variant, 0).get("detail_parts", []):
+			var at := (part[1] as Transform3D).origin
+			if str(part[0]).contains("Patch") and (at.z > 1.9 or (at.x > 2.9 and at.z > 0.0)):
+				score = maxi(score, 2 if str(part[0]).contains("Wattle") else 1)
+		if score > best:
+			best = score
+			poor = b
+	var fwd := poor.forward()
+	var yaw := atan2(fwd.x, fwd.z)
+	# THATCH_VIEWS=cottage takes only the close-up (renderer checks: --rendering-method mobile).
+	var only_cottage := OS.get_environment("THATCH_VIEWS") == "cottage"
+	for tier in ([] if only_cottage else [0, 1, 2]):
+		await set_tier.call(tier)
+		world.set_view_mode("overview", true)
+		world.camera_rig.set_yaw(_clear_yaw(st, poor.position, 30.0, yaw + 0.5), true)
+		world.camera_rig.look_at_point(poor.position + Vector3(0, 1.0, 0), 34.0, true)
+		await settle.call()
+		await _shot("thatch_street_%d.png" % tier)
+	await set_tier.call(0)
+	world.camera_rig.set_yaw(_clear_yaw(st, poor.position, 12.0, yaw + 0.75), true)
+	world.camera_rig.look_at_point(poor.position + Vector3(0, 1.4, 0), 13.0, true)
+	await settle.call()
+	await _shot("thatch_cottage.png")
+	if only_cottage:
+		return
+	world.set_view_mode("walk", true)
+	heir.teleport(poor.door_position() + fwd * 3.0 + Vector3(fwd.z, 0, -fwd.x) * 1.6)
+	heir.rotation.y = yaw
+	world.camera_rig.set_yaw(_clear_yaw(st, heir.global_position, 9.0, yaw + 0.3), true)
+	world.camera_rig.look_at_point(heir.global_position, 7.0, true)
+	await settle.call()
+	await _shot("thatch_onfoot.png")
+	world.set_view_mode("overview", true)
+	if farm:
+		var ffwd := farm.forward()
+		world.camera_rig.set_yaw(_clear_yaw(st, farm.position, 18.0, atan2(ffwd.x, ffwd.z) + 0.6), true)
+		world.camera_rig.look_at_point(farm.position + Vector3(0, 1.5, 0), 20.0, true)
+		await settle.call()
+		await _shot("thatch_farm.png")
+	world.camera_rig.set_yaw(0.5, true)
+	world.camera_rig.look_at_point(Vector3(0, 0, 4), 120.0, true)
+	await settle.call()
+	await _wait(10)
+	await _shot("thatch_village.png")
 
 
 ## How far the ground line from `focus` out to a camera `dist` m away along

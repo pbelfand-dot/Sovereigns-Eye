@@ -27,7 +27,7 @@ This plan was written after inspecting:
 **Recipes.** Each building type is a data recipe made of blocks on the kit's 2 m grid:
 
 - cells, stories (3 m each), wall set;
-- roof type (tiles with a ridge direction, or a tower roof);
+- roof type (tiles with a ridge direction, thatch, weathered thatch, or a tower roof);
 - door position, chimney, balcony, props.
 
 There are 11 types with 1–3 variants each. Footprints in `data/buildings.json` match the recipes, and a test enforces that.
@@ -40,6 +40,13 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
 - **Collision:** one box per block on collision layer 2 (rule 5).
 - **Ground fit:** each building sits on the lowest corner of its footprint so no wall floats on a slope.
 - **Fallback:** if the kit folder is missing, the old primitive buildings are used automatically, so the game never breaks.
+
+**Thatch and repair.**
+- Homes are thatched with the game's own roofs (`3D/buildings/thatch-repair/`), hipped all round so they need no gables.
+- A Cottage has weathered grey thatch with moss and a patch of new straw. Up to two of its walls are patched (wattle, boards, daub), and it has plank shutters.
+- A Timber House and a farmhouse have neat golden thatch with a block-cut ridge. A Townhouse keeps the kit's tiles.
+- So a hamlet of Cottages reads poorer than a town of Townhouses before a word is read. The level sets the roof (`home_tiers` "roof", "repairs", "shutters").
+- Screenshot: `docs/screenshots/thatch_levels.jpg`.
 
 ### Villagers
 
@@ -144,7 +151,7 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
   - manor: cauldron
   - cottage and farmhouse: the Home Yard (`3D/props/home-yard/`): a bench, a kitchen garden, the washing, the chores and hens, by the home's level, each where its whole footprint is clear
 - **Merging.** All props in a 64 m chunk merge into one mesh with one surface per kit material (4 trim materials plus vertex-colored variants). The whole village's props cost a handful of draw calls.
-- **Original families:** the well, charter banners and signposts in three charter tiers (`3D/props/village-commons/`); crops, field fences and gates by charter, haystacks, the log pile and scarecrows (`3D/props/farm-field/`); the square's kerb by charter, the market cross and the trough (`3D/props/market-square/`); the smith's forge yard (`3D/props/smithy/`); what stands round a home, by its level (`3D/props/home-yard/`). The next original families are in `3D/BACKLOG.md`.
+- **Original families:** the well, charter banners and signposts in three charter tiers (`3D/props/village-commons/`); crops, field fences and gates by charter, haystacks, the log pile and scarecrows (`3D/props/farm-field/`); the square's kerb by charter, the market cross and the trough (`3D/props/market-square/`); the smith's forge yard (`3D/props/smithy/`); what stands round a home, by its level (`3D/props/home-yard/`); thatched roofs, wall patches and plank shutters by a home's level (`3D/buildings/thatch-repair/`). The next original families are in `3D/BACKLOG.md`.
 - **Collisions.** Props get no physics proxies: villagers follow the road graph, and the heir walks round layout props and the solid pieces of the home yards as analytic circles (`data/controls.json` "props" and "dressing"). Add simple boxes when navmesh pathing arrives.
 - `tools/prefab_gallery.tscn -- <dir> props` renders every prop; `tools/capture.tscn -- <seed> <dir> art` includes stall, smithy and tavern close-ups.
 - Showcase: `docs/screenshots/props_showcase.jpg`.
