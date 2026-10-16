@@ -12,6 +12,13 @@ import os
 import random
 import sys
 
+# Python salts string hashes per run, and the glTF export path iterates a set
+# of strings, so triangles came out in a different order from run to run.
+# Pin the seed (re-launching once) so the same source gives the same GLBs.
+if os.environ.get("PYTHONHASHSEED") != "0":
+    os.environ["PYTHONHASHSEED"] = "0"
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.dont_write_bytecode = True
 
