@@ -17,6 +17,10 @@ extends RefCounted
 ##
 ## If the kit isn't in the project (or a module is missing), callers fall back
 ## to the primitive placeholder in BuildingFactory.
+##
+## A module named "family:NAME" is one of the game's own pieces, loaded from
+## that family's folder ("roots" in building_kit.json): thatched roofs, wall
+## patches and plank shutters (3D/buildings/thatch-repair).
 
 const DATA_FILE := "building_kit"
 
@@ -35,6 +39,14 @@ static func kit_path() -> String:
 	return str(config().get("kit_path", ""))
 
 
+## Where a module's model lives: the kit's glTF, or "family:NAME" in a root.
+static func module_path(module: String) -> String:
+	var i := module.find(":")
+	if i < 0:
+		return kit_path() + module + ".gltf"
+	return str(config().get("roots", {}).get(module.substr(0, i), "")) + module.substr(i + 1) + ".glb"
+
+
 static func available() -> bool:
 	if _available < 0:
 		_available = 1 if ResourceLoader.exists(kit_path() + "Wall_Plaster_Straight.gltf") else 0
@@ -49,7 +61,9 @@ static func has_prefab(type: String) -> bool:
 
 ## A home's recipe at a higher level (data/building_kit.json "home_tiers"):
 ## the door block gains stories on top of the same ground floor, so an
-## upgrade only adds floors. Tier 0 returns the recipe unchanged.
+## upgrade only adds floors. A tier may also change the roof (worn thatch,
+## neat thatch, tiles) and mend the walls and shutters ("repairs",
+## "shutters"). Tier 0 returns the recipe unchanged.
 static func tier_recipe(base: Dictionary, tier: int) -> Dictionary:
 	var tiers: Array = config().get("home_tiers", [])
 	if tier <= 0 or tiers.is_empty():
@@ -62,6 +76,11 @@ static func tier_recipe(base: Dictionary, tier: int) -> Dictionary:
 		block["ground"] = str(block.get("ground", block.get("walls", "plaster")))
 		block["walls"] = str(t.get("upper_walls", block.get("walls", "plaster")))
 		block["stories"] = mini(int(block.get("stories", 1)) + int(t.get("add_stories", 1)), int(t.get("max_stories", 3)))
+		if t.has("roof"):
+			block["roof"] = str(t["roof"])
+	for key: String in ["repairs", "shutters"]:
+		if t.has(key):
+			r[key] = t[key]
 	if t.has("balcony"):
 		r["balcony"] = bool(t["balcony"])
 	r["vines"] = int(r.get("vines", 0)) + int(t.get("add_vines", 0))
@@ -98,7 +117,7 @@ static func module_mesh(module: String) -> Mesh:
 	if _modules.has(module):
 		return _modules[module]
 	var mesh: Mesh = null
-	var path := kit_path() + module + ".gltf"
+	var path := module_path(module)
 	if ResourceLoader.exists(path):
 		var scene: PackedScene = load(path)
 		var inst := scene.instantiate() if scene else null
@@ -163,12 +182,16 @@ static func prefab(type: String, variant: int, tier: int = 0) -> Dictionary:
 	rng.seed = hash(base_key)
 	var vine_rng := RandomNumberGenerator.new()
 	vine_rng.seed = hash(base_key + "/vines")
+	# Patches on a poor home's walls roll on their own, so the walls, windows
+	# and doors come out the same with or without them.
+	var repair_rng := RandomNumberGenerator.new()
+	repair_rng.seed = hash(base_key + "/repairs")
 	var shell := _Assembler.new()
 	var details := _Assembler.new()
 	var boxes: Array[AABB] = []
 	var top := 0.0
 	for block: Dictionary in recipe.get("blocks", []):
-		top = maxf(top, _build_block(block, recipe, rng, vine_rng, shell, details, boxes))
+		top = maxf(top, _build_block(block, recipe, rng, vine_rng, repair_rng, shell, details, boxes))
 	_add_props(recipe, rng, details)
 	var out := {
 		"key": key,
@@ -302,7 +325,7 @@ const WINDOW_FIT := {
 
 
 ## Builds one block; returns its top height (meters).
-static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumberGenerator, vine_rng: RandomNumberGenerator, shell: _Assembler, details: _Assembler, boxes: Array[AABB]) -> float:
+static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumberGenerator, vine_rng: RandomNumberGenerator, repair_rng: RandomNumberGenerator, shell: _Assembler, details: _Assembler, boxes: Array[AABB]) -> float:
 	var cell := float(config().get("cell", 2.0))
 	var sh := float(config().get("story_height", 3.0))
 	var cells: Array = block["cells"]
@@ -332,6 +355,8 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 		{"n": Vector3(-1, 0, 0), "count": cz, "depth": w * 0.5},
 	]
 	var vine_budget := int(recipe.get("vines", 0))
+	var repair_budget := int(recipe.get("repairs", 0))
+	var patch_slot := 0   # a home's patches go down its wall set's list, so they differ
 	for s in stories:
 		var y := s * sh
 		var set_name := ground_set if s == 0 else upper_set
@@ -365,13 +390,22 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 							var parts: Array = WINDOW_FIT[fit]
 							shell.add(parts[0], xf)
 							if not tall_windows and rng.randf() < 0.7:
-								details.add(str(parts[1]) + ("Open" if rng.randf() < 0.6 else "Closed"), xf)
+								details.add(_shutters(str(parts[1]), fit, "Open" if rng.randf() < 0.6 else "Closed", recipe), xf)
 				else:
 					var plain: Array = set_def["plain_ground"] if s == 0 else set_def["plain"]
 					shell.add(_pick(plain, rng), xf)
+					var vined := false
 					if vine_budget > 0 and s == stories - 1 and vine_rng.randf() < 0.5:
 						vine_budget -= 1
+						vined = true
 						details.add(["Prop_Vine1", "Prop_Vine2", "Prop_Vine4"][vine_rng.randi() % 3], xf * Transform3D(Basis(), Vector3(0, sh - 0.25, 0.14)))
+					# A patch goes on a bare wall (not under a vine).
+					if repair_budget > 0 and s == 0 and not vined and repair_rng.randf() < float(thatch_config().get("patch_chance", 0.5)):
+						var patch := _wall_patch(set_name, repair_rng, patch_slot)
+						if not patch.is_empty():
+							repair_budget -= 1
+							patch_slot += 1
+							details.add(str(patch[0]), xf * (patch[1] as Transform3D))
 		# Corner posts / quoins.
 		var corner: String = set_def["corner"]
 		for k in 4:
@@ -389,6 +423,8 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 	match str(block.get("roof", "tiles")):
 		"tiles":
 			top = _add_tiled_roof(origin, w, d, wall_h, str(block.get("ridge", "x")), recipe, shell)
+		"thatch", "thatch_worn":
+			top = _add_thatched_roof(origin, w, d, wall_h, str(block.get("ridge", "x")), str(block["roof"]), recipe, shell)
 		"tower":
 			shell.add("Roof_Tower_RoundTiles", Transform3D(Basis(), origin + Vector3(0, wall_h, 0)))
 			top = wall_h + 6.8
@@ -412,14 +448,74 @@ static func _add_tiled_roof(origin: Vector3, w: float, d: float, base: float, ri
 		var n := Vector3(sgn, 0, 0) if along_x else Vector3(0, 0, sgn)
 		var gb := Basis(Vector3.UP, atan2(n.x, n.z))
 		shell.add(gable, Transform3D(gb, origin + n * (length * 0.5) + Vector3(0, base, 0)))
-	# Chimney poking out near one gable end.
+	_add_chimney(origin, length, along_x, base, rise, recipe, shell)
+	return base + rise
+
+
+## Hipped thatched roof (3D/buildings/thatch-repair, building_kit.json
+## "thatch" "roofs"): hipped all round, so it needs no gable ends. `kind` is
+## "thatch" (neat, a block-cut ridge) or "thatch_worn" (a poor home's).
+## Falls back to the tiled roof if the family has no roof that size.
+static func _add_thatched_roof(origin: Vector3, w: float, d: float, base: float, ridge: String, kind: String, recipe: Dictionary, shell: _Assembler) -> float:
+	var along_x := ridge == "x"
+	var span := int(round(d if along_x else w))
+	var length := int(round(w if along_x else d))
+	var pattern := str(thatch_config().get("roofs", {}).get(kind, ""))
+	var roof_name := pattern % [span, length] if not pattern.is_empty() else ""
+	var mesh := module_mesh(roof_name) if not roof_name.is_empty() else null
+	if mesh == null:
+		return _add_tiled_roof(origin, w, d, base, ridge, recipe, shell)
+	var basis := Basis(Vector3.UP, PI * 0.5 if along_x else 0.0)
+	shell.add(roof_name, Transform3D(basis, origin + Vector3(0, base, 0)))
+	var rise := mesh.get_aabb().end.y
+	_add_chimney(origin, length, along_x, base, rise, recipe, shell)
+	return base + rise
+
+
+## Chimney poking out near one end of the ridge.
+static func _add_chimney(origin: Vector3, length: int, along_x: bool, base: float, rise: float, recipe: Dictionary, shell: _Assembler) -> void:
 	var chimney: Variant = recipe.get("chimney", false)
 	if chimney is String or bool(chimney):
 		var c_name := "Prop_Chimney2" if str(chimney) == "forge" else "Prop_Chimney"
 		var off := (length * 0.5 - 1.5)
 		var p := origin + (Vector3(off, 0, 0) if along_x else Vector3(0, 0, -off)) + Vector3(0, base + rise - 2.3, 0)
 		shell.add(c_name, Transform3D(Basis(), p))
-	return base + rise
+
+
+static func thatch_config() -> Dictionary:
+	return config().get("thatch", {})
+
+
+## Shutters for a window: the kit's, or plank shutters for a poor home
+## (recipe "shutters": "plank") when the family has them.
+static func _shutters(kit_prefix: String, fit: String, state: String, recipe: Dictionary) -> String:
+	var style := str(recipe.get("shutters", ""))
+	var pattern := str(thatch_config().get("shutters", {}).get(style, ""))
+	if not pattern.is_empty():
+		var own := pattern % [fit, state]
+		if module_mesh(own) != null:
+			return own
+	return kit_prefix + state
+
+
+## A patch for a ground-floor wall of this set (wattle showing, boards over
+## a hole, new daub: the `slot`-th of the set's list) and where it sits on
+## the wall, at a random height and offset: [module, Transform3D] in the
+## wall module's frame, or [] if the set takes none.
+static func _wall_patch(set_name: String, rng: RandomNumberGenerator, slot: int) -> Array:
+	var th := thatch_config()
+	var list: Array = th.get("patches", {}).get(set_name, [])
+	if list.is_empty():
+		return []
+	var module := str(list[posmod(slot, list.size())])
+	var heights: Array = th.get("patch_height", {}).get(set_name, [1.4, 2.0])
+	var z := rng.randf_range(float(heights[0]), float(heights[1]))
+	var x := rng.randf_range(-0.3, 0.3)
+	var roll := rng.randf_range(-0.12, 0.12)
+	var out := float(th.get("patch_offset", {}).get(set_name, 0.095))
+	if module_mesh(module) == null:
+		return []
+	return [module, Transform3D(Basis(Vector3.BACK, roll), Vector3(x, z, out))]
 
 
 static func _add_props(recipe: Dictionary, rng: RandomNumberGenerator, details: _Assembler) -> void:

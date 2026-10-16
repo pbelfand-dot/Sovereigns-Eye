@@ -26,8 +26,9 @@ Retrieved on 2026-10-13 from the original publishers, Kenney, KayKit, and Quater
 | Farm & Field (original) | Made for Sovereign's Eye: [`props/farm-field/`](props/farm-field/) | 1.0 | CC0 1.0 | 16 GLB models + 1 texture (uses the Medieval Village MegaKit's trim sheets) |
 | Market Square (original) | Made for Sovereign's Eye: [`props/market-square/`](props/market-square/) | 1.0 | CC0 1.0 | 7 GLB models (uses the Medieval Village MegaKit's trim sheets and the Village Commons banner atlas) |
 | Home Yard (original) | Made for Sovereign's Eye: [`props/home-yard/`](props/home-yard/) | 1.0 | CC0 1.0 | 10 GLB models and one 512 atlas (uses the Medieval Village MegaKit's trim sheets and the Farm & Field atlas) |
-| Status Wear (original) | Made for Sovereign's Eye: [`characters/status-wear/`](characters/status-wear/) | 1.0 | CC0 1.0 | 27 skinned GLB pieces and four 512 atlases (skinned to the Quaternius outfit rig) |
+| Status Wear (original) | Made for Sovereign's Eye: [`characters/status-wear/`](characters/status-wear/) | 1.0 | CC0 1.0 | 32 skinned GLB pieces and ten 512 × 1024 atlases, one per dye (skinned to the Quaternius outfit rig) |
 | Smithy (original) | Made for Sovereign's Eye: [`props/smithy/`](props/smithy/) | 1.0 | CC0 1.0 | 8 GLB models (uses the Medieval Village MegaKit's trim sheets) |
+| Thatch & Repair (original) | Made for Sovereign's Eye: [`buildings/thatch-repair/`](buildings/thatch-repair/) | 1.0 | CC0 1.0 | 12 GLB models (thatched roofs, wall patches, plank shutters), two 1024 thatch tiles, their normal map and a 1024 atlas; made to sit on the Medieval Village MegaKit's walls |
 
 The repository includes a single glTF 2.0 version of each model, all required PNG
 textures, and available previews. Duplicate FBX and OBJ versions from the source

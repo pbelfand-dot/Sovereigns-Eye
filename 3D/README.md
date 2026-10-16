@@ -27,6 +27,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `props/market-square/` | **Original:** the square's kerb in three charter tiers, the market cross (Market Town and Town) and the trough beside the well, on the village kit's trim sheets | 7 |
 | `props/home-yard/` | **Original:** what stands round a home, by its level: benches, kitchen gardens, chopping block, water butt, laundry line, hen house, flower pots | 10 |
 | `props/smithy/` | **Original:** the smith's forge yard: two forge tiers, anvil, slack tub, charcoal heap and bin, tool rack, grindstone; glowing embers | 8 |
+| `buildings/thatch-repair/` | **Original:** thatched roofs for the village kit's homes (weathered for a Cottage, neat for a Timber House and a farmhouse), wall patches and plank shutters for poor homes | 12 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
 | `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |
@@ -37,11 +38,11 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `alternatives/option-05-kenney-mini-characters/` | Rejected comparison pack retained for reference | 26 |
 | `character-tests/quaternius-universal-base-standard/` | Sleek rigged base bodies plus modular hair test pieces | 10 |
 | `characters/quaternius-modular-outfits-fantasy-standard/` | Peasant/Ranger complete outfits and separate modular clothing pieces | 24 |
-| `characters/status-wear/` | **Original:** headwear and aprons by trade and rank (circlet, crown, helmet, straw hat, cap, baker's cap, veil, leather and linen aprons), skinned to the outfit rig | 27 |
+| `characters/status-wear/` | **Original:** headwear, aprons and long garments by trade and rank (circlet, crown, helmet, straw hat, cap, baker's cap, veil, leather and linen aprons; robes, gowns and coats in ten dyes), skinned to the outfit rig | 32 |
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,413 glTF 2.0 model files** (1,051 GLB + 362 JSON glTF).
+Total: **1,498 glTF 2.0 model files** (1,136 GLB + 362 JSON glTF).
 
 Original asset families made for the game, and what comes next, are tracked in
 [`BACKLOG.md`](BACKLOG.md). Each has its own README with budgets, contact sheets

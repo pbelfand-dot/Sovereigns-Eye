@@ -125,7 +125,7 @@ orders. You can switch them off in the Build panel.
 An upgrade keeps the house's existing floors exactly. The roof comes off and the
 new floors rise inside scaffolding.
 
-![Day 1 and day 60 of the same village](docs/screenshots/growth_before_after.jpg)
+![Day 1 and day 46 of the same village](docs/screenshots/growth_before_after.jpg)
 ![A cottage gaining floors, a Timber House and a Townhouse](docs/screenshots/home_levels.jpg)
 ![A home's card: who lives there and what the next level needs](docs/screenshots/home_card.jpg)
 ![Settlers arriving, one with hidden S+ talent](docs/screenshots/settlers.jpg)
@@ -141,6 +141,7 @@ new floors rise inside scaffolding.
 ![A Timber House's yard: the raised bed and the washing behind, the hen house at the side](docs/screenshots/home_yard.jpg)
 ![Villagers in their trade's headwear and aprons: straw hats, felt caps, a baker's cap, circlets and crowns, helmets, veils](docs/screenshots/status_wear.jpg)
 ![The same farmhand at 35, 62, 75 and 88, a man and a woman, then four builds from slight to heavy](docs/screenshots/age_build.jpg)
+![One street as Cottages (weathered thatch, patched walls, plank shutters), Timber Houses (neat thatch) and Townhouses (tiles)](docs/screenshots/thatch_levels.jpg)
 
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)

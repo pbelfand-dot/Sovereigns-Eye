@@ -1,27 +1,38 @@
 {
-  "_comment": "Building prefabs assembled from the Quaternius Medieval Village MegaKit (3D/environments/quaternius-medieval-village-standard). Each building type is one or more blocks on a 2 m grid. block: cells [x, z] (2 m each), at [x, z] = block center in meters (building center is 0,0; the door side is +Z), stories (3 m each), walls (plaster | brick), ground (wall set for the ground story, optional), roof (tiles | tower | none), ridge (x | z), door (true on the block that holds the front door). 'variants' picks how many distinct looks a type can have; the building's variant number chooses one. Missing kit categories are listed in 'missing' so they show up in docs and logs instead of being silently replaced.",
+  "_comment": "Building prefabs assembled from the Quaternius Medieval Village MegaKit (3D/environments/quaternius-medieval-village-standard). Each building type is one or more blocks on a 2 m grid. block: cells [x, z] (2 m each), at [x, z] = block center in meters (building center is 0,0; the door side is +Z), stories (3 m each), walls (plaster | brick), ground (wall set for the ground story, optional), roof (tiles | thatch | thatch_worn | tower | none), ridge (x | z), door (true on the block that holds the front door). 'variants' picks how many distinct looks a type can have; the building's variant number chooses one. Missing kit categories are listed in 'missing' so they show up in docs and logs instead of being silently replaced.",
   "kit_path": "res://3D/environments/quaternius-medieval-village-standard/models/",
   "cell": 2.0,
   "story_height": 3.0,
   "detail_range": 90.0,
-  "_home_tiers": "Upgraded homes (Phase 3): the door block gains stories over the same ground floor. Index = home tier (data/territory.json homes.tiers).",
+  "_home_tiers": "Upgraded homes (Phase 3): the door block gains stories over the same ground floor. Index = home tier (data/territory.json homes.tiers). A tier can re-roof the door block (roof) and mend a poor home (repairs: wall patches, shutters: plank or the kit's): a Cottage's weathered thatch becomes neat thatch at a Timber House and tiles at a Townhouse.",
   "home_tiers": [
     {},
-    { "add_stories": 1, "max_stories": 3, "upper_walls": "plaster", "add_vines": 1 },
-    { "add_stories": 2, "max_stories": 3, "upper_walls": "plaster", "balcony": true, "add_vines": 2 }
+    { "add_stories": 1, "max_stories": 3, "upper_walls": "plaster", "add_vines": 1, "roof": "thatch", "repairs": 0, "shutters": "kit" },
+    { "add_stories": 2, "max_stories": 3, "upper_walls": "plaster", "balcony": true, "add_vines": 2, "roof": "tiles", "repairs": 0, "shutters": "kit" }
   ],
+  "_roots": "Folders of the game's own building pieces: a module named 'family:NAME' loads <root>NAME.glb.",
+  "roots": { "thatch": "res://3D/buildings/thatch-repair/models/" },
+  "_thatch": "Thatch & Repair (3D/buildings/thatch-repair). roofs: a block's roof 'thatch' (neat, block-cut ridge) or 'thatch_worn' (a poor home's) by span x length, hipped so it takes no gables; a size the family lacks falls back to tiles. A recipe's 'repairs' patches up to that many ground-floor walls (patch_chance each plain wall, the front first; a home's patches go down the wall set's list in order, so they differ; patch_height m up, patch_offset m out from the wall's line), and 'shutters': 'plank' hangs plank shutters (one leaf hanging, a board gone) in place of the kit's.",
+  "thatch": {
+    "roofs": { "thatch": "thatch:SE_Thatch_%dx%d", "thatch_worn": "thatch:SE_Thatch_%dx%d_Worn" },
+    "patches": { "plaster": ["thatch:SE_Patch_Wattle", "thatch:SE_Patch_Boards", "thatch:SE_Patch_Daub"], "brick": ["thatch:SE_Patch_Boards", "thatch:SE_Patch_Daub"] },
+    "patch_chance": 1.0,
+    "patch_height": { "plaster": [1.45, 2.1], "brick": [0.9, 1.9] },
+    "patch_offset": { "plaster": 0.095, "brick": 0.095 },
+    "shutters": { "plank": "thatch:SE_Shutters_Plank_%s_%s" }
+  },
   "prefabs": {
     "cottage": {
       "variants": [
-        { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 1, "walls": "plaster", "roof": "tiles", "ridge": "x", "door": true } ], "chimney": true, "vines": 1 },
-        { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "chimney": true, "vines": 2 },
-        { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 2, "walls": "plaster", "ground": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "chimney": true, "vines": 1 }
+        { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 1, "walls": "plaster", "roof": "thatch_worn", "ridge": "x", "door": true } ], "chimney": true, "vines": 1, "repairs": 2, "shutters": "plank" },
+        { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "thatch_worn", "ridge": "x", "door": true } ], "chimney": true, "vines": 2, "repairs": 2, "shutters": "plank" },
+        { "blocks": [ { "cells": [3, 2], "at": [0, 0], "stories": 2, "walls": "plaster", "ground": "brick", "roof": "thatch_worn", "ridge": "x", "door": true } ], "chimney": true, "vines": 1, "repairs": 2, "shutters": "plank" }
       ]
     },
     "farmhouse": {
       "variants": [
-        { "blocks": [ { "cells": [4, 3], "at": [0, 0], "stories": 1, "walls": "plaster", "ground": "plaster", "roof": "tiles", "ridge": "x", "door": true } ], "chimney": true, "props": ["wagon", "crate"] },
-        { "blocks": [ { "cells": [4, 3], "at": [0, 0], "stories": 2, "walls": "plaster", "ground": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "chimney": true, "props": ["crate", "crate"], "vines": 1 }
+        { "blocks": [ { "cells": [4, 3], "at": [0, 0], "stories": 1, "walls": "plaster", "ground": "plaster", "roof": "thatch", "ridge": "x", "door": true } ], "chimney": true, "props": ["wagon", "crate"] },
+        { "blocks": [ { "cells": [4, 3], "at": [0, 0], "stories": 2, "walls": "plaster", "ground": "brick", "roof": "thatch", "ridge": "x", "door": true } ], "chimney": true, "props": ["crate", "crate"], "vines": 1 }
       ]
     },
     "tavern": {
