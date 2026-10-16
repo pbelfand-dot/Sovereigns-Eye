@@ -11,7 +11,8 @@
     { "add_stories": 2, "max_stories": 3, "upper_walls": "plaster", "balcony": true, "add_vines": 2, "roof": "tiles", "repairs": 0, "shutters": "kit" }
   ],
   "_roots": "Folders of the game's own building pieces: a module named 'family:NAME' loads <root>NAME.glb.",
-  "roots": { "thatch": "res://3D/buildings/thatch-repair/models/" },
+  "roots": { "thatch": "res://3D/buildings/thatch-repair/models/", "chapel": "res://3D/props/chapel-grounds/models/" },
+  "_chapel": "Chapel & Churchyard (3D/props/chapel-grounds). A block's 'belfry' module is hung in its top story, whose walls become the kit's arched windows left open (no glazing, no shutters), so the bell shows; 'finial' stands on the tip of a tower roof; 'gable_cross' rides the ridge at the block's back (-Z, the chapel's east) end, 'gable_inset' m in from the roof's end.",
   "_thatch": "Thatch & Repair (3D/buildings/thatch-repair). roofs: a block's roof 'thatch' (neat, block-cut ridge) or 'thatch_worn' (a poor home's) by span x length, hipped so it takes no gables; a size the family lacks falls back to tiles. A recipe's 'repairs' patches up to that many ground-floor walls (patch_chance each plain wall, the front first; a home's patches go down the wall set's list in order, so they differ; patch_height m up, patch_offset m out from the wall's line), and 'shutters': 'plank' hangs plank shutters (one leaf hanging, a board gone) in place of the kit's.",
   "thatch": {
     "roofs": { "thatch": "thatch:SE_Thatch_%dx%d", "thatch_worn": "thatch:SE_Thatch_%dx%d_Worn" },
@@ -52,8 +53,8 @@
     "chapel": {
       "variants": [
         { "blocks": [
-            { "cells": [3, 5], "at": [0, -1.5], "stories": 2, "walls": "brick", "roof": "tiles", "ridge": "z", "windows": "tall" },
-            { "cells": [2, 2], "at": [0, 4.5], "stories": 4, "walls": "brick", "roof": "tower", "door": true }
+            { "cells": [3, 5], "at": [0, -1.5], "stories": 2, "walls": "brick", "roof": "tiles", "ridge": "z", "windows": "tall", "gable_cross": "chapel:SE_Cross_Gable", "gable_inset": 0.45 },
+            { "cells": [2, 2], "at": [0, 4.5], "stories": 4, "walls": "brick", "roof": "tower", "door": true, "belfry": "chapel:SE_Belfry", "finial": "chapel:SE_Cross_Tower" }
           ], "vines": 2 }
       ]
     },
@@ -105,6 +106,6 @@
     "bakery": "No bread oven. Needs Fantasy Props MegaKit or custom prop.",
     "barracks": "No crenellations, weapon racks or training dummies. Needs a castle/military kit in the Quaternius style.",
     "tavern": "No hanging sign, tables or barrels. Needs Fantasy Props MegaKit.",
-    "chapel": "No church/temple pieces (bell, stained glass, altar). Built from village walls + tower roof."
+    "chapel": "No stained glass or interior (altar, candles). Built from village walls + tower roof; the bell, its frame and the crosses are the game's own (3D/props/chapel-grounds)."
   }
 }

@@ -12,9 +12,13 @@ const CROPS := ["wheat", "barley", "cabbage", "flax", "turnip"]
 ## Half-extents (m) kept clear for the big yard props: any haystack model
 ## turned any way (up to 2.1 m across), and the log pile (2.5 x 1.8 m).
 const YARD_HALF := {"haystack": Vector2(1.15, 1.15), "lumber": Vector2(1.3, 1.3), "forge": Vector2(2.4, 1.35),
-	"training": Vector2(5.5, 3.25), "training_small": Vector2(3.5, 2.0)}
+	"training": Vector2(5.5, 3.25), "training_small": Vector2(3.5, 2.0),
+	"churchyard": Vector2(4.6, 4.6), "churchyard_small": Vector2(4.6, 2.6)}
 ## How far a training yard keeps from the barracks' wall (m), nearest first.
 const TRAINING_SETBACKS := [1.2, 2.5, 4.0]
+## How far a churchyard keeps from the chapel's wall (m), nearest first:
+## room to walk round the chapel's east end.
+const CHURCHYARD_SETBACKS := [1.0, 2.0, 3.2]
 ## The forge yard's centre from the smithy's wall (m): its forge backs onto the wall.
 const FORGE_SETBACK := 1.27
 ## Where the market cross stands (x the square's radius from its centre) and
@@ -40,6 +44,7 @@ func generate(world_seed: int) -> VillageLayout:
 	_build_main_roads()
 	_place_square_props()
 	_place_square_buildings()
+	_reserve_churchyards()
 	_place_manor()
 	_place_farms()
 	_place_roadside("barracks", ["north"], 14.0, 60.0)
@@ -393,6 +398,39 @@ static func training_yard(l: VillageLayout, b: BuildingData, ignore_small := fal
 	return {}
 
 
+## The chapel's churchyard (3D/props/chapel-grounds): behind it, at its
+## east end (away from the tower), else beside the nave, full size where it
+## fits, else a shallow one. Graves lie east-west like the chapel, so the
+## yard always faces the way the chapel's back does (its +Z is east) and its
+## gateway, on its west side, faces the chapel or the square's side. `avoid`:
+## more rects to keep clear of ({"center", "rot", "half"}: sites being built).
+## {"type": "churchyard" or "churchyard_small", "pos", "rot"}, or {}.
+static func churchyard(l: VillageLayout, b: BuildingData, ignore_small := false, avoid: Array = []) -> Dictionary:
+	var basis := b.basis()
+	var rot := b.rotation + PI
+	for type: String in ["churchyard", "churchyard_small"]:
+		var half: Vector2 = YARD_HALF[type]
+		var spots: Array[Vector3] = []
+		for setback: float in CHURCHYARD_SETBACKS:
+			spots.append(Vector3(0, 0, -(b.footprint.y * 0.5 + setback + half.y)))
+		for setback: float in CHURCHYARD_SETBACKS:
+			for sx: float in [1.0, -1.0]:
+				spots.append(Vector3(sx * (b.footprint.x * 0.5 + setback + half.x), 0, -b.footprint.y * 0.5 + half.y))
+		for local in spots:
+			var center := b.position + basis * local
+			if not _yard_clear(l, b, center, rot, half, ignore_small):
+				continue
+			var rect := {"center": center, "rot": rot, "half": half}
+			var free := true
+			for r: Dictionary in avoid:
+				if rects_overlap(rect, r, 0.4):
+					free = false
+					break
+			if free:
+				return {"type": type, "pos": center, "rot": rot}
+	return {}
+
+
 static func _yard_clear(l: VillageLayout, owner: BuildingData, center: Vector3, rot: float, half: Vector2, ignore_small: bool) -> bool:
 	if center.length() + half.length() > l.flat_radius - 2.0:
 		return false
@@ -431,6 +469,9 @@ static func _yard_clear(l: VillageLayout, owner: BuildingData, center: Vector3, 
 		if ignore_small and p["type"] in ["barrel", "crate"]:
 			continue
 		if _point_in_rect(p["pos"], rect, 0.6):
+			return false
+		# Another yard's whole footprint, not just its middle.
+		if YARD_HALF.has(p["type"]) and rects_overlap(rect, {"center": p["pos"], "rot": float(p["rot"]), "half": YARD_HALF[p["type"]]}, 0.4):
 			return false
 	for t in l.trees:
 		if _point_in_rect(Vector3(t.x, 0, t.y), rect, 0.6):
@@ -516,6 +557,15 @@ static func square_spot(l: VillageLayout, dist: float, taken: Array = []) -> Vec
 			best_score = score
 			best = p
 	return best
+
+
+## Each chapel's churchyard, laid out as soon as the chapels stand on the
+## square, so the farms' fields and the houses along the roads keep out of it.
+func _reserve_churchyards() -> void:
+	for b in layout.buildings_of_type("chapel"):
+		var yard := churchyard(layout, b)
+		if not yard.is_empty():
+			_add_prop(str(yard["type"]), yard["pos"], yard["rot"], YARD_HALF[yard["type"]])
 
 
 func _place_building_props() -> void:

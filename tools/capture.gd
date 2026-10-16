@@ -32,6 +32,7 @@ var smithy_only := false
 var home_only := false
 var thatch_only := false
 var training_only := false
+var chapel_only := false
 
 
 func _ready() -> void:
@@ -54,6 +55,7 @@ func _ready() -> void:
 	home_only = args.has("home")
 	thatch_only = args.has("thatch")
 	training_only = args.has("training")
+	chapel_only = args.has("chapel")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -120,6 +122,10 @@ func _run() -> void:
 		return
 	if training_only:
 		await _training_shots()
+		get_tree().quit()
+		return
+	if chapel_only:
+		await _chapel_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -882,6 +888,94 @@ func _training_shots() -> void:
 		await settle.call()
 		await _shot(tag + "gameplay.png")
 		world.set_view_mode("overview", true)
+
+
+## The chapel and its churchyard (3D/props/chapel-grounds) at each charter:
+## from the square, from behind, from the side and on foot by the east
+## wall; then close views of the bell in the tower and the gable cross.
+## CHAPEL_CHARTERS=0,3 takes only those charters; CHAPEL_SIZE=small shows a
+## shallow churchyard in place of the full one.
+func _chapel_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	var heir := world.player_npc()
+	var chapels := st.layout.buildings_of_type("chapel")
+	if chapels.is_empty():
+		push_warning("no chapel in this village")
+		return
+	var b: BuildingData = chapels[0]
+	var at := b.position
+	var back := b.basis() * Vector3(0, 0, -1)
+	var side := Vector3(back.z, 0, -back.x)
+	var yards := st.layout.props_of_type("churchyard") + st.layout.props_of_type("churchyard_small")
+	if OS.get_environment("CHAPEL_SIZE") == "small":
+		# Every village here has room for a full churchyard; show the shallow one too.
+		for y: Dictionary in yards:
+			var half: Vector2 = VillageLayoutGenerator.YARD_HALF["churchyard_small"]
+			y["type"] = "churchyard_small"
+			y["pos"] = at + back * (b.footprint.y * 0.5 + VillageLayoutGenerator.CHURCHYARD_SETBACKS[0] + half.y)
+		world.builder.refresh_ground()
+	var yard_at := at + back * 12.0
+	var depth := 4.6
+	for y: Dictionary in yards:
+		if (y["pos"] as Vector3).distance_to(at) < 20.0:
+			yard_at = y["pos"]
+			depth = VillageLayoutGenerator.YARD_HALF[y["type"]].y
+	var settle := func() -> void:
+		for k in 4:
+			world._process(0.05)
+		await _wait(4)
+	var only := OS.get_environment("CHAPEL_CHARTERS").split(",", false)
+	for charter in [0, 1, 2, 3]:
+		if not only.is_empty() and not str(charter) in only:
+			continue
+		st.territory.charter = charter
+		world.builder.refresh_props()
+		world.territory_changed.emit()
+		await _wait(2)
+		var tag := "chapel_%d_" % charter
+		world.set_view_mode("overview", true)
+		heir.teleport(yard_at + back * (depth + 3.0) + side * 6.0)
+		for view: Array in [["front", PI, at, 30.0], ["yard", 0.35, yard_at, 20.0], ["side", PI * 0.5 + 0.4, at + back * 4.0, 28.0]]:
+			world.camera_rig.set_yaw(atan2(back.x, back.z) + float(view[1]), true)
+			world.camera_rig.look_at_point(view[2], float(view[3]), true)
+			await settle.call()
+			await _shot(tag + str(view[0]) + ".png")
+		# On foot, outside the east wall, looking back over the graves to the chapel.
+		world.set_view_mode("walk", true)
+		heir.teleport(yard_at + back * (depth + 1.6) + side * 1.2)
+		var to := yard_at - heir.global_position
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.set_yaw(heir.rotation.y + 0.35, true)
+		world.camera_rig.look_at_point(heir.global_position, 8.0, true)
+		await settle.call()
+		await _shot(tag + "gameplay.png")
+		world.set_view_mode("overview", true)
+	# Close views: the bell in the tower's top stage, the iron cross on the
+	# spire, the stone cross on the east gable.
+	var cam := Camera3D.new()
+	cam.fov = 38.0
+	add_child(cam)
+	var front := -back
+	var tower := at + front * 4.5
+	for view: Array in [["tower", tower + front * 9.0 + side * 6.0 + Vector3(0, 13.0, 0), tower + Vector3(0, 12.5, 0)],
+			["belfry", tower + front * 16.0 + side * 3.0 + Vector3(0, 5.0, 0), tower + Vector3(0, 10.6, 0)],
+			["spire", tower + front * 8.0 + side * 5.0 + Vector3(0, 19.0, 0), tower + Vector3(0, 17.2, 0)],
+			["gable", at + back * 15.0 + side * 5.0 + Vector3(0, 11.0, 0), at + back * 6.0 + Vector3(0, 10.4, 0)]]:
+		cam.global_position = view[1]
+		cam.look_at(view[2])
+		cam.make_current()
+		await settle.call()
+		await _shot("chapel_close_%s.png" % view[0])
+	world.camera_rig.camera.make_current()
+	cam.queue_free()
 
 
 ## How far the ground line from `focus` out to a camera `dist` m away along

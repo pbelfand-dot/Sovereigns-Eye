@@ -426,15 +426,27 @@ func _build_nature() -> void:
 ## Scatter items still on open ground (new lanes and building sites wear the
 ## ground after the meadow was scattered).
 func _kept_scatter(group: Dictionary, items: Dictionary) -> Dictionary:
+	var clear := _clear_yards()
 	var out := {}
 	for model: String in items:
 		var kept := []
 		for it: Array in items[model]:
 			var o: Vector3 = (it[0] as Transform3D).origin
-			if _scatter_ok(group, wear_at(Vector2(o.x, o.z))):
+			if _scatter_ok(group, wear_at(Vector2(o.x, o.z))) and not _in_taken(o, clear):
 				kept.append(it)
 		if not kept.is_empty():
 			out[model] = kept
+	return out
+
+
+## Yards that grow no scatter (data/nature.json "keep_clear"): their
+## footprints, {"center", "rot", "half"}.
+func _clear_yards() -> Array:
+	var types: Array = NatureKit.config().get("keep_clear", [])
+	var out := []
+	for p: Dictionary in layout.props:
+		if types.has(p["type"]) and VillageLayoutGenerator.YARD_HALF.has(p["type"]):
+			out.append({"center": p["pos"], "rot": float(p["rot"]), "half": VillageLayoutGenerator.YARD_HALF[p["type"]]})
 	return out
 
 
@@ -774,9 +786,7 @@ func dressing_items() -> Array:
 		if VillageLayoutGenerator.YARD_HALF.has(p["type"]):
 			taken.append({"center": p["pos"], "rot": float(p["rot"]), "half": VillageLayoutGenerator.YARD_HALF[p["type"]]})
 		for it: Array in PropKit.set_items(model.substr(4), Transform3D(Basis(Vector3.UP, float(p["rot"])), p["pos"])):
-			if solid.has(it[0]):
-				var o: Vector3 = (it[1] as Transform3D).origin
-				layout.dressing_obstacles.append(Vector3(o.x, o.z, float(solid[it[0]])))
+			_add_obstacles(solid.get(it[0]), it[1])
 	for b in layout.buildings:
 		var list: Array = dressing.get(b.type, [])
 		var placed := {}  # a set listed again is a second choice of spot
@@ -802,12 +812,21 @@ func dressing_items() -> Array:
 				continue
 			var items := PropKit.set_items(set_name, Transform3D(Basis(Vector3.UP, rot), TerrainHeight.on_ground(pos)))
 			for it: Array in items:
-				if solid.has(it[0]):
-					var o: Vector3 = (it[1] as Transform3D).origin
-					layout.dressing_obstacles.append(Vector3(o.x, o.z, float(solid[it[0]])))
+				_add_obstacles(solid.get(it[0]), it[1])
 			out.append_array(items)
 			placed[set_name] = true
 	return out
+
+
+## A solid piece's circles for walking (data/controls.json "dressing"): a
+## radius at its origin, or circles [x, z, radius] in its own frame.
+func _add_obstacles(shape: Variant, xf: Transform3D) -> void:
+	if shape is Array:
+		for c: Array in shape:
+			var o := xf * Vector3(float(c[0]), 0, float(c[1]))
+			layout.dressing_obstacles.append(Vector3(o.x, o.z, float(c[2])))
+	elif shape != null:
+		layout.dressing_obstacles.append(Vector3(xf.origin.x, xf.origin.z, float(shape)))
 
 
 func _in_taken(pos: Vector3, taken: Array) -> bool:

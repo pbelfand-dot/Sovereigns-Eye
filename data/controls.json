@@ -37,10 +37,16 @@
 
   "_obstacles": "Collision radius (meters) for props and tree trunks. Buildings use their footprint. 0: the prop is a whole yard whose pieces block on their own (\"dressing\").",
   "tree_radius": 0.45,
-  "props": { "well": 1.1, "stall": 1.3, "bench": 0.6, "crate": 0.45, "barrel": 0.4, "banner": 0.35, "haystack": 1.0, "dummy": 0.35, "lumber": 1.35, "cart": 1.2, "signpost": 0.3, "rock": 0.6, "market_cross": 1.5, "trough": 0.95, "forge": 2.0, "training": 0.0, "training_small": 0.0 },
-  "_dressing": "Solid pieces of the house dressing and the training yards (data/props.json sets), walked round by the heir: model -> radius (m).",
+  "props": { "well": 1.1, "stall": 1.3, "bench": 0.6, "crate": 0.45, "barrel": 0.4, "banner": 0.35, "haystack": 1.0, "dummy": 0.35, "lumber": 1.35, "cart": 1.2, "signpost": 0.3, "rock": 0.6, "market_cross": 1.5, "trough": 0.95, "forge": 2.0, "training": 0.0, "training_small": 0.0, "churchyard": 0.0, "churchyard_small": 0.0 },
+  "_dressing": "Solid pieces of the house dressing, the training yards and the churchyards (data/props.json sets), walked round by the heir: model -> radius (m) of a circle at its origin, or a list of circles [x, z, radius] in the model's own frame (graves, walls, fences, a lychgate's posts).",
   "dressing": { "home:SE_ChickenCoop": 0.75, "home:SE_WaterButt": 0.42, "home:SE_ChoppingBlock": 0.3,
     "training:SE_Pell": 0.2, "training:SE_Dummy_Straw": 0.3, "training:SE_Quintain": 0.3, "training:SE_ArcheryButt": 1.25,
-    "training:SE_Rack_Staves": 0.75, "training:SE_Rack_Weapons": 0.8 },
+    "training:SE_Rack_Staves": 0.75, "training:SE_Rack_Weapons": 0.8,
+    "chapel:SE_Grave_Mound": [[0, -0.55, 0.42], [0, 0.55, 0.42]], "chapel:SE_Grave_Fresh": [[0, -0.6, 0.48], [0, 0.6, 0.48]],
+    "chapel:SE_Grave_Slab": [[0, -0.55, 0.38], [0, 0.55, 0.38]], "chapel:SE_Grave_Slab_Knight": [[0, -0.6, 0.42], [0, 0.6, 0.42]],
+    "chapel:SE_Grave_Cross": 0.12, "chapel:SE_Churchyard_Cross": 0.95, "chapel:SE_Yew": 0.8, "chapel:SE_Wall_Pier": 0.4,
+    "chapel:SE_Wall_Rubble": [[-0.67, 0, 0.36], [0, 0, 0.36], [0.67, 0, 0.36]], "chapel:SE_Wall_Coped": [[-0.67, 0, 0.34], [0, 0, 0.34], [0.67, 0, 0.34]],
+    "chapel:SE_Lychgate": [[-0.95, -1.0, 0.13], [0.95, -1.0, 0.13], [-0.95, 1.0, 0.13], [0.95, 1.0, 0.13]],
+    "farm:SE_Fence_Wattle": [[0.33, 0, 0.3], [1.0, 0, 0.3], [1.67, 0, 0.3]], "farm:SE_Fence_Paled": [[0.33, 0, 0.3], [1.0, 0, 0.3], [1.67, 0, 0.3]] },
   "villager_radius": 0.3
 }

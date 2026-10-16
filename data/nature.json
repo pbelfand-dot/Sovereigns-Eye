@@ -329,6 +329,8 @@
     }
   ],
   "chunk": 64.0,
+  "_keep_clear": "Yards (layout prop types) whose whole footprint grows no scatter: a churchyard's grass is grazed short, so no tufts, flowers or bushes come up through its graves and walls.",
+  "keep_clear": ["churchyard", "churchyard_small"],
   "_mobile": "Phones and tablets draw this fraction of the ground cover and skip the 'mobile_skip' layers entirely (fewer draw calls). Trees and rocks are unchanged.",
   "mobile_density": 0.5,
   "mobile_skip": [
