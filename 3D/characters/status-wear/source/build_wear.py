@@ -55,7 +55,7 @@ OWN = {
     WEAR: {"doubleSided": True, "dir": os.path.join(FAMILY, "textures"),
            "pbr": {"baseColorTexture": "T_Wear_BaseColor.png", "metallicFactor": 0, "roughnessFactor": 0.85}},
     METAL: {"doubleSided": False, "dir": os.path.join(FAMILY, "textures"),
-            "pbr": {"baseColorTexture": "T_Wear_BaseColor.png", "metallicFactor": 0.6, "roughnessFactor": 0.4}},
+            "pbr": {"baseColorTexture": "T_Wear_BaseColor.png", "metallicFactor": 0.4, "roughnessFactor": 0.42}},
 }
 # Atlas regions (u0, v0, u1, v1), Blender UV space (v up); see paint_wear.py.
 A = {
@@ -557,7 +557,7 @@ def setup():
     L.reset()
     L.custom_material(WEAR, (1.0, 1.0, 1.0), roughness=0.85, image=TEX)
     m = L.custom_material(METAL, (1.0, 1.0, 1.0), roughness=0.35, image=TEX)
-    m.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = 0.6
+    m.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = 0.4
 
 
 # What each piece fits: hats sit on the hair, so they come in a fit for short

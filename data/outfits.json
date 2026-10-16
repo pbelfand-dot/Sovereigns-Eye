@@ -64,5 +64,6 @@
   "instead": { "male": { "veil": "cap" } },
   "_aprons": "An apron look wears an apron: leather at the forge, the bench and the quarry, linen elsewhere.",
   "aprons": { "blacksmith": "apron_leather", "carpenter": "apron_leather", "stonecutter": "apron_leather" },
-  "apron_default": "apron_linen"
+  "apron_default": "apron_linen",
+  "apron_describe": { "apron_leather": "a heavy leather apron", "apron_linen": "a linen apron" }
 }

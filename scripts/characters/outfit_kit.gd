@@ -45,7 +45,8 @@ static func available() -> bool:
 
 
 ## What a character wears: {"gender", "parts": [part names], "colorways":
-## {set: index}, "hides_hair": bool, "hair": hairstyle to show, "key"}.
+## {set: index}, "hides_hair": bool, "hair": hairstyle to show, "headwear":
+## the headwear shown ("" for none), "apron": its slot ("" for none), "key"}.
 static func look_for(c: CharacterData) -> Dictionary:
 	var cfg := config()
 	var g := "female" if c.gender == "female" else "male"
@@ -63,8 +64,10 @@ static func look_for(c: CharacterData) -> Dictionary:
 		if not sets.has(set_id):
 			sets.append(set_id)
 	var extras: Array = (look.get("extras", []) as Array).duplicate()
+	var apron := ""
 	if bool(look.get("apron", false)):
-		extras.append(str(cfg.get("aprons", {}).get(c.occupation_id, cfg.get("apron_default", ""))))
+		apron = str(cfg.get("aprons", {}).get(c.occupation_id, cfg.get("apron_default", "")))
+		extras.append(apron)
 	var hair := str(c.appearance.get("hair_style", "short"))
 	var headwear := str(c.occupation().get("headwear", ""))
 	headwear = str(cfg.get("instead", {}).get(g, {}).get(headwear, headwear))
@@ -95,7 +98,8 @@ static func look_for(c: CharacterData) -> Dictionary:
 	var key := g + "|" + ",".join(key_parts)
 	for k in cw_keys:
 		key += "|%s:%d" % [k, colorways[k]]
-	return {"gender": g, "parts": parts, "colorways": colorways, "hides_hair": hides_hair, "hair": hair, "key": key}
+	return {"gender": g, "parts": parts, "colorways": colorways, "hides_hair": hides_hair, "hair": hair,
+		"headwear": headwear if not slot.is_empty() else "", "apron": apron, "key": key}
 
 
 ## Plain-language description for portrait prompts ("" if no outfit pack data).
@@ -109,6 +113,9 @@ static func describe(look: Dictionary) -> String:
 			var d := str(variants[i].get("describe", ""))
 			if not d.is_empty() and not bits.has(d):
 				bits.append(d)
+	var apron := str(look.get("apron", ""))
+	if not apron.is_empty():
+		bits.append(str(config().get("apron_describe", {}).get(apron, "an apron")))
 	return " and ".join(bits)
 
 

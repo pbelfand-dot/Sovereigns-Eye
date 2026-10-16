@@ -118,6 +118,11 @@ COLLECTIONS = {
         "license": "props/market-square/LICENSE.txt",
         "preview_root": "props/market-square/previews",
     },
+    "status-wear": {
+        "source": "original (Sovereign's Eye): characters/status-wear/source/build_wear.py",
+        "license": "characters/status-wear/LICENSE.txt",
+        "preview_root": "characters/status-wear/previews",
+    },
     "home-yard": {
         "source": "original (Sovereign's Eye): props/home-yard/source/build_home.py",
         "license": "props/home-yard/LICENSE.txt",
@@ -235,6 +240,8 @@ def collection_for(path: Path) -> tuple[str, str]:
         "quaternius-modular-outfits-fantasy-standard",
     ):
         return "quaternius-modular-outfits-fantasy-standard", relative.parts[3]
+    if relative.parts[:2] == ("characters", "status-wear"):
+        return "status-wear", "aprons" if "Apron" in path.stem else "headwear"
     if relative.parts[:2] == ("characters", "blocky"):
         return "blocky-characters", "characters"
     if relative.parts[:2] == ("environments", "castle-kit"):

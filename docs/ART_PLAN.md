@@ -56,12 +56,16 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
   | Outfit style | What they wear |
   |---|---|
   | Tunic (farmers, children, apprentices) | Peasant set, sometimes with Ranger trousers or boots |
-  | Apron (crafts and trades) | Peasant set |
+  | Apron (crafts and trades) | Peasant set with an apron: leather at the forge, the bench and the quarry, linen elsewhere (Status Wear) |
   | Robe (priests, herbalists, elders) | Peasant set |
   | Armor (soldiers, guards, knights) | Ranger set with shoulder armor |
   | Fine / gown (nobles, steward, merchant) | Ranger set in the brown leather colorway |
 
   - Hooded jobs (woodcutter, priest, herbalist) get the Ranger hood, which hides the hair.
+  - **Status Wear** (`3D/characters/status-wear/`, the game's own) adds the headwear every occupation names: a lord's circlet, a king's crown, a soldier's nasal helmet, a farmer's straw hat, a felt cap in four dyes, a baker's cap and a linen veil.
+    - Hats are fitted to short or long hair; a bun is let down under one.
+    - The helmet and veil hide the hair.
+    - The pieces are skinned to the outfit rig and merged into the same mesh.
   - Each set has two colorways. A villager gets the one closest to their primary clothing color, so the AI portrait prompt (which now describes the real clothes) matches the 3D model.
 - The pieces share the base rig's bone order. Each look is merged into **one skinned mesh**, with one surface per material and generated LODs, and that mesh is shared by everyone wearing the look. The skeleton switches to the outfits' slightly narrower "Regular" shoulders and hips.
 - Hands and head use `shaders/human_skin.gdshader`, which re-tints each texture to the villager's skin tone relative to its own average brightness. Hands and face therefore match.
@@ -180,7 +184,7 @@ Prices were checked on Quaternius's itch.io pages on 2026-10-14. All of these pa
 | **Windmill.** Kit tower plus simple boards in the kit's wood material | Ultimate Fantasy RTS (selected landmarks) or a custom model | free / custom | 6 |
 | **Chapel / temple.** Built from village walls and a tower roof | Church/temple pieces: custom, or a future Quaternius kit | — | 6 |
 | **Barracks / military.** Plain stone hall, no crenellations or racks | Castle/military pieces in this style | — | 7 |
-| **Hats, helmets, crowns.** Not shown in 3D (portraits still describe them) | Outfit pack accessories | (in the outfits pack) | with 1 |
+| **Hats, helmets, crowns.** Done: the game's own Status Wear (`3D/characters/status-wear/`): circlet, crown, helmet, straw hat, cap, baker's cap, veil, aprons | — | original | done |
 | **Palace, keep, walls, gates, throne room** | Ultimate Modular Ruins (damaged areas), plus a custom or new kit for intact royal architecture | — | kingdom phase |
 | **Docks, ships** | Pirate Kit (71 models) as the starting point; review against the village kit first | — | harbor phase |
 

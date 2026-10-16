@@ -139,6 +139,7 @@ new floors rise inside scaffolding.
 ![A Town's square: the lantern cross, a stepped edge, the well and its trough](docs/screenshots/market_square.jpg)
 ![A Town smithy's forge yard: the forge against its wall, anvil, slack tub, coal bin and grindstone](docs/screenshots/smithy.jpg)
 ![A Timber House's yard: the raised bed and the washing behind, the hen house at the side](docs/screenshots/home_yard.jpg)
+![Villagers in their trade's headwear and aprons: straw hats, felt caps, a baker's cap, circlets and crowns, helmets, veils](docs/screenshots/status_wear.jpg)
 
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
@@ -386,8 +387,10 @@ as readable JSON.
 * Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
   fine leather and there are no gowns, robes or plate armor yet.
 * Crops don't grow or change with the seasons yet, and field fences don't block
-  walking (see [3D/props/farm-field](3D/props/farm-field/README.md)). Hats and hand
-  tools aren't shown on villagers yet. Home yards are set dressing: nobody sits on the
+  walking (see [3D/props/farm-field](3D/props/farm-field/README.md)). Villagers now
+  wear their trade's headwear and apron (see
+  [3D/characters/status-wear](3D/characters/status-wear/README.md)), but hand tools
+  aren't shown yet. Home yards are set dressing: nobody sits on the
   bench or feeds the hens yet (see [3D/props/home-yard](3D/props/home-yard/README.md)). See [docs/ART_PLAN.md](docs/ART_PLAN.md) and
   [3D/BACKLOG.md](3D/BACKLOG.md).
 * From the farthest zoom, kit trees read smaller and darker than the old round

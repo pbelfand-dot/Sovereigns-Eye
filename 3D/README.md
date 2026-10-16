@@ -37,6 +37,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `alternatives/option-05-kenney-mini-characters/` | Rejected comparison pack retained for reference | 26 |
 | `character-tests/quaternius-universal-base-standard/` | Sleek rigged base bodies plus modular hair test pieces | 10 |
 | `characters/quaternius-modular-outfits-fantasy-standard/` | Peasant/Ranger complete outfits and separate modular clothing pieces | 24 |
+| `characters/status-wear/` | **Original:** headwear and aprons by trade and rank (circlet, crown, helmet, straw hat, cap, baker's cap, veil, leather and linen aprons), skinned to the outfit rig | 27 |
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 

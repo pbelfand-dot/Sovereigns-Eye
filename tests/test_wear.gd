@@ -139,3 +139,12 @@ func test_a_caps_colour_follows_the_clothes() -> void:
 		c.appearance["primary"] = str(variants[i]["swatch"])
 		check_eq(int(OutfitKit.look_for(c)["colorways"]["wear"]), i, "a %s coat gets the matching cap" % variants[i]["swatch"])
 		check(ResourceLoader.exists("res://3D/characters/status-wear/" + str(variants[i]["texture"])), "colorway %d's atlas is there" % i)
+
+
+func test_portraits_describe_what_the_model_wears() -> void:
+	var baker := PortraitPrompt.build(_villager("baker", "female", "long", 7600), 1)["prompt"] as String
+	check(baker.contains("linen apron") and baker.contains("baker's cap"), "a baker's portrait has her linen apron and cap")
+	var smith := PortraitPrompt.build(_villager("blacksmith", "male", "short", 7601), 1)["prompt"] as String
+	check(smith.contains("leather apron"), "the smith's portrait has his leather apron")
+	var elder := PortraitPrompt.build(_villager("dowager", "male", "short", 7602), 1)["prompt"] as String
+	check(elder.contains("cloth cap") and not elder.contains("veil"), "an elder lord is painted in the cap he wears, not a veil")
