@@ -34,7 +34,7 @@ square visibly changes.
 - **Materials.** These are shared with the village buildings. The wood, stone, roof-tile and iron surfaces are UV-mapped straight onto the **Quaternius Medieval Village MegaKit trim sheets**: `MI_WoodTrim`, `MI_RockTrim`, `MI_RoundTiles` and `MI_MetalOrnaments`. The exported materials are the kit's exact definitions, and their images point to the kit's PNGs by relative path (`../../../environments/quaternius-medieval-village-standard/models/...`).
   - Godot loads each texture once for buildings and commons alike.
   - 11 of the 12 textures the family uses are the kit's.
-- **Own textures.** One 1024 × 1024 atlas, `textures/T_Commons_Banner_BaseColor.png` (~1.4 MB in VRAM with mipmaps). It holds:
+- **Own textures.** One 1024 × 1024 atlas, `textures/T_Commons_Banner_BaseColor.png` (about 0.7 MB in VRAM: compressed like the kit's textures, with mipmaps). It holds:
   - three crimson banner faces with gold embroidered borders and charges;
   - gold fringe, cord and gilding, used by tassels and gilt finials.
   - It is painted by `source/paint_banner.py`.

@@ -1,8 +1,12 @@
 {
-  "_comment": "Props from the Quaternius Fantasy Props MegaKit (free Standard: 94 models). Sets are small arrangements of kit models; layout props (stalls, benches, barrels...) are drawn from them, and buildings get extra exterior dressing by type. Everything is merged into a few meshes per 64 m chunk (one surface per shared material). The well, charter banners and signposts are Village Commons models (below); haystacks, lumber piles and rocks keep their simple shapes.",
+  "_comment": "Props from the Quaternius Fantasy Props MegaKit (free Standard: 94 models). Sets are small arrangements of kit models; layout props (stalls, benches, barrels...) are drawn from them, and buildings get extra exterior dressing by type. Everything is merged into a few meshes per 64 m chunk (one surface per shared material). The well, charter banners and signposts are Village Commons models (below); rocks keep their simple shapes; haystacks and the lumber pile come from the Farm & Field family (variants).",
   "root": "res://3D/props/quaternius-fantasy-props-standard/models/",
   "_commons": "The Village Commons (3D/props/village-commons): the well, charter banners and signposts are this game's own models and grow finer with the charter (index 0 Hamlet, 1 Village, 2 Market Town, 3 Town). Banners and signposts merge with the props; the well is placed whole so it keeps its LODs. A banner's arm is mirrored when it would reach into a building ('banner_reach' meters).",
-  "commons_root": "res://3D/props/village-commons/models/",
+  "_roots": "The game's own model families: a model named 'family:NAME' is <root>NAME.glb.",
+  "roots": {
+    "commons": "res://3D/props/village-commons/models/",
+    "farm": "res://3D/props/farm-field/models/"
+  },
   "by_charter": {
     "well": [
       "commons:SE_Well_Hamlet",
@@ -24,6 +28,17 @@
     ]
   },
   "banner_reach": 1.25,
+  "_variants": "Layout props drawn from the game's own models, one look per spot (picked from the prop's position): haystacks are a haycock, a hayrick or stooks; the workshop's lumber is the log pile.",
+  "variants": {
+    "haystack": [
+      "farm:SE_Haycock",
+      "farm:SE_Hayrick",
+      "farm:SE_Stooks"
+    ],
+    "lumber": [
+      "farm:SE_LogPile"
+    ]
+  },
   "_sets": "Each entry: [model, x, y, z, yaw degrees] in the set's local frame (meters; +Z is the front, the side facing the viewer or the square).",
   "sets": {
     "stall_fruit": [

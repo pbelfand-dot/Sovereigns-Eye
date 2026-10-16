@@ -258,6 +258,15 @@ func add_field(f: Dictionary, holder: Node3D = null) -> void:
 	field.position = TerrainHeight.on_ground(center)
 	field.rotation.y = rot
 	holder.add_child(field)
+	# The Farm & Field models (data/farm.json); the simple shapes below are
+	# the fallback when they're missing.
+	if FarmKit.available():
+		var farm_local: Variant = null
+		var farm := layout.get_building(int(f.get("building", -1))) if f.has("building") else null
+		if farm:
+			farm_local = Basis(Vector3.UP, rot).inverse() * (farm.position - center)
+		FarmKit.build_field(field, f, territory.charter if territory else 0, farm_local)
+		return
 	Mats.box(field, Vector3(size.x, 0.16, size.y), Vector3(0, 0.04, 0), soil)
 	var look: Dictionary = CROP_LOOK.get(f["crop"], CROP_LOOK["wheat"])
 	var is_stalk: bool = look["shape"] == "stalk"
@@ -526,6 +535,11 @@ func _build_props() -> void:
 	var kit_items := []
 	for p in layout.props:
 		var type := str(p["type"])
+		# Haystacks and the log pile: the Farm & Field models, one look per spot.
+		var variant := PropKit.variant_model(type, p["pos"])
+		if not variant.is_empty():
+			kit_items.append([variant, Transform3D(Basis(Vector3.UP, float(p["rot"])), TerrainHeight.on_ground(p["pos"]))])
+			continue
 		# The Village Commons (well, banners, signposts) follow the charter.
 		var commons := PropKit.commons_model(type, charter)
 		if not commons.is_empty():
@@ -682,7 +696,7 @@ func road_clearance(p: Vector2) -> float:
 	return best
 
 
-## Inside (or right against) another building, or in a field.
+## Inside (or right against) another building, in a field, or on a yard prop.
 func _blocked_for_props(pos: Vector3, owner: BuildingData) -> bool:
 	for b in layout.buildings + _site_buildings():
 		if b == owner:
@@ -695,6 +709,10 @@ func _blocked_for_props(pos: Vector3, owner: BuildingData) -> bool:
 		var size: Vector2 = f["size"]
 		var local := Basis(Vector3.UP, float(f["rot"])).inverse() * (pos - c)
 		if absf(local.x) < size.x * 0.5 + 1.0 and absf(local.z) < size.y * 0.5 + 1.0:
+			return true
+	var radii: Dictionary = WorldGeometry.cfg().get("props", {})
+	for p in layout.props:
+		if p["type"] in ["haystack", "lumber", "cart"] and Vector2(pos.x - p["pos"].x, pos.z - p["pos"].z).length() < float(radii.get(p["type"], 1.0)) + 0.6:
 			return true
 	return false
 
@@ -801,6 +819,11 @@ func refresh_ground() -> void:
 ## Rebuilds the merged props (rocks cleared, new buildings dressed).
 func refresh_props() -> void:
 	_replace_holder("Props", _build_props)
+
+
+## Redraws the fields (a new charter brings a new kind of fence).
+func refresh_fields() -> void:
+	_replace_holder("Fields", _build_fields)
 
 
 func _replace_holder(holder_name: String, build_fn: Callable) -> void:

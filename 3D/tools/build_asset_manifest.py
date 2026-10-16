@@ -108,6 +108,11 @@ COLLECTIONS = {
         "license": "props/village-commons/LICENSE.txt",
         "preview_root": "props/village-commons/previews",
     },
+    "farm-field": {
+        "source": "original (Sovereign's Eye): props/farm-field/source/build_farm.py",
+        "license": "props/farm-field/LICENSE.txt",
+        "preview_root": "props/farm-field/previews",
+    },
 }
 
 
@@ -240,6 +245,11 @@ def collection_for(path: Path) -> tuple[str, str]:
             if path.stem.startswith(prefix):
                 return "village-commons", category
         return "village-commons", "commons"
+    if relative.parts[:2] == ("props", "farm-field"):
+        for prefix, category in (("SE_Crop_", "crops"), ("SE_Fence_", "fences"), ("SE_Gate_", "gates")):
+            if path.stem.startswith(prefix):
+                return "farm-field", category
+        return "farm-field", "yard"
     if relative.parts[:2] == ("props", "quaternius-fantasy-props-standard"):
         return "quaternius-fantasy-props-standard", fantasy_props_category(
             path.stem

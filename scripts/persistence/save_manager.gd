@@ -115,6 +115,25 @@ static func migrate(data: Dictionary) -> Dictionary:
 			var people := (data.get("characters", []) as Array).size()
 			t["charter"] = 1 if people > 70 else 0
 		data["save_version"] = 7
+		version = 7
+	if version == 7:
+		# v8 (Farm & Field) draws haystacks and the log pile as full-size
+		# models, and new layouts give them room in the yard. Older layouts
+		# put some against (or inside) a wall, where they'd clip and block
+		# the path: those are dropped. Nothing else changes.
+		var l: Dictionary = data.get("layout", {})
+		if not l.is_empty():
+			var layout := VillageLayout.from_dict(l)
+			var radii: Dictionary = WorldGeometry.cfg().get("props", {})
+			var kept := []
+			for p: Dictionary in l.get("props", []):
+				var type := str(p["type"])
+				var pos: Array = p["pos"]
+				if type in ["haystack", "lumber"] and not layout.yard_spot_clear(Vector3(float(pos[0]), 0, float(pos[1])), float(radii.get(type, 1.0))):
+					continue
+				kept.append(p)
+			l["props"] = kept
+		data["save_version"] = 8
 	return data
 
 

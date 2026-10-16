@@ -1,0 +1,11 @@
+Farm & Field (Sovereign's Eye)
+
+The models in models/, the farm atlas in textures/ and the build scripts
+and Blender source in source/ were made for Sovereign's Eye and are
+released under CC0 1.0 Universal (public domain dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The models also use textures they do not contain: the wood, stone and iron
+trim sheets of the Quaternius Medieval Village MegaKit (Standard), CC0 1.0,
+kept in 3D/environments/quaternius-medieval-village-standard/ with its own
+LICENSE.txt. They are referenced by relative path, not copied.

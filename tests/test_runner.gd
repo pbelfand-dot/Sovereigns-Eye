@@ -18,6 +18,7 @@ const SUITES := [
 	"res://tests/test_charters.gd",
 	"res://tests/test_art_pipeline.gd",
 	"res://tests/test_commons.gd",
+	"res://tests/test_farm.gd",
 	"res://tests/test_audio.gd",
 	"res://tests/test_world_smoke.gd",
 ]
@@ -38,7 +39,8 @@ func _run() -> void:
 		if not only.is_empty() and not path.contains(only):
 			continue
 		var script: GDScript = load(path)
-		if script == null:
+		# A parse error still returns a script, one that can't be instanced.
+		if script == null or not script.can_instantiate():
 			failed.append("%s: could not load" % path)
 			continue
 		var suite: TestCase = script.new()

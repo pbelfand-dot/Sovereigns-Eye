@@ -26,6 +26,7 @@ var growth_only := false
 var charter_only := false
 var talk_only := false
 var commons_only := false
+var farm_only := false
 
 
 func _ready() -> void:
@@ -42,6 +43,7 @@ func _ready() -> void:
 	charter_only = args.has("charter")
 	talk_only = args.has("talk")
 	commons_only = args.has("commons")
+	farm_only = args.has("farm")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -84,6 +86,10 @@ func _run() -> void:
 		return
 	if commons_only:
 		await _commons_shots()
+		get_tree().quit()
+		return
+	if farm_only:
+		await _farm_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -340,6 +346,170 @@ func _commons_shots() -> void:
 			world.camera_rig.look_at_point(sp["pos"], 9.0, true)
 			await _wait(4)
 			await _shot(tag + "signpost.png")
+
+
+## Farm & Field in the game: for each fence tier (hamlet wattle, village
+## rails, town pales) a field from the map table, its gate at 3/4 and the
+## follow camera on foot by the gate; then each crop over the heir's
+## shoulder, the haystacks, the log pile and a scarecrow; and the village
+## from the map table with and without its fields (the perf numbers are in
+## the log). Cameras pick an angle with no building in the way.
+## Files: farm_<tier>_<view>.png, farm_crop_<crop>.png, farm_<prop>.png.
+## FARM_TIERS=0,3 renders only those tiers; FARM_VIEWS=tiers only the tier shots.
+func _farm_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	var heir := world.player_npc()
+	# refresh_fields() replaces the holder, so look it up each time.
+	var fields := func() -> Node3D: return world.builder.get_node("Fields")
+	# The field nearest the square, and one of each crop.
+	var c := st.layout.square_center
+	var main_i := 0
+	var by_crop := {}
+	var centroid := Vector3.ZERO
+	for i in st.layout.fields.size():
+		var f: Dictionary = st.layout.fields[i]
+		centroid += f["center"] / float(st.layout.fields.size())
+		if (f["center"] as Vector3).distance_to(c) < (st.layout.fields[main_i]["center"] as Vector3).distance_to(c):
+			main_i = i
+		if not by_crop.has(f["crop"]):
+			by_crop[f["crop"]] = i
+	var settle := func() -> void:
+		for k in 4:
+			world._process(0.05)
+		await _wait(4)
+	# On foot: the heir outside a field side, facing in at a slant, the
+	# follow camera behind. Takes the side with a clear view, `prefer` first.
+	var on_foot := func(i: int, prefer: int, back: float, cam: float) -> void:
+		var f: Dictionary = st.layout.fields[i]
+		var xf: Transform3D = (fields.call() as Node3D).get_child(i).global_transform
+		var size: Vector2 = f["size"]
+		var off := float(FarmKit.cfg()["fence"]["offset"])
+		var outs := [Vector3(0, 0, -1), Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0)]
+		var best := {}
+		for k in 4:
+			var side: int = (prefer + k) % 4
+			var o: Vector3 = outs[side]
+			var half := (size.y if side % 2 == 0 else size.x) * 0.5 + off
+			var along := Vector3(o.z, 0, -o.x)
+			var at := xf * (o * (half + back) + along * 1.2)
+			var face := (xf.basis * (-o * 1.0 - along * 0.45)).normalized()
+			face.y = 0
+			var yaw := atan2(-face.x, -face.z)
+			var clear := _clearance(st, at, yaw, cam * 0.8)
+			if best.is_empty() or (clear >= 1.0 and float(best["clear"]) < 1.0):
+				best = {"at": at, "yaw": yaw, "clear": clear}
+		world.set_view_mode("walk", true)
+		heir.teleport(best["at"])
+		heir.rotation.y = best["yaw"]
+		world.camera_rig.set_yaw(best["yaw"], true)
+		world.camera_rig.look_at_point(heir.global_position, cam, true)
+		await settle.call()
+	var map_table := func(focus: Vector3, dist: float, prefer: float) -> void:
+		world.set_view_mode("overview", true)
+		world.camera_rig.set_yaw(_clear_yaw(st, focus, dist * 0.7, prefer), true)
+		world.camera_rig.look_at_point(focus, dist, true)
+		await settle.call()
+	var only := OS.get_environment("FARM_TIERS").split(",", false)
+	for tier in [0, 1, 3]:
+		if not only.is_empty() and not str(tier) in only:
+			continue
+		st.territory.charter = tier
+		world.builder.refresh_props()
+		world.builder.refresh_fields()
+		world.territory_changed.emit()
+		await _wait(2)
+		var f: Dictionary = st.layout.fields[main_i]
+		var node: Node3D = fields.call().get_child(main_i)
+		var gate := node.get_node_or_null("Gate") as Node3D
+		var gate_pos: Vector3 = gate.global_position if gate else node.global_position
+		var out := gate_pos - node.global_position
+		out.y = 0
+		out = out.normalized()
+		var tag := "farm_%d_" % tier
+		heir.teleport(c)
+		await map_table.call(f["center"], 24.0, atan2(out.x, out.z) + 0.6)
+		await _shot(tag + "field.png")
+		await map_table.call(gate_pos, 9.5, atan2(out.x, out.z) + 0.75)
+		await _shot(tag + "gate.png")
+		var gate_side := FarmKit.gate_side(f["size"], node.global_transform.affine_inverse() * gate_pos)
+		await on_foot.call(main_i, gate_side, 2.4, 11.0)
+		await _shot(tag + "gameplay.png")
+	# FARM_VIEWS=tiers stops here (renderer checks: --rendering-method mobile).
+	if OS.get_environment("FARM_VIEWS") == "tiers":
+		return
+	# Each crop over the heir's shoulder, from the side away from the farmhouse.
+	for crop: String in by_crop:
+		var i: int = by_crop[crop]
+		var node: Node3D = fields.call().get_child(i)
+		var gate := node.get_node_or_null("Gate") as Node3D
+		var away := 0
+		if gate:
+			away = (FarmKit.gate_side(st.layout.fields[i]["size"], node.global_transform.affine_inverse() * gate.global_position) + 2) % 4
+		await on_foot.call(i, away, 0.9, 5.5)
+		await _shot("farm_crop_%s.png" % crop)
+	# Haystacks, the log pile and a scarecrow.
+	heir.teleport(c)
+	var shown := {}
+	for type: String in ["haystack", "lumber"]:
+		for p: Dictionary in st.layout.props_of_type(type):
+			var model := PropKit.variant_model(type, p["pos"])
+			if shown.has(model):
+				continue
+			shown[model] = true
+			await map_table.call(p["pos"], 9.5, float(p["rot"]) + 0.6)
+			await _shot("farm_%s.png" % model.get_slice(":", 1).to_lower())
+	for node: Node in fields.call().get_children():
+		var sc := node.get_node_or_null("Scarecrow") as Node3D
+		if sc:
+			await map_table.call(sc.global_position + Vector3(0, 1.0, 0), 9.5, sc.global_rotation.y + 0.4)
+			await _shot("farm_scarecrow.png")
+			break
+	# The village from the map table, with and without its fields.
+	st.territory.charter = 1
+	world.builder.refresh_fields()
+	world.set_view_mode("overview", true)
+	world.camera_rig.set_yaw(0.6, true)
+	world.camera_rig.look_at_point(c.lerp(centroid, 0.6), 75.0, true)
+	await _wait(6)
+	await _shot("farm_overview.png")
+	fields.call().visible = false
+	await _wait(4)
+	await _shot("farm_overview_nofields.png")
+	fields.call().visible = true
+
+
+## How far the ground line from `focus` out to a camera `dist` m away along
+## `yaw` keeps from the nearest building (m; negative: through one).
+func _clearance(st: WorldState, focus: Vector3, yaw: float, dist: float) -> float:
+	var a := Vector3(focus.x, 0, focus.z)
+	var b := a + Vector3(sin(yaw), 0, cos(yaw)) * dist
+	var worst := INF
+	for bd: BuildingData in st.layout.buildings:
+		var at := Vector3(bd.position.x, 0, bd.position.z)
+		worst = minf(worst, Geometry3D.get_closest_point_to_segment(at, a, b).distance_to(at) - bd.radius())
+	return worst
+
+
+## The yaw nearest `prefer` from which a camera `dist` m out sees `focus`
+## past every building (with 1.5 m to spare when it can).
+func _clear_yaw(st: WorldState, focus: Vector3, dist: float, prefer: float) -> float:
+	var best := prefer
+	var best_score := -INF
+	for k in 36:
+		var yaw := prefer + k * TAU / 36.0
+		var score := minf(_clearance(st, focus, yaw, dist), 1.5) - absf(angle_difference(prefer, yaw)) * 0.2
+		if score > best_score:
+			best_score = score
+			best = yaw
+	return best
 
 
 ## A conversation on foot: the terms, a refusal (terms still open) and

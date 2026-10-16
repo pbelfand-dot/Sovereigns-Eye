@@ -9,6 +9,9 @@ extends RefCounted
 
 const SQUARE_BUILDINGS := ["tavern", "chapel", "bakery", "smithy"]
 const CROPS := ["wheat", "barley", "cabbage", "flax", "turnip"]
+## Half-extents (m) kept clear for the big yard props: any haystack model
+## turned any way (up to 2.1 m across), and the log pile (2.5 x 1.8 m).
+const YARD_HALF := {"haystack": Vector2(1.15, 1.15), "lumber": Vector2(1.3, 1.3)}
 
 var rng: RandomNumberGenerator
 var layout: VillageLayout
@@ -353,16 +356,35 @@ func _place_building_props() -> void:
 					var local := Vector3((fp.x * 0.5 + 0.8) * (1 if i % 2 == 0 else -1), 0, rng.randf_range(-fp.y * 0.4, fp.y * 0.3))
 					_add_prop("barrel" if rng.randf() < 0.6 else "crate", b.position + basis * local, rng.randf() * TAU)
 			"farmhouse":
-				for i in rng.randi_range(1, 3):
-					var local := Vector3(rng.randf_range(-1, 1) * (fp.x * 0.5 + 2.5), 0, -fp.y * 0.5 + rng.randf_range(-1.0, 2.0))
-					_add_prop("haystack", b.position + basis * local, rng.randf() * TAU)
+				# Haystacks in the yard, beside or behind the house (never on
+				# the door side, nor across a back door mid-wall), on spots
+				# clear of the house, its fields and the road: the stacks are
+				# up to 2.1 m across.
+				var want := rng.randi_range(1, 3)
+				var placed := 0
+				for attempt in 12:
+					if placed >= want:
+						break
+					var side := 1.0 if rng.randf() < 0.5 else -1.0
+					var local := Vector3(side * rng.randf_range(fp.x * 0.3, fp.x * 0.5 + 2.0), 0, -fp.y * 0.5 - rng.randf_range(1.7, 3.5))
+					if attempt % 2 == 1:
+						local = Vector3((fp.x * 0.5 + rng.randf_range(1.7, 3.2)) * (1 if rng.randf() < 0.5 else -1), 0, rng.randf_range(-fp.y * 0.5, fp.y * 0.2))
+					var pos := b.position + basis * local
+					if _rect_is_free(pos, b.rotation, YARD_HALF["haystack"], 0.4, 0.6):
+						_add_prop("haystack", pos, rng.randf() * TAU, YARD_HALF["haystack"])
+						placed += 1
 			"barracks":
 				for i in 3:
 					var local := Vector3((i - 1) * 3.0, 0, fp.y * 0.5 + 5.0)
 					_add_prop("dummy", b.position + basis * local, b.rotation)
 				_add_prop("banner", b.position + basis * Vector3(fp.x * 0.5 + 1.2, 0, fp.y * 0.5), b.rotation)
 			"workshop":
-				_add_prop("lumber", b.position + basis * Vector3(fp.x * 0.5 + 1.6, 0, 0.5), b.rotation + PI * 0.5)
+				# The log pile beside the workshop, or behind it if that side is taken.
+				for local: Vector3 in [Vector3(fp.x * 0.5 + 2.4, 0, 0.5), Vector3(0, 0, -fp.y * 0.5 - 2.4)]:
+					var pos := b.position + basis * local
+					if _rect_is_free(pos, b.rotation, YARD_HALF["lumber"], 0.3, 0.5):
+						_add_prop("lumber", pos, b.rotation + (PI * 0.5 if local.x > 0.0 else 0.0), YARD_HALF["lumber"])
+						break
 				_add_prop("cart", b.position + basis * Vector3(-fp.x * 0.5 - 2.0, 0, 1.0), b.rotation + 0.4)
 			"manor":
 				_add_prop("banner", b.position + basis * Vector3(-fp.x * 0.5 - 1.0, 0, fp.y * 0.5 + 1.0), b.rotation)

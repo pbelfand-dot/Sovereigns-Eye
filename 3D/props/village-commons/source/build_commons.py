@@ -952,3 +952,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # bpy 4.2 can crash while tearing down after a glTF export (exit 139).
+    # Everything is written by now, so leave without the teardown.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
