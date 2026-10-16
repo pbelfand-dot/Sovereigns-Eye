@@ -46,7 +46,8 @@ static func available() -> bool:
 
 ## What a character wears: {"gender", "parts": [part names], "colorways":
 ## {set: index}, "hides_hair": bool, "hair": hairstyle to show, "headwear":
-## the headwear shown ("" for none), "apron": its slot ("" for none), "key"}.
+## the headwear shown ("" for none), "apron": its slot ("" for none),
+## "garment": robe, gown or coat ("" for none), "key"}.
 static func look_for(c: CharacterData) -> Dictionary:
 	var cfg := config()
 	var g := "female" if c.gender == "female" else "male"
@@ -63,6 +64,12 @@ static func look_for(c: CharacterData) -> Dictionary:
 		parts.append(str(parts_cfg.get(set_id, {}).get(slot, "")))
 		if not sets.has(set_id):
 			sets.append(set_id)
+	var garment := str(look.get("garment", ""))
+	if not garment.is_empty():
+		# A long garment in place of the outfit's body and trousers.
+		parts.append(str(parts_cfg.get("wear", {}).get(garment, "")))
+		if not sets.has("wear"):
+			sets.append("wear")
 	var extras: Array = (look.get("extras", []) as Array).duplicate()
 	var apron := ""
 	if bool(look.get("apron", false)):
@@ -89,8 +96,9 @@ static func look_for(c: CharacterData) -> Dictionary:
 				break
 	var colorways := {}
 	var primary := Color.from_string(str(c.appearance.get("primary", "#7a6248")), Color("#7a6248"))
+	var fixed: Dictionary = look.get("colorways", {})
 	for set_id in sets:
-		colorways[set_id] = int(look["colorway"]) if look.has("colorway") else _nearest_colorway(set_id, primary)
+		colorways[set_id] = int(fixed[set_id]) if fixed.has(set_id) else _nearest_colorway(set_id, primary)
 	var key_parts := parts.duplicate()
 	key_parts.sort()
 	var cw_keys := colorways.keys()
@@ -99,7 +107,7 @@ static func look_for(c: CharacterData) -> Dictionary:
 	for k in cw_keys:
 		key += "|%s:%d" % [k, colorways[k]]
 	return {"gender": g, "parts": parts, "colorways": colorways, "hides_hair": hides_hair, "hair": hair,
-		"headwear": headwear if not slot.is_empty() else "", "apron": apron, "key": key}
+		"headwear": headwear if not slot.is_empty() else "", "apron": apron, "garment": garment, "key": key}
 
 
 ## Plain-language description for portrait prompts ("" if no outfit pack data).
@@ -113,6 +121,12 @@ static func describe(look: Dictionary) -> String:
 			var d := str(variants[i].get("describe", ""))
 			if not d.is_empty() and not bits.has(d):
 				bits.append(d)
+	var garment := str(look.get("garment", ""))
+	if not garment.is_empty():
+		var variants: Array = sets.get("wear", {}).get("variants", [])
+		var i := int(look.get("colorways", {}).get("wear", 0))
+		var dye := str(variants[i].get("dye", "")) if i < variants.size() else ""
+		bits.push_front(str(config().get("garment_describe", {}).get(garment, "%s clothes")) % dye)
 	var apron := str(look.get("apron", ""))
 	if not apron.is_empty():
 		bits.append(str(config().get("apron_describe", {}).get(apron, "an apron")))

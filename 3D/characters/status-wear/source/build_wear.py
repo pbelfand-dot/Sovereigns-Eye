@@ -57,16 +57,20 @@ OWN = {
     METAL: {"doubleSided": False, "dir": os.path.join(FAMILY, "textures"),
             "pbr": {"baseColorTexture": "T_Wear_BaseColor.png", "metallicFactor": 0.4, "roughnessFactor": 0.42}},
 }
-# Atlas regions (u0, v0, u1, v1), Blender UV space (v up); see paint_wear.py.
-A = {
-    "straw": (0.004, 0.754, 0.246, 0.996), "straw_band": (0.254, 0.754, 0.496, 0.996),
-    "linen": (0.504, 0.754, 0.746, 0.996), "linen_cream": (0.754, 0.754, 0.996, 0.996),
-    "felt": (0.004, 0.504, 0.496, 0.746), "felt_band": (0.504, 0.504, 0.746, 0.746), "hem": (0.754, 0.504, 0.996, 0.746),
-    "gold": (0.004, 0.254, 0.246, 0.496), "gold_band": (0.254, 0.254, 0.496, 0.496),
-    "ruby": (0.51, 0.27, 0.615, 0.48), "sapphire": (0.635, 0.27, 0.74, 0.48), "steel": (0.754, 0.254, 0.996, 0.496),
-    "leather": (0.004, 0.004, 0.246, 0.246), "strap": (0.254, 0.004, 0.496, 0.246),
-    "brass": (0.504, 0.004, 0.746, 0.246), "iron": (0.754, 0.004, 0.996, 0.246),
+# Atlas regions in pixels (x0, y0, x1, y1) on the 512 x 1024 atlas (see
+# paint_wear.py), turned into Blender UV rectangles (v up), inset a little.
+ATLAS = (512, 1024)
+PX = {
+    "straw": (0, 0, 128, 128), "straw_band": (128, 0, 256, 128), "linen": (256, 0, 384, 128), "linen_cream": (384, 0, 512, 128),
+    "felt": (0, 128, 256, 256), "felt_band": (256, 128, 384, 256), "hem": (384, 128, 512, 256),
+    "gold": (0, 256, 128, 384), "gold_band": (128, 256, 256, 384), "ruby": (258, 264, 316, 376), "sapphire": (322, 264, 380, 376),
+    "steel": (384, 256, 512, 384),
+    "leather": (0, 384, 128, 512), "strap": (128, 384, 256, 512), "brass": (256, 384, 384, 512), "iron": (384, 384, 512, 512),
+    "wool": (0, 512, 256, 640), "wool_shadow": (256, 512, 384, 640), "lining": (384, 512, 512, 640),
+    "braid": (0, 640, 128, 768), "ermine": (128, 640, 256, 768), "cord": (256, 640, 384, 768), "embroidery": (384, 640, 512, 768),
 }
+A = {k: (x0 / ATLAS[0] + 0.004, 1.0 - y1 / ATLAS[1] + 0.002, x1 / ATLAS[0] - 0.004, 1.0 - y0 / ATLAS[1] - 0.002)
+     for k, (x0, y0, x1, y1) in PX.items()}
 GENDERS = {
     "M": {"rig": "Male_Peasant_Body.gltf", "body": ["Male_Peasant_Body", "Male_Peasant_Legs"],
           "head": "bodies/Superhero_Male_FullBody.glb", "hair": {"short": ["Hair_SimpleParted", "Hair_Buzzed"], "long": ["Hair_Long"]}},
@@ -137,7 +141,18 @@ def measure(g):
                 weight_meshes.append(o)
             else:
                 bpy.data.objects.remove(o)
+    av, ap = [], []
+    for o in _import(os.path.join(PACK, ("Male" if g == "M" else "Female") + "_Peasant_Arms.gltf")):
+        if o.type == "MESH" and o.name != "Icosphere":
+            base = len(av)
+            av += [o.matrix_world @ v.co for v in o.data.vertices]
+            ap += [[base + i for i in p.vertices] for p in o.data.polygons]
+        bpy.data.objects.remove(o)
+    bones = rig.data.bones
+    arm = {"shoulder": bones["upperarm_l"].head_local.copy(), "elbow": bones["lowerarm_l"].head_local.copy(),
+           "wrist": bones["hand_l"].head_local.copy()}
     return {"rig": rig, "head_at": head_at, "head": head, "short": head + hair_sets["short"], "long": head + hair_sets["long"],
+            "arms_bvh": BVHTree.FromPolygons(av, ap), "arm": arm, "pelvis": bones["pelvis"].head_local.copy(),
             "bvh": BVHTree.FromPolygons(verts, polys), "weight_meshes": weight_meshes, "gender": g}
 
 
@@ -493,10 +508,188 @@ def apron(m, g, bib, region):
 APRONS = {"apron_leather": (True, "leather"), "apron_linen": (False, "linen_cream")}
 
 
+# --- Robes, gowns and coats (cast onto the outfit body; the trousers come off) -----------------
+
+# Kinds of vertex, for skinning (a vertex attribute "wkind").
+K_BODY, K_SKIRT, K_SLEEVE_L, K_SLEEVE_R = 1.0, 2.0, 3.0, 4.0
+GARMENTS = {
+    # hem height, flare at the hem, sleeves, belt, trim at hem and neck, neckline drop at the front, train
+    "robe": {"genders": ["M", "F"], "hem": 0.13, "flare": 0.1, "sleeves": True, "belt": "cord", "trim": None, "neck": 0.02, "train": 0.0},
+    "gown": {"genders": ["F"], "hem": 0.04, "flare": 0.2, "sleeves": True, "belt": "braid", "trim": "braid", "neck": 0.1, "train": 0.06},
+    "coat": {"genders": ["M", "F"], "hem": 0.5, "flare": 0.07, "sleeves": False, "belt": "leather", "trim": "braid", "neck": 0.04, "train": 0.0},
+}
+
+
+def tag(bm, kind):
+    layer = bm.verts.layers.float.get("wkind") or bm.verts.layers.float.new("wkind")
+    for v in bm.verts:
+        v[layer] = kind
+    return bm
+
+
+def hull_ring(m, z_fn, offset, axis_y=0.03, n=N, bvh=None):
+    """A ring round the body (or legs) at heights z_fn(i): per direction the
+    outermost surface, smoothed so it never dips into a gap (between the
+    legs), pushed out by `offset`."""
+    bvh = bvh or m["bvh"]
+    rs = []
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        d = Vector((math.cos(a), math.sin(a), 0.0))
+        c = Vector((0.0, axis_y, z_fn(i)))
+        hit = bvh.ray_cast(c + d * 0.7, -d, 0.7)
+        rs.append((hit[0] - c).length if hit[0] is not None else 0.0)
+    for i in range(n):
+        if rs[i] == 0.0:
+            rs[i] = max(rs[(i - 1) % n], rs[(i + 1) % n], 0.06)
+    mx = [max(rs[(i + k) % n] for k in (-1, 0, 1)) for i in range(n)]
+    for _ in range(2):
+        mx = [(mx[(i - 1) % n] + 2 * mx[i] + mx[(i + 1) % n]) / 4.0 for i in range(n)]
+    rs = [max(a, b) for a, b in zip(mx, rs)]
+    return [Vector((math.cos(2 * math.pi * i / n) * (rs[i] + offset), axis_y + math.sin(2 * math.pi * i / n) * (rs[i] + offset), z_fn(i)))
+            for i in range(n)]
+
+
+def strip(ring_lo, ring_hi, region, kind):
+    return tag(loft([ring_lo, ring_hi], region), kind)
+
+
+def grow(ring, by, axis_y=0.03):
+    out = []
+    for p in ring:
+        d = Vector((p.x, p.y - axis_y, 0.0))
+        out.append(p + d.normalized() * by if d.length > 1e-6 else p.copy())
+    return out
+
+
+def garment(m, g, kind):
+    spec = GARMENTS[kind]
+    male = g == "M"
+    neck_z = 1.47 if male else 1.425
+    shoulder_z = 1.41 if male else 1.37
+    waist_z = 1.05 if male else 1.0
+    hip_z = 0.93 if male else 0.9
+    front = lambda i: max(0.0, -math.sin(2 * math.pi * i / N)) ** 2  # 1 at the front, 0 at the sides and back
+    # The bodice: neck to hips, fitted.
+    levels = [lambda i: neck_z - spec["neck"] * front(i), lambda i: shoulder_z - spec["neck"] * 0.5 * front(i)]
+    for z in (1.32 if male else 1.29, 1.2 if male else 1.16, waist_z, hip_z):
+        levels.append(lambda i, z=z: z)
+    body = [hull_ring(m, f, 0.012) for f in levels]
+    body[0] = grow(body[0], -0.004)  # the neckline hugs the neck
+    # The skirt: hips to the hem, flaring, a little longer at the back for a train.
+    skirt = [body[-1]]
+    hem = spec["hem"]
+    steps = 5 if hem < 0.3 else 3
+    for k in range(1, steps + 1):
+        t = k / steps
+        z = hip_z + (hem - hip_z) * t
+        back = lambda i: max(0.0, math.sin(2 * math.pi * i / N))
+        ring = hull_ring(m, lambda i, z=z: z - spec["train"] * t * back(i) ** 2, 0.016)
+        # Never narrower than the ring above (an A-line from the hips, not a
+        # skirt that pinches in at the knees), then flared.
+        prev = skirt[-1]
+        ring = [p if Vector((p.x, p.y - 0.03)).length >= Vector((q.x, q.y - 0.03)).length
+                else Vector((q.x, q.y, p.z)) for p, q in zip(ring, prev)]
+        skirt.append(grow(ring, spec["flare"] * t ** 1.15 - (spec["flare"] * ((k - 1) / steps) ** 1.15 if k > 1 else 0.0)))
+    parts = {WEAR: []}
+    parts[WEAR].append(tag(loft(body, "wool"), K_BODY))
+    # A linen chemise fills the neckline (the outfit's own shirt comes off).
+    yoke = grow(hull_ring(m, lambda i: neck_z + 0.012, 0.004), -0.006)
+    parts[WEAR].append(tag(loft([body[0], yoke], "lining"), K_BODY))
+    parts[WEAR].append(tag(loft(skirt, "wool"), K_SKIRT))
+    # Belt at the waist.
+    belt_ring = grow(hull_ring(m, lambda i: waist_z, 0.012), 0.008)
+    belt_region = {"cord": "cord", "braid": "braid", "leather": "strap"}[spec["belt"]]
+    belt = strip([p + Vector((0, 0, -0.016)) for p in belt_ring], [p + Vector((0, 0, 0.016)) for p in belt_ring], belt_region, K_BODY)
+    parts[WEAR].append(belt)
+    if spec["belt"] == "cord":  # the girdle's end hangs at the front
+        knot = belt_ring[N * 3 // 4] + Vector((0.03, -0.006, 0.0))
+        tail = L.sweep([knot, knot + Vector((0.01, -0.012, -0.18)), knot + Vector((0.02, -0.02, -0.34))], 0.008, sides=5, rect="iron_bar")
+        parts[WEAR].append(tag(region_uv(tail, "cord"), K_SKIRT))
+    if spec["belt"] == "leather":
+        buckle = L.new_bm()
+        bmesh.ops.create_cube(buckle, size=1.0)
+        b0 = belt_ring[N * 3 // 4]
+        for v in buckle.verts:
+            v.co = Vector((v.co.x * 0.05, b0.y - 0.004 + v.co.y * 0.008, waist_z + v.co.z * 0.04))
+        parts[METAL] = [tag(region_uv(buckle, "brass"), K_BODY)]
+    # Trim: a band round the hem and the neckline.
+    if spec["trim"]:
+        lo = grow(skirt[-1], 0.003)
+        parts[WEAR].append(strip(lo, [p + Vector((0, 0, 0.05)) for p in grow(skirt[-1], 0.002)], spec["trim"], K_SKIRT))
+        nk = grow(body[0], 0.003)
+        parts[WEAR].append(strip([p + Vector((0, 0, -0.03)) for p in grow(body[1], 0.003)], nk, "embroidery", K_BODY))
+    # Sleeves: wide, falling open at the wrist (bell sleeves), round the pack's sleeves.
+    if spec["sleeves"]:
+        for side, kind_id in ((1, K_SLEEVE_L), (-1, K_SLEEVE_R)):
+            parts[WEAR].append(sleeve(m, side, kind_id))
+    return parts
+
+
+def sleeve(m, side, kind_id):
+    arm = m["arm"]
+    x0, x1 = arm["shoulder"].x * 0.75, arm["wrist"].x - 0.02
+    rings = []
+    count = 7
+    for k in range(count):
+        t = k / (count - 1)
+        x = x0 + (x1 - x0) * t
+        c = arm["shoulder"].lerp(arm["wrist"], (x - arm["shoulder"].x) / (arm["wrist"].x - arm["shoulder"].x))
+        c.x = x
+        # Clear the pack's sleeve: cast across the arm from all round.
+        best = 0.0
+        for i in range(12):
+            a = 2 * math.pi * i / 12
+            d = Vector((0.0, math.cos(a), math.sin(a)))
+            hit = m["arms_bvh"].ray_cast(c + d * 0.3, -d, 0.3)
+            if hit[0] is not None:
+                best = max(best, (hit[0] - c).length)
+        r = max(best, 0.045) + 0.014 + 0.045 * t ** 2.2
+        droop = 0.07 * t ** 2  # the cuff hangs low
+        ring = []
+        for i in range(N):
+            a = 2 * math.pi * i / N
+            sag = droop * max(0.0, -math.sin(a))  # the lower half falls further
+            ring.append(Vector((x, c.y + math.cos(a) * r, c.z + math.sin(a) * r - sag)))
+        rings.append(ring)
+    bm = loft(rings, "wool")
+    if side < 0:
+        for v in bm.verts:
+            v.co.x = -v.co.x
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    return tag(bm, kind_id)
+
+
 # --- Skinning and export ----------------------------------------------------------------------
 
-def weights_for(m, name, co):
+def garment_weights(m, kind, co, name=""):
+    if kind in (K_SLEEVE_L, K_SLEEVE_R):
+        sfx = "_l" if kind == K_SLEEVE_L else "_r"
+        arm = m["arm"]
+        t = (abs(co.x) - arm["shoulder"].x * 0.75) / (arm["wrist"].x - arm["shoulder"].x * 0.75)
+        if t < 0.12:
+            k = t / 0.12
+            return {"upperarm" + sfx: 0.45 + 0.55 * k, "clavicle" + sfx: 0.35 * (1 - k), "spine_03": 0.2 * (1 - k)}
+        e = min(1.0, max(0.0, (t - 0.42) / 0.2))
+        return {"upperarm" + sfx: 1.0 - e, "lowerarm" + sfx: e}
+    if co.z > 1.0:
+        return nearest_weights(m, co)
+    # The skirt follows the legs from the hip down, each side its own, the
+    # front and back blending gently across the middle (a sharp blend would
+    # split the hem in a stride).
+    if name == "coat":  # a short skirt close to the legs: each half follows its leg, as an apron does
+        s = min(1.0, (1.0 - co.z) / 0.22) ** 0.8 * 0.95
+        side = min(1.0, max(0.0, 0.5 + co.x / 0.1))
+    else:
+        s = min(1.0, (1.0 - co.z) / 0.3) ** 0.8 * 0.72
+        side = min(1.0, max(0.0, 0.5 + co.x / 0.26))
+    return {"pelvis": 1.0 - s, "thigh_l": s * side, "thigh_r": s * (1.0 - side)}
+
+
+def weights_for(m, name, co, kind=0.0):
     """Bone weights for a vertex (armature space)."""
+    if name in GARMENTS:
+        return garment_weights(m, kind, co, name)
     if name in HEADWEAR:
         if name == "veil":
             rel_z = co.z - m["head_at"].z
@@ -538,11 +731,16 @@ def make_piece(m, g, name, mats, obj_name):
             objs.append(L.to_object(bm, name, mat, smooth_angle=40, recalc=False))
     obj = L.join(objs, obj_name)
     groups = {}
+    attr = obj.data.attributes.get("wkind")
+    kinds = [d.value for d in attr.data] if attr is not None else None
     for v in obj.data.vertices:
-        for bone, w in weights_for(m, name, v.co).items():
+        kind = kinds[v.index] if kinds else 0.0
+        for bone, w in weights_for(m, name, v.co, kind).items():
             if bone not in groups:
                 groups[bone] = obj.vertex_groups.new(name=bone)
             groups[bone].add([v.index], w, "REPLACE")
+    if obj.data.attributes.get("wkind") is not None:
+        obj.data.attributes.remove(obj.data.attributes["wkind"])
     obj.parent = m["rig"]
     mod = obj.modifiers.new("Armature", "ARMATURE")
     mod.object = m["rig"]
@@ -584,12 +782,17 @@ def build(only=None):
                 todo.append((name, None, piece_name(name, g)))
         for name in APRONS:
             todo.append((name, None, piece_name(name, g)))
+        for name, spec in GARMENTS.items():
+            if g in spec["genders"]:
+                todo.append((name, None, piece_name(name, g)))
         for name, fit, obj_name in todo:
             if only and obj_name not in only:
                 continue
             random.seed(obj_name)
             if name in HEADWEAR:
                 mats = HEADWEAR[name](m, m[fit] if fit else None)
+            elif name in GARMENTS:
+                mats = garment(m, g, name)
             else:
                 bib, region = APRONS[name]
                 mats = apron(m, g, bib, region)
@@ -692,8 +895,9 @@ def main():
                     o.hide_render = gg != g or (key.startswith("hair") and (any(k in name for k in ("Helmet", "Veil"))
                                                                             or key != ("hair_long" if "_Long_" in name else "hair_short")))
             head = any(k in name for k in ("Circlet", "Crown", "Helmet", "Hat", "Cap", "Veil"))
-            cz = (1.72 if g == "M" else 1.67) if head else 1.05
-            d = 5.0 if head else 11.0
+            whole = any(k in name for k in ("Robe", "Gown", "Coat"))
+            cz = (1.72 if g == "M" else 1.67) if head else (0.95 if whole else 1.05)
+            d = 5.0 if head else (22.0 if whole else 11.0)
             views = [("front34", -35, 10, d, 35), ("rear34", 150, 12, d, 35), ("side", 90, 4, d, 35)]
             for p in BC.review([obj], os.path.join(out, name), views=views, extent=0.6, center_z=cz):
                 print("  ", p)
