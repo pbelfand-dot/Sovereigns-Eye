@@ -104,3 +104,6 @@ python3 3D/tools/build_asset_manifest.py                                        
 - **Rubble pieces.** Rubble pieces next to a road are shortened by stretching, so their stones come out a little squashed there.
 - **The steps.** They are a two-course edge, not a raised plaza: people walk over them at ground height, so their feet dip a few centimetres into the coping.
 - **The market cross** is set dressing. It doesn't yet host anything (proclamations, market-day crowds).
+- **Rendering paths.** Checked in all three of Godot's renderers on the Hamlet kerb and the Town cross (`previews/_renderers_forward_mobile_compat.jpg`).
+  - Forward+ (desktop) and Mobile (the Android build) look the same.
+  - Compatibility (OpenGL) drew everything with no shader errors, but the whole scene comes out brighter there (paler paving, deeper grass). That is the renderer's colour handling, not these models.

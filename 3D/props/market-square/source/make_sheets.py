@@ -25,7 +25,8 @@ PANEL, fit, font, label = _commons.PANEL, _commons.fit, _commons.font, _commons.
 
 TIER_NAMES = ["Hamlet", "Village", "Market Town", "Town"]
 # Asset -> (top row [(file, title)], bottom row [in-game view "square_<tier>_<view>"]).
-ARC = [("arc_%s_close", "Laid round the square, close (Blender)"), ("arc_%s_mid", "Laid round the square (Blender)")]
+ARC = [("arc_%s_close", "Laid round the square, close (Blender)"), ("arc_%s_mid", "Laid round the square (Blender)"),
+       ("arc_%s_top", "From above (Blender)")]
 ASSETS = {
     "SE_Kerb_Rubble": (ARC, ["0_kerb", "0_square", "0_trough"]),
     "SE_Kerb_Stone": (ARC, ["1_kerb", "1_square", "1_trough"]),
@@ -58,7 +59,7 @@ def main():
         d.text((16, 18), head, fill=(240, 220, 170), font=f_big)
         row = [("%s_front34" % name, "Front 3/4 (Blender)"), ("%s_rear34" % name, "Rear 3/4 (Blender)"), ("%s_close" % name, "Close detail (Blender)")]
         if top:
-            row = [(f % name, t) for f, t in top] + [("%s_gameplay" % name, "")]
+            row = [(f % name, t) for f, t in top]
         for i, (stem, t) in enumerate(row[:3]):
             p = os.path.join(cycles, stem + ".png")
             if os.path.exists(p) and t:

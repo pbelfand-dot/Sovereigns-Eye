@@ -510,7 +510,8 @@ def kerb_arcs(objs, out, radius=13.5):
         sc.camera = cam
         cam_data.lens = 40
         sc.render.resolution_x, sc.render.resolution_y = 1280, 640
-        for name, eye, look in (("mid", (5.5, -radius - 7.5, 4.2), (0, -radius + 0.5, 0.2)), ("close", (2.2, -radius - 2.6, 1.3), (0.3, -radius + 0.3, 0.1))):
+        for name, eye, look in (("mid", (5.5, -radius - 7.5, 4.2), (0, -radius + 0.5, 0.2)), ("close", (2.2, -radius - 2.6, 1.3), (0.3, -radius + 0.3, 0.1)),
+                                ("top", (0.0, -radius - 0.4, 7.5), (0.0, -radius - 0.3, 0.0))):
             cam.location = eye
             cam.rotation_euler = (Vector(look) - Vector(eye)).to_track_quat("-Z", "Y").to_euler()
             sc.render.filepath = "%s_%s_%s.png" % (out, k.name, name)
@@ -541,9 +542,20 @@ def main():
             for o in built:
                 o.hide_render = o is not obj
             h = max(obj.dimensions.z, 0.6)
-            ext = max(obj.dimensions.x, obj.dimensions.y, 2.0) * 1.15
-            views = [("front34", -35, 18, 6.0, 40), ("rear34", 150, 20, 6.0, 40), ("gameplay", -20, 38, 10.0, 50), ("close", -40, 12, 3.0, 42)]
-            for p in BC.review([obj], os.path.join(out, obj.name), views=views, extent=ext, center_z=h * 0.45):
+            base = os.path.join(out, obj.name)
+            if h > 3.0:
+                # The crosses: framed on their height, and a close look at the
+                # socket with its notice (Market Town) or the lantern head (Town).
+                ext = h * 1.15
+                far = [("front34", -35, 14, 6.0, 40), ("rear34", 150, 16, 6.0, 40), ("gameplay", -20, 38, 10.0, 50)]
+                shots = BC.review([obj], base, views=far, extent=ext, center_z=h * 0.48)
+                detail_z = 1.4 if obj.name == "SE_MarketCross" else (h - 0.75) / 1.45
+                shots += BC.review([obj], base, views=[("close", -30, 12, 3.4, 42)], extent=3.4, center_z=detail_z)
+            else:
+                ext = max(obj.dimensions.x, obj.dimensions.y, 2.0) * 1.15
+                views = [("front34", -35, 18, 6.0, 40), ("rear34", 150, 20, 6.0, 40), ("gameplay", -20, 38, 10.0, 50), ("close", -40, 12, 3.0, 42)]
+                shots = BC.review([obj], base, views=views, extent=ext, center_z=h * 0.45)
+            for p in shots:
                 print("  ", p)
     if "--kerbs" in args:
         out = args[args.index("--kerbs") + 1]

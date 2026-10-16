@@ -136,6 +136,7 @@ new floors rise inside scaffolding.
 ![The Village Commons grow with the charter: a hamlet's well, a village's, a town's](docs/screenshots/commons_tiers.jpg)
 
 ![Fields on foot: a wheat field behind town pales, cabbages in front](docs/screenshots/farm_fields.jpg)
+![A Town's square: the lantern cross, a stepped edge, the well and its trough](docs/screenshots/market_square.jpg)
 
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
