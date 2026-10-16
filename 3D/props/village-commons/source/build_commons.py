@@ -918,6 +918,7 @@ def main():
     for name, fn in BUILDERS.items():
         if only and name not in only:
             continue
+        random.seed(name)  # helpers called without an rng of their own draw from here: same source, same GLBs
         parts = fn()
         obj = L.join(parts, name)
         uvs = obj.data.uv_layers

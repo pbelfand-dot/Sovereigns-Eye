@@ -58,7 +58,7 @@ The fire glows, by day and at night. Before this family a smithy was a brick bui
 - **Collision.**
   - Each GLB carries a simple convex proxy (`-convcolonly`).
   - In the game, the yard is one analytic circle. `tests/test_smithy.gd` checks that every piece of both yards stays inside the yard's footprint.
-- **Build.** The build is deterministic: the same source gives byte-identical GLBs.
+- **Build.** The build is deterministic: the same source gives byte-identical GLBs (see `farm-field/README.md`).
 
 ## Rebuilding
 

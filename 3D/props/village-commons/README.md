@@ -55,7 +55,7 @@ square visibly changes.
 
 ## Rebuilding
 
-Everything is generated from code. Edit `source/build_commons.py` (assets) or `source/commons_lib.py` (modelling helpers), then run:
+Everything is generated from code, and the same source gives byte-identical GLBs (see `../farm-field/README.md`). Edit `source/build_commons.py` (assets) or `source/commons_lib.py` (modelling helpers), then run:
 
 ```
 python3 source/paint_banner.py                                   # banner atlas

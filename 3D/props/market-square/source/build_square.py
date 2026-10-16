@@ -395,6 +395,7 @@ def build(only=None):
     for name, fn in BUILDERS.items():
         if only and name not in only:
             continue
+        random.seed(name)  # helpers called without an rng of their own draw from here: same source, same GLBs
         obj = L.join(fn(), name)
         uvs = obj.data.uv_layers
         uvs.active = uvs["UVMap"]
