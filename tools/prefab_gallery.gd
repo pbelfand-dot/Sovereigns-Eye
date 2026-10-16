@@ -2,7 +2,7 @@ extends Node3D
 ## Renders every kit building prefab (and, if present, a lineup of villagers)
 ## to PNGs for review. Needs a display/GPU (use xvfb-run on servers).
 ##
-##   godot --path . res://tools/prefab_gallery.tscn -- <output_dir> [people|nature|props]
+##   godot --path . res://tools/prefab_gallery.tscn -- <output_dir> [people|wear|nature|props]
 
 var out_dir := "user://gallery"
 var _camera: Camera3D
@@ -65,6 +65,10 @@ func _run() -> void:
 		await _people()
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("wear"):
+		await _wear()
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("nature"):
 		await _nature()
 		get_tree().quit()
@@ -88,6 +92,57 @@ func _run() -> void:
 		await _shot("prefab_%s_back.png" % t)
 	await _people()
 	get_tree().quit()
+
+
+## Status Wear (3D/characters/status-wear): one villager per headwear and
+## apron, men and women, short and long hair, standing (idle) and walking.
+## WEAR_MODE=walk poses them mid-stride.
+func _wear() -> void:
+	var w := WorldGenerator.generate("gallery")
+	var base: CharacterData = null
+	for c in w.characters:
+		if c.age >= 25 and c.age < 50:
+			base = c
+			break
+	var lineup := [
+		["farmer", "male", "short"], ["farmer", "female", "long"], ["miller", "male", "long"], ["merchant", "female", "short"],
+		["baker", "male", "short"], ["baker", "female", "bun"], ["lord", "male", "short"], ["lady", "female", "long"],
+		["king", "male", "long"], ["queen", "female", "long"], ["soldier", "male", "short"], ["guard_captain", "female", "long"],
+		["dowager", "female", "bun"], ["blacksmith", "male", "short"], ["carpenter", "female", "long"], ["innkeeper", "male", "cropped"],
+		["housekeeper", "female", "long"], ["dowager", "male", "short"],
+	]
+	var mode := OS.get_environment("WEAR_MODE")
+	var models: Array[CharacterModel] = []
+	for i in lineup.size():
+		var c := CharacterData.from_dict(base.to_dict())
+		c.id = 9000 + i
+		c.occupation_id = str(lineup[i][0])
+		c.gender = str(lineup[i][1])
+		c.appearance["hair_style"] = str(lineup[i][2])
+		c.appearance["beard"] = false
+		var m := HumanModel.for_character(c)
+		add_child(m)
+		m.position = Vector3(-8.5 + (i % 9) * 2.1, 0, 40 - floorf(i / 9.0) * 3.0)
+		m.rotation.y = PI
+		models.append(m)
+		print("%d %s %s %s look %s" % [i, c.occupation_id, c.gender, c.appearance["hair_style"], OutfitKit.look_for(c)["parts"]])
+	for f in 30:
+		for m in models:
+			m.animate(mode if not mode.is_empty() else "idle", f * 0.1, 1.0 / 30.0)
+	_look(Vector3(0, 2.6, 49), Vector3(0, 1.0, 38.5), 55.0)
+	await _shot("wear_lineup.png")
+	# Each villager alone: the head close, then the whole figure.
+	for i in models.size():
+		for j in models.size():
+			models[j].visible = j == i
+		var at := models[i].position
+		var head_y := models[i].head_height() * 0.93
+		_look(at + Vector3(0.45, head_y + 0.08, 1.15), at + Vector3(0, head_y, 0), 32.0)
+		await _shot("wear_head_%02d.png" % i)
+		_look(at + Vector3(0.9, 1.3, 3.4), at + Vector3(0, 0.9, 0), 38.0)
+		await _shot("wear_body_%02d.png" % i)
+	for m in models:
+		m.visible = true
 
 
 ## A lineup of generated villagers in different outfits, ages and poses.

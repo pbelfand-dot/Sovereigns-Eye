@@ -126,9 +126,9 @@ func _build_human(c: CharacterData) -> bool:
 		if clothes:
 			clothes.set_instance_shader_parameter("skin_tint", skin)
 
-	var style := str(ap.get("hair_style", "short"))
+	var style := str(look.get("hair", ap.get("hair_style", "short")))
 	var hair_name := str(HAIR[g].get(style, ""))
-	if not hair_name.is_empty() and not bool(look.get("hood", false)):
+	if not hair_name.is_empty() and not bool(look.get("hides_hair", false)):
 		_attach_hair(hair_name, hair_color)
 	if g == "male" and bool(ap.get("beard", false)):
 		_attach_hair("Hair_Beard", hair_color)
