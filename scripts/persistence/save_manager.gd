@@ -175,6 +175,34 @@ static func migrate(data: Dictionary) -> Dictionary:
 					props.append({"type": "forge", "pos": [snappedf(pos.x, 0.01), snappedf(pos.z, 0.01)], "rot": snappedf(float(yard["rot"]), 0.0001)})
 			l["props"] = props
 		data["save_version"] = 10
+		version = 10
+	if version == 10:
+		# v11 (Training Yard) gives each barracks its training yard behind or
+		# beside it, where the generator would put it now, in place of the
+		# three kit dummies before it (kept where no yard fits), moving barrels
+		# and crates out of the way.
+		var l: Dictionary = data.get("layout", {})
+		if not l.is_empty():
+			var layout := VillageLayout.from_dict(l)
+			var props: Array = l.get("props", [])
+			if not props.any(func(p: Dictionary) -> bool: return str(p["type"]).begins_with("training")):
+				for b in layout.buildings:
+					if b.type != "barracks":
+						continue
+					var yard := VillageLayoutGenerator.training_yard(layout, b, true)
+					if yard.is_empty():
+						continue
+					var rect := {"center": yard["pos"], "rot": yard["rot"], "half": VillageLayoutGenerator.YARD_HALF[yard["type"]]}
+					var here := b.position
+					props = props.filter(func(p: Dictionary) -> bool:
+						var at := Vector3(float(p["pos"][0]), 0, float(p["pos"][1]))
+						if str(p["type"]) == "dummy" and at.distance_to(here) < b.footprint.length() * 0.5 + 6.0:
+							return false
+						return not (str(p["type"]) in ["barrel", "crate"] and VillageLayoutGenerator._point_in_rect(at, rect, 0.5)))
+					var pos: Vector3 = yard["pos"]
+					props.append({"type": yard["type"], "pos": [snappedf(pos.x, 0.01), snappedf(pos.z, 0.01)], "rot": snappedf(float(yard["rot"]), 0.0001)})
+			l["props"] = props
+		data["save_version"] = 11
 	return data
 
 

@@ -270,8 +270,15 @@ func _plan_work(style: String) -> void:
 			_go(p, "Patrolling the roads")
 			_stay(rng.randf_range(4, 12), "idle", "Standing watch")
 		"drill":
+			# At the training yard's pells, dummies, quintain and ring (by charter).
+			var charter := world.state.territory.charter if world.state.territory else 0
+			var spots := PropKit.drill_spots(world.state.layout, charter)
 			var dummies := world.state.layout.props_of_type("dummy")
-			if dummies.is_empty() or wp == null:
+			if not spots.is_empty() and wp != null:
+				var spot: Array = spots[world.worker_slot(c) % spots.size()]
+				_go(spot[0], "Heading to the training yard")
+				_stay(rng.randf_range(40, 80), "work", text, spot[1])
+			elif dummies.is_empty() or wp == null:
 				_plan_work("patrol")
 			else:
 				var d: Dictionary = dummies[world.worker_slot(c) % dummies.size()]

@@ -35,6 +35,12 @@ static func bake(layout: VillageLayout, origin: Vector2, size: float, res: int, 
 		var c: Vector3 = f["center"]
 		var half_size: Vector2 = (f["size"] as Vector2) * 0.5 + Vector2(0.4, 0.4)
 		_stamp_rect(data, res, origin, px, Vector2(c.x, c.z), float(f["rot"]), half_size, field_margin)
+	# Yards drilled on (the training yard): trodden over their whole footprint.
+	var yards: Dictionary = cfg.get("yards", {})
+	for p: Dictionary in layout.props:
+		if yards.has(p["type"]) and VillageLayoutGenerator.YARD_HALF.has(p["type"]):
+			var pos: Vector3 = p["pos"]
+			_stamp_rect(data, res, origin, px, Vector2(pos.x, pos.z), float(p["rot"]), VillageLayoutGenerator.YARD_HALF[p["type"]], float(cfg.get("yard_margin", 1.0)), float(yards[p["type"]]))
 	var bytes := PackedByteArray()
 	bytes.resize(res * res)
 	for i in data.size():
@@ -63,8 +69,9 @@ static func _stamp(data: PackedFloat32Array, res: int, origin: Vector2, px: floa
 				data[k] = v
 
 
-## Rotated rectangle (yaw like BuildingData.rotation) worn out to `margin`.
-static func _stamp_rect(data: PackedFloat32Array, res: int, origin: Vector2, px: float, center: Vector2, yaw: float, half: Vector2, margin: float) -> void:
+## Rotated rectangle (yaw like BuildingData.rotation) worn out to `margin`,
+## `strength` at most (1: bare earth).
+static func _stamp_rect(data: PackedFloat32Array, res: int, origin: Vector2, px: float, center: Vector2, yaw: float, half: Vector2, margin: float, strength: float = 1.0) -> void:
 	var reach := half.length() + margin
 	var lo := ((center - Vector2(reach, reach) - origin) / px).floor()
 	var hi := ((center + Vector2(reach, reach) - origin) / px).ceil()
@@ -75,7 +82,7 @@ static func _stamp_rect(data: PackedFloat32Array, res: int, origin: Vector2, px:
 			var local := inv * Vector3(w.x, 0.0, w.y)
 			var q := Vector2(absf(local.x) - half.x, absf(local.z) - half.y)
 			var d := Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length()
-			var v := 1.0 - smoothstep(0.0, margin, d)
+			var v := (1.0 - smoothstep(0.0, margin, d)) * strength
 			var k := iz * res + ix
 			if v > data[k]:
 				data[k] = v

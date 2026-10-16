@@ -8,7 +8,8 @@
     "farm": "res://3D/props/farm-field/models/",
     "square": "res://3D/props/market-square/models/",
     "smithy": "res://3D/props/smithy/models/",
-    "home": "res://3D/props/home-yard/models/"
+    "home": "res://3D/props/home-yard/models/",
+    "training": "res://3D/props/training-yard/models/"
   },
   "by_charter": {
     "well": [
@@ -48,6 +49,19 @@
       "set:forge_yard_village",
       "set:forge_yard_town",
       "set:forge_yard_town"
+    ],
+    "_training": "The barracks' training yard (3D/props/training-yard) behind or beside it ('training', or 'training_small' where only a small one fits): a village muster's pells, rack of staves and archery butt (Hamlet, Village; straw dummies from Village), then the town guard's sparring ring, straw dummies and weapons rack (Market Town), and a quintain and railed ring (Town).",
+    "training": [
+      "set:training_yard_0",
+      "set:training_yard_1",
+      "set:training_yard_2",
+      "set:training_yard_3"
+    ],
+    "training_small": [
+      "set:training_small_0",
+      "set:training_small_1",
+      "set:training_small_2",
+      "set:training_small_3"
     ]
   },
   "_whole": "Centrepieces placed as their own node (keeping their automatic LODs) instead of merged with the props.",
@@ -98,6 +112,18 @@
       ["smithy:SE_CoalHeap", -1.25, 0, 0.35, 0],
       ["smithy:SE_ToolRack", -1.05, 0, -1.0, 0]
     ],
+    "_training_yards": "Training yards (3D/props/training-yard) by charter: +Z points away from the barracks' wall, the yard is 11 x 6.5 m ('training') or 7 x 4 m ('training_small') round its centre; the butts back onto the barracks.",
+    "training_yard_0": [["training:SE_Pell", -3.3, 0, 0.4, 0], ["training:SE_Pell", -1.5, 0, 0.9, 10], ["training:SE_Rack_Staves", 1.0, 0, -2.3, 0], ["training:SE_ArcheryButt", 3.9, 0, -1.9, 0]],
+    "training_yard_1": [["training:SE_Pell", -4.2, 0, 0.6, 0], ["training:SE_Dummy_Straw", -2.5, 0, 0.9, 0], ["training:SE_Dummy_Straw", -0.8, 0, 0.9, -8],
+      ["training:SE_Rack_Staves", 1.2, 0, -2.3, 0], ["training:SE_ArcheryButt", 3.9, 0, -1.9, 0]],
+    "training_yard_2": [["training:SE_Ring_Rope", -2.5, 0, 0.0, 0], ["training:SE_Dummy_Straw", 1.6, 0, 1.4, 0], ["training:SE_Dummy_Straw", 3.4, 0, 1.4, 6],
+      ["training:SE_Rack_Weapons", 1.6, 0, -2.4, 0], ["training:SE_ArcheryButt", 4.0, 0, -1.9, 0]],
+    "training_yard_3": [["training:SE_Ring_Rail", -2.5, 0, 0.0, 0], ["training:SE_Quintain", 2.2, 0, 0.6, 0], ["training:SE_Dummy_Straw", 4.4, 0, 1.5, 0],
+      ["training:SE_Rack_Weapons", 1.2, 0, -2.5, 0], ["training:SE_ArcheryButt", 4.0, 0, -1.8, 0]],
+    "training_small_0": [["training:SE_Pell", -2.4, 0, 0.3, 0], ["training:SE_Pell", -0.9, 0, 0.6, 10], ["training:SE_Rack_Staves", 1.9, 0, -1.2, 0]],
+    "training_small_1": [["training:SE_Pell", -2.5, 0, 0.4, 0], ["training:SE_Dummy_Straw", -0.9, 0, 0.5, 0], ["training:SE_Rack_Staves", 1.9, 0, -1.2, 0]],
+    "training_small_2": [["training:SE_Dummy_Straw", -2.4, 0, 0.4, 0], ["training:SE_Dummy_Straw", -0.8, 0, 0.5, 0], ["training:SE_Rack_Weapons", 2.0, 0, -1.3, 0]],
+    "training_small_3": [["training:SE_Quintain", -1.8, 0, 0.2, 0], ["training:SE_Dummy_Straw", 0.4, 0, 0.8, 0], ["training:SE_Rack_Weapons", 2.3, 0, -1.3, 0]],
     "forge_yard_town": [
       ["smithy:SE_Forge_Town", -0.5, 0, -0.55, 0],
       ["smithy:SE_Anvil", -0.15, 0, 0.8, 15],
@@ -643,6 +669,14 @@
     "home_garden_0": [1.2, 0.7], "home_garden_1": [1.2, 0.7], "home_laundry_0": [1.5, 0.25],
     "home_chores_0": [1.45, 0.85], "home_chores_1": [1.45, 0.85], "home_chores_2": [1.45, 0.85],
     "home_coop_1": [0.75, 1.05]
+  },
+  "_drill": "Where soldiers drill at a training yard's pieces, in the piece's own frame (metres; +Z its front): [stand x, stand z, look x, look z] per soldier. Pells, dummies and the quintain take one each, a ring two (sparring, face to face).",
+  "drill": {
+    "training:SE_Pell": [[0, 1.25, 0, 0]],
+    "training:SE_Dummy_Straw": [[0, 1.3, 0, 0]],
+    "training:SE_Quintain": [[-0.5, 1.8, -0.29, 0.9]],
+    "training:SE_Ring_Rope": [[-0.9, 0, 0.9, 0], [0.9, 0, -0.9, 0]],
+    "training:SE_Ring_Rail": [[-0.9, 0, 0.9, 0], [0.9, 0, -0.9, 0]]
   },
   "_replace": "Layout prop types drawn from kit sets; one set is picked per prop by its position.",
   "replace": {

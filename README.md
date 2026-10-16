@@ -142,6 +142,7 @@ new floors rise inside scaffolding.
 ![Villagers in their trade's headwear and aprons: straw hats, felt caps, a baker's cap, circlets and crowns, helmets, veils](docs/screenshots/status_wear.jpg)
 ![The same farmhand at 35, 62, 75 and 88, a man and a woman, then four builds from slight to heavy](docs/screenshots/age_build.jpg)
 ![One street as Cottages (weathered thatch, patched walls, plank shutters), Timber Houses (neat thatch) and Townhouses (tiles)](docs/screenshots/thatch_levels.jpg)
+![The barracks' training yard at each charter: a muster's pells, then straw dummies, a sparring ring, a quintain](docs/screenshots/training_yard.jpg)
 
 ![Building stages](docs/screenshots/construction_stages.jpg)
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)

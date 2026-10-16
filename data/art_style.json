@@ -75,13 +75,15 @@
       140.0
     ],
     "wear": {
-      "_comment": "Baked trodden-ground mask: how far worn grass reaches past each road edge, the square, building walls and field fences.",
+      "_comment": "Baked trodden-ground mask: how far worn grass reaches past each road edge, the square, building walls and field fences; yards (layout prop type -> how worn, 0..1) are trodden over their whole footprint and yard_margin past it.",
       "mask_size": 512,
       "road_margin": 1.8,
       "square_margin": 3.5,
       "building_margin": 1.6,
       "door_path": 4.0,
-      "field_margin": 0.9
+      "field_margin": 0.9,
+      "yards": { "training": 0.85, "training_small": 0.85 },
+      "yard_margin": 1.0
     }
   },
   "portrait": {

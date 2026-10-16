@@ -3,7 +3,7 @@ extends RefCounted
 ## Everything that defines one playthrough: the seed, the clock, the village
 ## layout, families and characters. Saving the game = saving this object.
 
-const SAVE_VERSION := 10
+const SAVE_VERSION := 11
 
 var seed_text: String = ""
 var world_seed: int = 0
