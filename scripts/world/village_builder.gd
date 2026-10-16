@@ -764,6 +764,19 @@ func dressing_items() -> Array:
 				taken.append({"center": sb.position, "rot": sb.rotation, "half": sb.footprint * 0.5 + Vector2(0.4, 0.4)})
 	layout.dressing_obstacles.clear()
 	yard_rects.clear()
+	# Yards drawn as sets (the training yard): nothing else goes inside them,
+	# and their solid pieces block walking.
+	var charter := territory.charter if territory else 0
+	for p: Dictionary in layout.props:
+		var model := PropKit.commons_model(str(p["type"]), charter)
+		if not model.begins_with("set:"):
+			continue
+		if VillageLayoutGenerator.YARD_HALF.has(p["type"]):
+			taken.append({"center": p["pos"], "rot": float(p["rot"]), "half": VillageLayoutGenerator.YARD_HALF[p["type"]]})
+		for it: Array in PropKit.set_items(model.substr(4), Transform3D(Basis(Vector3.UP, float(p["rot"])), p["pos"])):
+			if solid.has(it[0]):
+				var o: Vector3 = (it[1] as Transform3D).origin
+				layout.dressing_obstacles.append(Vector3(o.x, o.z, float(solid[it[0]])))
 	for b in layout.buildings:
 		var list: Array = dressing.get(b.type, [])
 		var placed := {}  # a set listed again is a second choice of spot

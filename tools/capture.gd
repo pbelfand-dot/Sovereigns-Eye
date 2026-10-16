@@ -31,6 +31,7 @@ var square_only := false
 var smithy_only := false
 var home_only := false
 var thatch_only := false
+var training_only := false
 
 
 func _ready() -> void:
@@ -52,6 +53,7 @@ func _ready() -> void:
 	smithy_only = args.has("smithy")
 	home_only = args.has("home")
 	thatch_only = args.has("thatch")
+	training_only = args.has("training")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -114,6 +116,10 @@ func _run() -> void:
 		return
 	if thatch_only:
 		await _thatch_shots()
+		get_tree().quit()
+		return
+	if training_only:
+		await _training_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -820,6 +826,62 @@ func _thatch_shots() -> void:
 	await settle.call()
 	await _wait(10)
 	await _shot("thatch_village.png")
+
+
+## The Training Yard (3D/props/training-yard): the barracks' yard at each
+## charter (Hamlet muster to Town guard) from outside, soldiers drilling in
+## it, and on foot. TRAINING_CHARTERS=0,3 limits the charters.
+func _training_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	var heir := world.player_npc()
+	var yards := st.layout.props_of_type("training") + st.layout.props_of_type("training_small")
+	if yards.is_empty():
+		push_warning("no training yard in this village")
+		return
+	var yard: Dictionary = yards[0]
+	var at: Vector3 = yard["pos"]
+	var out := Basis(Vector3.UP, float(yard["rot"])) * Vector3(0, 0, 1)
+	var settle := func() -> void:
+		for k in 4:
+			world._process(0.05)
+		await _wait(4)
+	var only := OS.get_environment("TRAINING_CHARTERS").split(",", false)
+	for charter in [0, 1, 2, 3]:
+		if not only.is_empty() and not str(charter) in only:
+			continue
+		st.territory.charter = charter
+		world.builder.refresh_props()
+		world.territory_changed.emit()
+		# Let the soldiers walk out to the yard.
+		world.set_speed(2)
+		for k in 160:
+			world._process(0.1)
+		world.set_speed(0)
+		await _wait(2)
+		var tag := "training_%d_" % charter
+		world.set_view_mode("overview", true)
+		heir.teleport(at + out * 9.0 + Vector3(out.z, 0, -out.x) * 4.0)
+		world.camera_rig.set_yaw(_clear_yaw(st, at, 16.0, atan2(out.x, out.z) + 0.45), true)
+		world.camera_rig.look_at_point(at + Vector3(0, 0.6, 0), 17.0, true)
+		await settle.call()
+		await _shot(tag + "yard.png")
+		world.set_view_mode("walk", true)
+		heir.teleport(at + out * 5.5 + Vector3(out.z, 0, -out.x) * 1.5)
+		var to := at - heir.global_position
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.set_yaw(heir.rotation.y + 0.25, true)
+		world.camera_rig.look_at_point(heir.global_position, 7.5, true)
+		await settle.call()
+		await _shot(tag + "gameplay.png")
+		world.set_view_mode("overview", true)
 
 
 ## How far the ground line from `focus` out to a camera `dist` m away along

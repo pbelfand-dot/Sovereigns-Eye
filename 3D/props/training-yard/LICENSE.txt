@@ -1,0 +1,16 @@
+Training Yard (Sovereign's Eye)
+
+The models in models/, the texture in textures/ (T_Training_BaseColor.png,
+painted by source/paint_training.py) and the build scripts and Blender
+source in source/ were made for Sovereign's Eye and are released under CC0
+1.0 Universal (public domain dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The models also use textures they do not contain:
+- the wood and iron trim sheets of the Quaternius Medieval Village MegaKit
+  (Standard), CC0 1.0, kept in
+  3D/environments/quaternius-medieval-village-standard/ with its own
+  LICENSE.txt;
+- the farm atlas of this game's Farm & Field family
+  (3D/props/farm-field/textures/T_Farm_BaseColor.png), CC0 1.0.
+They are referenced by relative path, not copied.

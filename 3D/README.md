@@ -28,6 +28,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `props/home-yard/` | **Original:** what stands round a home, by its level: benches, kitchen gardens, chopping block, water butt, laundry line, hen house, flower pots | 10 |
 | `props/smithy/` | **Original:** the smith's forge yard: two forge tiers, anvil, slack tub, charcoal heap and bin, tool rack, grindstone; glowing embers | 8 |
 | `buildings/thatch-repair/` | **Original:** thatched roofs for the village kit's homes (weathered for a Cottage, neat for a Timber House and a farmhouse), wall patches and plank shutters for poor homes | 12 |
+| `props/training-yard/` | **Original:** the barracks' training yard by charter: pells, straw dummies, a quintain, turf archery butts, racks of staves and of weapons, sparring rings | 8 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
 | `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |
@@ -42,7 +43,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,498 glTF 2.0 model files** (1,136 GLB + 362 JSON glTF).
+Total: **1,506 glTF 2.0 model files** (1,144 GLB + 362 JSON glTF).
 
 Original asset families made for the game, and what comes next, are tracked in
 [`BACKLOG.md`](BACKLOG.md). Each has its own README with budgets, contact sheets

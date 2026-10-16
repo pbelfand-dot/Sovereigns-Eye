@@ -11,7 +11,10 @@ const SQUARE_BUILDINGS := ["tavern", "chapel", "bakery", "smithy"]
 const CROPS := ["wheat", "barley", "cabbage", "flax", "turnip"]
 ## Half-extents (m) kept clear for the big yard props: any haystack model
 ## turned any way (up to 2.1 m across), and the log pile (2.5 x 1.8 m).
-const YARD_HALF := {"haystack": Vector2(1.15, 1.15), "lumber": Vector2(1.3, 1.3), "forge": Vector2(2.4, 1.35)}
+const YARD_HALF := {"haystack": Vector2(1.15, 1.15), "lumber": Vector2(1.3, 1.3), "forge": Vector2(2.4, 1.35),
+	"training": Vector2(5.5, 3.25), "training_small": Vector2(3.5, 2.0)}
+## How far a training yard keeps from the barracks' wall (m), nearest first.
+const TRAINING_SETBACKS := [1.2, 2.5, 4.0]
 ## The forge yard's centre from the smithy's wall (m): its forge backs onto the wall.
 const FORGE_SETBACK := 1.27
 ## Where the market cross stands (x the square's radius from its centre) and
@@ -371,6 +374,25 @@ static func smithy_yard(l: VillageLayout, b: BuildingData, ignore_small := false
 	return {}
 
 
+## The barracks' training yard (3D/props/training-yard): behind it, else
+## beside it (never on the door side, which faces its road), a full yard if
+## one fits, else a small one, wherever its whole footprint is clear (as a
+## forge yard's must be). The yard's +Z points away from the wall.
+## {"type": "training" or "training_small", "pos", "rot"}, or {}.
+static func training_yard(l: VillageLayout, b: BuildingData, ignore_small := false) -> Dictionary:
+	var basis := b.basis()
+	for type: String in ["training", "training_small"]:
+		var half: Vector2 = YARD_HALF[type]
+		for side: Array in [[Vector3(0, 0, -1), b.footprint.y, PI], [Vector3(1, 0, 0), b.footprint.x, PI * 0.5], [Vector3(-1, 0, 0), b.footprint.x, -PI * 0.5]]:
+			var out: Vector3 = side[0]
+			for setback: float in TRAINING_SETBACKS:
+				var center := b.position + basis * (out * (float(side[1]) * 0.5 + setback + half.y))
+				var rot := b.rotation + float(side[2])
+				if _yard_clear(l, b, center, rot, half, ignore_small):
+					return {"type": type, "pos": center, "rot": rot}
+	return {}
+
+
 static func _yard_clear(l: VillageLayout, owner: BuildingData, center: Vector3, rot: float, half: Vector2, ignore_small: bool) -> bool:
 	if center.length() + half.length() > l.flat_radius - 2.0:
 		return false
@@ -533,10 +555,20 @@ func _place_building_props() -> void:
 						_add_prop("haystack", pos, rng.randf() * TAU, YARD_HALF["haystack"])
 						placed += 1
 			"barracks":
-				for i in 3:
-					var local := Vector3((i - 1) * 3.0, 0, fp.y * 0.5 + 5.0)
-					_add_prop("dummy", b.position + basis * local, b.rotation)
-				_add_prop("banner", b.position + basis * Vector3(fp.x * 0.5 + 1.2, 0, fp.y * 0.5), b.rotation)
+				# Its training yard behind it (or beside it); the kit's three
+				# dummies before it only where no yard fits.
+				var training := training_yard(layout, b)
+				if not training.is_empty():
+					_add_prop(str(training["type"]), training["pos"], training["rot"], YARD_HALF[training["type"]])
+				else:
+					for i in 3:
+						var local := Vector3((i - 1) * 3.0, 0, fp.y * 0.5 + 5.0)
+						_add_prop("dummy", b.position + basis * local, b.rotation)
+				# Its banner at a front corner, the one the yard leaves clear.
+				var flag := b.position + basis * Vector3(fp.x * 0.5 + 1.2, 0, fp.y * 0.5)
+				if not training.is_empty() and _point_in_rect(flag, {"center": training["pos"], "rot": training["rot"], "half": YARD_HALF[training["type"]]}, 0.6):
+					flag = b.position + basis * Vector3(-fp.x * 0.5 - 1.2, 0, fp.y * 0.5)
+				_add_prop("banner", flag, b.rotation)
 			"workshop":
 				# The log pile beside the workshop, or behind it if that side is taken.
 				for local: Vector3 in [Vector3(fp.x * 0.5 + 2.4, 0, 0.5), Vector3(0, 0, -fp.y * 0.5 - 2.4)]:

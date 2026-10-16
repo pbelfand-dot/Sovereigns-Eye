@@ -75,7 +75,11 @@ static func resolve(state: WorldState, p: Vector3, radius: float) -> Vector3:
 				continue
 			if not PropKit.present(str(prop["type"]), charter):
 				continue
-			p = _out_of_circle(Vector2(pp.x, pp.z), float(radii.get(str(prop["type"]), 0.4)) + radius, p)
+			# 0: a whole yard (the training yard), whose pieces block on their own.
+			var pr := float(radii.get(str(prop["type"]), 0.4))
+			if pr <= 0.0:
+				continue
+			p = _out_of_circle(Vector2(pp.x, pp.z), pr + radius, p)
 		for o in state.layout.dressing_obstacles:
 			if absf(o.x - p.x) > 3.0 or absf(o.y - p.z) > 3.0:
 				continue

@@ -144,6 +144,22 @@ static func dressing_set(entry_name: String, tier: int) -> String:
 	return ""
 
 
+## Where soldiers drill at the training yards drawn at this charter
+## (data/props.json "drill", per piece): [[stand, look], ...] on the ground.
+static func drill_spots(layout: VillageLayout, charter: int) -> Array:
+	var drill: Dictionary = config().get("drill", {})
+	var out := []
+	for p: Dictionary in layout.props:
+		var model := commons_model(str(p["type"]), charter)
+		if not model.begins_with("set:"):
+			continue
+		for it: Array in set_items(model.substr(4), Transform3D(Basis(Vector3.UP, float(p["rot"])), p["pos"])):
+			var t: Transform3D = it[1]
+			for s: Array in drill.get(str(it[0]), []):
+				out.append([t * Vector3(float(s[0]), 0, float(s[1])), t * Vector3(float(s[2]), 0, float(s[3]))])
+	return out
+
+
 ## The models of a set placed at `origin`: [[model, Transform3D], ...].
 static func set_items(set_name: String, origin: Transform3D) -> Array:
 	var out := []
