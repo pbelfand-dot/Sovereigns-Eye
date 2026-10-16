@@ -57,9 +57,9 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
   |---|---|
   | Tunic (farmers, children, apprentices) | Peasant set, sometimes with Ranger trousers or boots |
   | Apron (crafts and trades) | Peasant set with an apron: leather at the forge, the bench and the quarry, linen elsewhere (Status Wear) |
-  | Robe (priests, herbalists, elders) | Peasant set |
+  | Robe (priests, herbalists, elders) | Status Wear robe (ankle-length wool, bell sleeves, a cord girdle) over the peasant sleeves and shoes |
   | Armor (soldiers, guards, knights) | Ranger set with shoulder armor |
-  | Fine / gown (nobles, steward, merchant) | Ranger set in the brown leather colorway |
+  | Fine / gown (nobles, steward, merchant) | Status Wear: a knee-length coat over plain trousers and the ranger's boots for men, a floor-length gown with bell sleeves for women; dyed from the villager's clothing colour |
 
   - Hooded jobs (woodcutter, priest, herbalist) get the Ranger hood, which hides the hair.
   - **Status Wear** (`3D/characters/status-wear/`, the game's own) adds the headwear every occupation names: a lord's circlet, a king's crown, a soldier's nasal helmet, a farmer's straw hat, a felt cap in four dyes, a baker's cap and a linen veil.

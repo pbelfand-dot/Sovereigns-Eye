@@ -3,7 +3,7 @@ extends TestCase
 ## a villager does and where they stand, skinned to the outfit rig.
 
 const BUDGETS := {"SE_Circlet": 400, "SE_Crown": 600, "SE_Helmet": 900, "SE_StrawHat": 900, "SE_Cap": 800, "SE_BakerHat": 800,
-	"SE_Veil": 900, "SE_Apron": 700}
+	"SE_Veil": 900, "SE_Apron": 700, "SE_Robe": 1500, "SE_Gown": 1500, "SE_Coat": 900}
 
 
 ## A copy of a generated villager with the given job, gender and hairstyle.
@@ -42,7 +42,7 @@ func test_every_wear_model_loads_within_budget() -> void:
 		check(budget > 0 and tris <= budget and tris > 100, "%s: %d tris within its budget (%d)" % [f, tris, budget])
 		check(skinned, "%s is skinned" % f)
 		root.free()
-	check_eq(seen, 27, "all 27 pieces are there")
+	check_eq(seen, 32, "all 32 pieces are there")
 
 
 func test_each_piece_shares_the_outfit_rig() -> void:
@@ -148,3 +148,41 @@ func test_portraits_describe_what_the_model_wears() -> void:
 	check(smith.contains("leather apron"), "the smith's portrait has his leather apron")
 	var elder := PortraitPrompt.build(_villager("dowager", "male", "short", 7602), 1)["prompt"] as String
 	check(elder.contains("cloth cap") and not elder.contains("veil"), "an elder lord is painted in the cap he wears, not a veil")
+
+
+func test_robes_gowns_and_coats() -> void:
+	# CharacterData.outfit(): noblemen wear the fine look (a coat), noblewomen a gown.
+	var cases := [
+		["priest", "male", "wear:SE_Robe_M"], ["herbalist", "female", "wear:SE_Robe_F"], ["elder", "male", "wear:SE_Robe_M"],
+		["lady", "female", "wear:SE_Gown_F"], ["queen", "female", "wear:SE_Gown_F"], ["dowager", "male", "wear:SE_Coat_M"],
+		["lord", "male", "wear:SE_Coat_M"], ["merchant", "female", "wear:SE_Gown_F"], ["merchant", "male", "wear:SE_Coat_M"],
+		["king", "male", "wear:SE_Coat_M"], ["steward", "female", "wear:SE_Gown_F"],
+	]
+	for i in cases.size():
+		var e: Array = cases[i]
+		var c := _villager(str(e[0]), str(e[1]), "short", 7700 + i)
+		var look := OutfitKit.look_for(c)
+		var parts: Array = look["parts"]
+		check(parts.has(e[2]), "a %s (%s) wears %s (%s)" % [e[0], e[1], e[2], parts])
+		for part: String in parts:
+			check(not part.ends_with("_Body"), "%s: the garment takes the outfit body's place (%s)" % [e[0], part])
+		if str(e[2]).contains("Robe") or str(e[2]).contains("Gown"):
+			for part: String in parts:
+				check(not part.ends_with("_Legs"), "%s: no trousers under a long garment" % e[0])
+		check(OutfitKit.describe(look).contains(str(e[2]).get_slice("_", 1).to_lower()), "%s's portrait names the %s" % [e[0], str(e[2]).get_slice("_", 1).to_lower()])
+	# The dye follows the clothes: a noble in crimson wears a crimson gown.
+	var lady := _villager("lady", "female", "long", 7800)
+	lady.appearance["primary"] = "#8a1f2f"
+	var look := OutfitKit.look_for(lady)
+	var variants: Array = OutfitKit.config()["sets"]["wear"]["variants"]
+	check_eq(str(variants[int(look["colorways"]["wear"])]["dye"]), "crimson", "a crimson lady's gown is crimson")
+	check(OutfitKit.describe(look).contains("crimson gown"), "and her portrait says so")
+	check_eq(int(look["colorways"].get("ranger", -1)), 1, "her shoes keep the ranger's leather colorway")
+	# Built: one merged mesh, the garment's wool among its surfaces.
+	var m := HumanModel.for_character(lady)
+	var outfit := m.find_child("Outfit", true, false) as MeshInstance3D
+	var names := []
+	for sfc in outfit.mesh.get_surface_count():
+		names.append(str(outfit.mesh.surface_get_material(sfc).resource_name))
+	check(names.has("wear:4"), "the gown is drawn in the crimson atlas (%s)" % [names])
+	m.free()

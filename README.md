@@ -384,8 +384,9 @@ as readable JSON.
 * There is no demolition yet. You can cancel a site (full refund before work
   starts, half after).
 
-* Art gaps: the free outfit sampler has only Peasant and Ranger sets, so nobles wear
-  fine leather and there are no gowns, robes or plate armor yet.
+* Art gaps: clergy wear robes, noblewomen gowns and noblemen coats (the game's own
+  Status Wear), but there is no plate armor yet, and every robe, gown and coat has
+  one cut.
 * Crops don't grow or change with the seasons yet, and field fences don't block
   walking (see [3D/props/farm-field](3D/props/farm-field/README.md)). Villagers now
   wear their trade's headwear and apron (see

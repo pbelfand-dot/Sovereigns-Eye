@@ -1,5 +1,6 @@
-"""Paints the Status Wear atlas (T_Wear_BaseColor*.png), 512 x 512, one per
-colorway: the felt (caps) is dyed per colorway, everything else is shared.
+"""Paints the Status Wear atlas (T_Wear_BaseColor*.png), 512 x 1024, one per
+colorway: the felt (caps) and the wool (robes, gowns, coats) are dyed per
+colorway, everything else is shared.
 
     python3 paint_wear.py [out_dir]
 
@@ -20,6 +21,13 @@ Regions (image pixels, y down), 128 px cells:
              x 128-256  dark leather straps       apron straps, helmet rim
              x 256-384  brass                     buckles, rivets
              x 384-512  iron dark                 helmet nasal and band
+  y 512-640  x   0-256  dyed wool (per colorway)  robes, gowns, coats
+             x 256-384  dyed wool in shadow        lining, folds
+             x 384-512  undyed linen lining        sleeves' insides
+  y 640-768  x   0-128  gold braid                gown and coat trim
+             x 128-256  ermine                    a royal's trim
+             x 256-384  hemp cord                 a robe's girdle
+             x 384-512  embroidered band (dyed)   necklines
 """
 import math
 import os
@@ -29,7 +37,8 @@ import sys
 from PIL import Image, ImageDraw, ImageFilter
 
 S = 2
-W = H = 512 * S
+W = 512 * S
+H = 1024 * S
 U = 128 * S
 # Colorways: name, felt colour, swatch (the clothing colour it suits best).
 COLORWAYS = [
@@ -37,6 +46,12 @@ COLORWAYS = [
     ("woad", (62, 86, 124), "#3e567c"),
     ("green", (66, 92, 52), "#425c34"),
     ("black", (44, 38, 36), "#2c2624"),
+    ("crimson", (138, 31, 47), "#8a1f2f"),
+    ("purple", (91, 42, 134), "#5b2a86"),
+    ("royal", (31, 63, 122), "#1f3f7a"),
+    ("cream", (226, 216, 196), "#e8e0d0"),
+    ("brown", (96, 76, 58), "#5a4a3a"),
+    ("grey", (78, 78, 80), "#4a4a4a"),
 ]
 
 
@@ -148,6 +163,73 @@ def leather(w, h, base, seed, dark=False):
     return img.filter(ImageFilter.GaussianBlur(1.0 * S))
 
 
+def wool(w, h, base, seed, shadow=False):
+    """Fulled wool: a soft twill with faint vertical drape lines."""
+    c = lerp(base, (0, 0, 0), 0.28) if shadow else base
+    img = Image.new("RGB", (w, h), c)
+    d = ImageDraw.Draw(img)
+    rng = random.Random(seed)
+    for y in range(0, h, 4 * S):
+        d.line((0, y, w, y + 4 * S), fill=lerp(c, (0, 0, 0), 0.07), width=1)
+    for _ in range(14):
+        x = rng.uniform(0, w)
+        d.line((x, 0, x + rng.uniform(-6, 6) * S, h), fill=lerp(c, (0, 0, 0), 0.12), width=int(3 * S))
+        d.line((x + 4 * S, 0, x + 4 * S, h), fill=lerp(c, (255, 255, 255), 0.06), width=int(2 * S))
+    for _ in range(300):
+        x, y = rng.uniform(0, w), rng.uniform(0, h)
+        r = rng.uniform(1, 2.5) * S
+        d.ellipse((x - r, y - r, x + r, y + r), fill=shade(c, rng, 7))
+    return img.filter(ImageFilter.GaussianBlur(1.0 * S))
+
+
+def braid(w, h, seed):
+    base = (214, 168, 64)
+    img = Image.new("RGB", (w, h), lerp(base, (0, 0, 0), 0.25))
+    d = ImageDraw.Draw(img)
+    step = 10 * S
+    for x in range(-step, w + step, step):
+        for y in range(0, h, step):
+            d.polygon([(x, y), (x + step // 2, y + step // 2), (x, y + step), (x - step // 2, y + step // 2)], fill=base,
+                      outline=lerp(base, (90, 60, 10), 0.6))
+    return img.filter(ImageFilter.GaussianBlur(0.6 * S))
+
+
+def ermine(w, h, seed):
+    img = Image.new("RGB", (w, h), (238, 236, 230))
+    d = ImageDraw.Draw(img)
+    rng = random.Random(seed)
+    for _ in range(400):
+        x, y = rng.uniform(0, w), rng.uniform(0, h)
+        r = rng.uniform(1, 3) * S
+        d.ellipse((x - r, y - r, x + r, y + r), fill=shade((238, 236, 230), rng, 10))
+    for _ in range(14):  # the black tails
+        x, y = rng.uniform(0, w), rng.uniform(0, h)
+        d.polygon([(x, y), (x + 3 * S, y + 9 * S), (x - 3 * S, y + 9 * S)], fill=(30, 28, 28))
+    return img.filter(ImageFilter.GaussianBlur(0.7 * S))
+
+
+def cord(w, h, seed):
+    base = (176, 150, 104)
+    img = Image.new("RGB", (w, h), base)
+    d = ImageDraw.Draw(img)
+    for x in range(-h, w, 7 * S):
+        d.line((x, h, x + h, 0), fill=lerp(base, (60, 40, 20), 0.35), width=2 * S)
+    return img.filter(ImageFilter.GaussianBlur(0.8 * S))
+
+
+def embroidered(w, h, base, seed):
+    img = Image.new("RGB", (w, h), lerp(base, (0, 0, 0), 0.2))
+    d = ImageDraw.Draw(img)
+    gold = (220, 176, 70)
+    for y in (6 * S, h - 8 * S):
+        d.line((0, y, w, y), fill=gold, width=2 * S)
+    for x in range(8 * S, w, 18 * S):
+        cy = h // 2
+        d.ellipse((x - 4 * S, cy - 4 * S, x + 4 * S, cy + 4 * S), outline=gold, width=2 * S)
+        d.line((x + 4 * S, cy, x + 14 * S, cy), fill=gold, width=S)
+    return img.filter(ImageFilter.GaussianBlur(0.6 * S))
+
+
 def main():
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "textures")
     os.makedirs(out, exist_ok=True)
@@ -166,11 +248,18 @@ def main():
     shared.paste(leather(U, U, (66, 42, 26), 10, dark=True), (U, 3 * U))
     shared.paste(metal(U, U, (176, 140, 70), 11, hi=(240, 210, 130)), (2 * U, 3 * U))
     shared.paste(metal(U, U, (74, 74, 78), 12), (3 * U, 3 * U))
+    shared.paste(cloth(U, U, (222, 212, 188), 13), (3 * U, 4 * U))
+    shared.paste(braid(U, U, 14), (0, 5 * U))
+    shared.paste(ermine(U, U, 15), (U, 5 * U))
+    shared.paste(cord(U, U, 16), (2 * U, 5 * U))
     for i, (name, colour, _swatch) in enumerate(COLORWAYS):
         a = shared.copy()
         a.paste(felt(2 * U, U, colour, 20 + i), (0, U))
         a.paste(felt(U, U, colour, 30 + i, band=True), (2 * U, U))
-        a = a.resize((512, 512), Image.LANCZOS)
+        a.paste(wool(2 * U, U, colour, 40 + i), (0, 4 * U))
+        a.paste(wool(U, U, colour, 50 + i, shadow=True), (2 * U, 4 * U))
+        a.paste(embroidered(U, U, colour, 60 + i), (3 * U, 5 * U))
+        a = a.resize((512, 1024), Image.LANCZOS)
         path = os.path.join(out, "T_Wear_BaseColor.png" if i == 0 else "T_Wear_%d_BaseColor.png" % (i + 1))
         a.save(path, optimize=True)
         print("wrote", os.path.abspath(path))

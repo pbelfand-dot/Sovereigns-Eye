@@ -24,7 +24,8 @@ PANEL, fit, font, label = _commons.PANEL, _commons.fit, _commons.font, _commons.
 # The gallery's villagers (tools/prefab_gallery.gd _wear): index -> who.
 WHO = {0: "a farmer", 1: "a farmer", 2: "a miller", 3: "a merchant", 4: "a baker", 5: "a baker (bun let down)", 6: "a lord",
        7: "a lady", 8: "a king", 9: "a queen", 10: "a soldier", 11: "a guard captain", 12: "a dowager", 13: "a blacksmith",
-       14: "a carpenter", 15: "an innkeeper", 16: "a housekeeper", 17: "an elder lord (a cap for a veil)"}
+       14: "a carpenter", 15: "an innkeeper", 16: "a housekeeper", 17: "an elder lord (a cap for a veil)", 18: "a priest",
+       19: "a herbalist", 20: "an elder", 21: "a merchant", 22: "a steward", 23: "a noble scion"}
 # Kind -> (title, pieces for the numbers, top row [(stem, caption)], bottom row [(kind, index, caption)]).
 KINDS = {
     "Circlet": ("SE_Circlet", [("SE_Circlet_Short_M_front34", "Short hair, man (Blender)"), ("SE_Circlet_Long_F_front34", "Long hair, woman (Blender)"),
@@ -43,6 +44,12 @@ KINDS = {
                          ("SE_Veil_F_side", "Side (Blender)")], [("head", 12), ("head", 16), ("body", 12)]),
     "ApronLeather": ("SE_ApronLeather", [("SE_ApronLeather_M_front34", "Man (Blender)"), ("SE_ApronLeather_F_front34", "Woman (Blender)"),
                                          ("SE_ApronLeather_M_side", "Side (Blender)")], [("body", 13), ("body", 14), ("walk", 13)]),
+    "Robe": ("SE_Robe", [("SE_Robe_M_front34", "Man (Blender)"), ("SE_Robe_F_front34", "Woman (Blender)"),
+                         ("SE_Robe_M_side", "Side: the cord girdle (Blender)")], [("body", 18), ("body", 19), ("walk", 20)]),
+    "Gown": ("SE_Gown", [("SE_Gown_F_front34", "Front 3/4 (Blender)"), ("SE_Gown_F_rear34", "Rear 3/4: the train (Blender)"),
+                         ("SE_Gown_F_side", "Side (Blender)")], [("body", 7), ("body", 9), ("walk", 22)]),
+    "Coat": ("SE_Coat", [("SE_Coat_M_front34", "Man (Blender)"), ("SE_Coat_F_front34", "Woman (Blender)"),
+                         ("SE_Coat_M_rear34", "Rear 3/4 (Blender)")], [("body", 6), ("body", 8), ("walk", 21)]),
     "ApronLinen": ("SE_ApronLinen", [("SE_ApronLinen_M_front34", "Man (Blender)"), ("SE_ApronLinen_F_front34", "Woman (Blender)"),
                                      ("SE_ApronLinen_F_side", "Side (Blender)")], [("body", 4), ("body", 16), ("walk", 15)]),
 }
@@ -58,7 +65,8 @@ def main():
         d = ImageDraw.Draw(sheet)
         pieces = sorted(k for k in stats if k.startswith(prefix + "_"))
         tris = sorted({stats[k]["tris"] for k in pieces})
-        head = "%s   %d pieces | %s tris each | %s" % (kind, len(pieces), "/".join(str(t) for t in tris),
+        head = "%s   %d piece%s | %s tris%s | %s" % (kind, len(pieces), "" if len(pieces) == 1 else "s", "/".join(str(t) for t in tris),
+                                                    "" if len(pieces) == 1 else " each",
                                                        ", ".join(sorted({m for k in pieces for m in stats[k]["materials"]})))
         d.text((16, 18), head, fill=(240, 220, 170), font=f_big)
         for i, (stem, t) in enumerate(top):

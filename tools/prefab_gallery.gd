@@ -109,7 +109,8 @@ func _wear() -> void:
 		["baker", "male", "short"], ["baker", "female", "bun"], ["lord", "male", "short"], ["lady", "female", "long"],
 		["king", "male", "long"], ["queen", "female", "long"], ["soldier", "male", "short"], ["guard_captain", "female", "long"],
 		["dowager", "female", "bun"], ["blacksmith", "male", "short"], ["carpenter", "female", "long"], ["innkeeper", "male", "cropped"],
-		["housekeeper", "female", "long"], ["dowager", "male", "short"],
+		["housekeeper", "female", "long"], ["dowager", "male", "short"], ["priest", "male", "short"], ["herbalist", "female", "long"],
+		["elder", "male", "short"], ["merchant", "male", "short"], ["steward", "female", "bun"], ["noble_scion", "male", "long"],
 	]
 	var mode := OS.get_environment("WEAR_MODE")
 	var models: Array[CharacterModel] = []
@@ -120,9 +121,13 @@ func _wear() -> void:
 		c.gender = str(lineup[i][1])
 		c.appearance["hair_style"] = str(lineup[i][2])
 		c.appearance["beard"] = false
+		# A clothing colour from the wearer's station, so the dyes vary.
+		var palette: Dictionary = GameData.appearance()["outfits"].get(str(c.occupation().get("status", "commoner")), GameData.appearance()["outfits"]["commoner"])
+		var primaries: Array = palette["primary"]
+		c.appearance["primary"] = str(primaries[i % primaries.size()])
 		var m := HumanModel.for_character(c)
 		add_child(m)
-		m.position = Vector3(-8.5 + (i % 9) * 2.1, 0, 40 - floorf(i / 9.0) * 3.0)
+		m.position = Vector3(-10.5 + (i % 12) * 1.9, 0, 40 - floorf(i / 12.0) * 3.0)
 		m.rotation.y = PI
 		models.append(m)
 		print("%d %s %s %s look %s" % [i, c.occupation_id, c.gender, c.appearance["hair_style"], OutfitKit.look_for(c)["parts"]])
