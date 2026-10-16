@@ -1069,7 +1069,12 @@ func _talk_shots() -> void:
 func _menu_shots() -> void:
 	var menu: Control = load("res://scenes/main/main.tscn").instantiate()
 	add_child(menu)
-	await _wait(10)
+	await _wait(60)  # past the fade-in
+	await _shot("14_main_menu.png")
+	menu.call("_show_new_game")
+	await _wait(5)
+	await _shot("15_menu_new_game.png")
+	menu.call("_show_menu")
 	menu.call("_show_sound")
 	await _wait(5)
 	await _shot("16_menu_sound.png")
