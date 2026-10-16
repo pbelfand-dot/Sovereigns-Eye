@@ -34,6 +34,7 @@ var thatch_only := false
 var training_only := false
 var chapel_only := false
 var castle_only := false
+var harbour_only := false
 
 
 func _ready() -> void:
@@ -58,6 +59,7 @@ func _ready() -> void:
 	training_only = args.has("training")
 	chapel_only = args.has("chapel")
 	castle_only = args.has("castle")
+	harbour_only = args.has("harbour")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -132,6 +134,10 @@ func _run() -> void:
 		return
 	if castle_only:
 		await _castle_shots()
+		get_tree().quit()
+		return
+	if harbour_only:
+		await _harbour_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -1093,6 +1099,61 @@ func _castle_shots() -> void:
 		await _shot(tag + "gameplay.png")
 		world.set_view_mode("overview", true)
 	cam.queue_free()
+
+
+## The Harbour & Ships family (3D/props/harbour) in a harbour of its own
+## (tools/harbour_demo.gd): the game has no sea yet, so the demo brings its
+## shore and water, under the game's sky, with villagers on the quays for
+## scale. From the sea, the stone quay and the cog, the cog's stern, the
+## hoist, the timber quay, the jetty, the shore, the water stairs and the
+## trading ship under sail.
+func _harbour_shots() -> void:
+	var Demo: GDScript = load("res://tools/harbour_demo.gd")
+	var sky := SkyController.new()
+	add_child(sky)
+	sky.set_time(10.5 * 60.0)
+	add_child(Demo.build(true))
+	var w := WorldGenerator.generate(seed_text)
+	var adults := w.characters.filter(func(c: CharacterData) -> bool: return c.age >= 18 and c.age < 70)
+	var people: Array[CharacterModel] = []
+	for i in HARBOUR_PEOPLE.size():
+		var m := HumanModel.for_character(adults[(i * 7) % adults.size()])
+		add_child(m)
+		m.position = HARBOUR_PEOPLE[i][0]
+		m.rotation.y = float(HARBOUR_PEOPLE[i][1])
+		people.append(m)
+	for f in 30:
+		for m in people:
+			m.animate("idle", f * 0.1, 1.0 / 30.0)
+	var cam := Camera3D.new()
+	cam.fov = 50.0
+	cam.far = 900.0
+	add_child(cam)
+	cam.make_current()
+	for view: Array in HARBOUR_VIEWS:
+		cam.global_position = view[1]
+		cam.look_at(view[2])
+		await _wait(6)
+		await _shot("harbour_%s.png" % view[0])
+
+
+## Villagers on the quays and the shore: [position, yaw].
+const HARBOUR_PEOPLE := [
+	[Vector3(-3.4, 1.4, -0.7), 0.5], [Vector3(-1.5, 1.4, -2.9), 2.6], [Vector3(-20.6, 1.4, -1.4), 0.3],
+	[Vector3(5.0, 1.4, -1.0), -0.4], [Vector3(20.4, 1.28, 9.4), PI], [Vector3(29.0, 1.4, -7.6), -0.7],
+]
+## [name, camera, looking at].
+const HARBOUR_VIEWS := [
+	["overview", Vector3(46, 30, 78), Vector3(-6, 0, 10)],
+	["quay", Vector3(-31, 6, 17), Vector3(-10, 2.5, 2)],
+	["stern", Vector3(-25, 3.5, 10), Vector3(-17.5, 1.8, 3.9)],
+	["hoist", Vector3(3.5, 5.0, 10), Vector3(-3, 3.2, 0.5)],
+	["timber", Vector3(15, 3.0, 9), Vector3(7, 1.0, 0)],
+	["jetty", Vector3(28, 3.5, -4), Vector3(20, 1.0, 8)],
+	["shore", Vector3(35, 3.2, 7), Vector3(35, 1.2, -6)],
+	["steps", Vector3(-17, 3.5, 7.5), Vector3(-22, 0.6, 0.5)],
+	["sail", Vector3(-32, 5, 72), Vector3(-4, 5, 46)],
+]
 
 
 ## How far the ground line from `focus` out to a camera `dist` m away along

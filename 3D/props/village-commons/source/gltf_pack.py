@@ -74,6 +74,10 @@ def pack(src, dst, own=None):
         used.add(name)
         image_dir = spec.get("dir", VILLAGE)
         new = {"name": name, "doubleSided": spec["doubleSided"]}
+        if "alphaMode" in spec:
+            # Cut-out parts (nets): alpha below the cutoff is not drawn.
+            new["alphaMode"] = spec["alphaMode"]
+            new["alphaCutoff"] = spec.get("alphaCutoff", 0.5)
         if "normalTexture" in spec:
             new["normalTexture"] = tex(os.path.join(image_dir, spec["normalTexture"]))
         pbr = {}
