@@ -11,7 +11,9 @@ const SQUARE_BUILDINGS := ["tavern", "chapel", "bakery", "smithy"]
 const CROPS := ["wheat", "barley", "cabbage", "flax", "turnip"]
 ## Half-extents (m) kept clear for the big yard props: any haystack model
 ## turned any way (up to 2.1 m across), and the log pile (2.5 x 1.8 m).
-const YARD_HALF := {"haystack": Vector2(1.15, 1.15), "lumber": Vector2(1.3, 1.3)}
+const YARD_HALF := {"haystack": Vector2(1.15, 1.15), "lumber": Vector2(1.3, 1.3), "forge": Vector2(2.4, 1.35)}
+## The forge yard's centre from the smithy's wall (m): its forge backs onto the wall.
+const FORGE_SETBACK := 1.27
 ## Where the market cross stands (x the square's radius from its centre) and
 ## how far the trough stands from the well (m).
 const CROSS_AT := 0.42
@@ -124,7 +126,7 @@ func _closest_road_point(p: Vector3, main_only: bool) -> Vector3:
 
 # --- Occupancy ------------------------------------------------------------------
 
-func _rect_samples(center: Vector3, rot: float, half: Vector2) -> Array[Vector3]:
+static func _rect_samples(center: Vector3, rot: float, half: Vector2) -> Array[Vector3]:
 	var basis := Basis(Vector3.UP, rot)
 	var out: Array[Vector3] = [center]
 	for sx: float in [-1.0, 0.0, 1.0]:
@@ -135,7 +137,7 @@ func _rect_samples(center: Vector3, rot: float, half: Vector2) -> Array[Vector3]
 	return out
 
 
-func _point_in_rect(p: Vector3, rect: Dictionary, margin: float) -> bool:
+static func _point_in_rect(p: Vector3, rect: Dictionary, margin: float) -> bool:
 	var local: Vector3 = Basis(Vector3.UP, float(rect["rot"])).inverse() * (p - rect["center"])
 	var half: Vector2 = rect["half"]
 	return absf(local.x) < half.x + margin and absf(local.z) < half.y + margin
@@ -351,6 +353,69 @@ func _place_square_props() -> void:
 	layout.props.append_array(square_furniture(layout))
 
 
+## Where a smithy's forge yard goes: against its right wall, else its left,
+## else its back, on the first side clear of other buildings, the square,
+## roads, fields, props and trees. {"pos", "rot"} (the yard's +Z points away
+## from the wall), or {} if no side has room. No randomness, so loading an
+## older save finds the spot the generator would (SaveManager.migrate);
+## `ignore_small` lets barrels and crates be moved out of the way there.
+static func smithy_yard(l: VillageLayout, b: BuildingData, ignore_small := false) -> Dictionary:
+	var half: Vector2 = YARD_HALF["forge"]
+	var basis := b.basis()
+	for side: Array in [[Vector3(1, 0, 0), b.footprint.x, PI * 0.5], [Vector3(-1, 0, 0), b.footprint.x, -PI * 0.5], [Vector3(0, 0, -1), b.footprint.y, PI]]:
+		var out: Vector3 = side[0]
+		var center := b.position + basis * (out * (float(side[1]) * 0.5 + FORGE_SETBACK))
+		var rot := b.rotation + float(side[2])
+		if _yard_clear(l, b, center, rot, half, ignore_small):
+			return {"pos": center, "rot": rot}
+	return {}
+
+
+static func _yard_clear(l: VillageLayout, owner: BuildingData, center: Vector3, rot: float, half: Vector2, ignore_small: bool) -> bool:
+	if center.length() + half.length() > l.flat_radius - 2.0:
+		return false
+	var rect := {"center": center, "rot": rot, "half": half}
+	var samples := _rect_samples(center, rot, half)
+	for s in samples:
+		if s.distance_to(l.square_center) < l.square_radius + 1.0:
+			return false
+		var p2 := Vector2(s.x, s.z)
+		for road: Dictionary in l.roads:
+			var pts: PackedVector3Array = road["points"]
+			for i in range(1, pts.size()):
+				var a := Vector2(pts[i - 1].x, pts[i - 1].z)
+				var c := Geometry2D.get_closest_point_to_segment(p2, a, Vector2(pts[i].x, pts[i].z))
+				if p2.distance_to(c) - float(road["width"]) * 0.5 < 0.4:
+					return false
+	for other in l.buildings:
+		if other == owner:
+			continue
+		var orect := {"center": other.position, "rot": other.rotation, "half": other.footprint * 0.5}
+		for s in samples:
+			if _point_in_rect(s, orect, 0.4):
+				return false
+		for s in _rect_samples(other.position, other.rotation, other.footprint * 0.5):
+			if _point_in_rect(s, rect, 0.4):
+				return false
+	for f: Dictionary in l.fields:
+		var frect := {"center": f["center"], "rot": f["rot"], "half": (f["size"] as Vector2) * 0.5}
+		for s in samples:
+			if _point_in_rect(s, frect, 0.5):
+				return false
+		for s in _rect_samples(f["center"], float(f["rot"]), (f["size"] as Vector2) * 0.5):
+			if _point_in_rect(s, rect, 0.5):
+				return false
+	for p: Dictionary in l.props:
+		if ignore_small and p["type"] in ["barrel", "crate"]:
+			continue
+		if _point_in_rect(p["pos"], rect, 0.6):
+			return false
+	for t in l.trees:
+		if _point_in_rect(Vector3(t.x, 0, t.y), rect, 0.6):
+			return false
+	return true
+
+
 ## The market cross's spot (it stands once the Crown grants a market) and
 ## the trough beside the well, as layout props; both are drawn by charter
 ## (data/props.json "by_charter"). No randomness, so loading an older save
@@ -400,9 +465,18 @@ func _place_building_props() -> void:
 		var fp := b.footprint
 		match b.type:
 			"tavern", "smithy", "bakery", "storehouse":
+				# A smithy's forge yard against a side wall first; barrels and
+				# crates keep out of it.
+				var yard := smithy_yard(layout, b) if b.type == "smithy" else {}
+				if not yard.is_empty():
+					_add_prop("forge", yard["pos"], yard["rot"], YARD_HALF["forge"])
 				for i in rng.randi_range(2, 4):
 					var local := Vector3((fp.x * 0.5 + 0.8) * (1 if i % 2 == 0 else -1), 0, rng.randf_range(-fp.y * 0.4, fp.y * 0.3))
-					_add_prop("barrel" if rng.randf() < 0.6 else "crate", b.position + basis * local, rng.randf() * TAU)
+					var kind := "barrel" if rng.randf() < 0.6 else "crate"
+					var yaw := rng.randf() * TAU
+					if not yard.is_empty() and _point_in_rect(b.position + basis * local, {"center": yard["pos"], "rot": yard["rot"], "half": YARD_HALF["forge"]}, 0.5):
+						continue
+					_add_prop(kind, b.position + basis * local, yaw)
 			"farmhouse":
 				# Haystacks in the yard, beside or behind the house (never on
 				# the door side, nor across a back door mid-wall), on spots

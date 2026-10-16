@@ -6,7 +6,8 @@
   "roots": {
     "commons": "res://3D/props/village-commons/models/",
     "farm": "res://3D/props/farm-field/models/",
-    "square": "res://3D/props/market-square/models/"
+    "square": "res://3D/props/market-square/models/",
+    "smithy": "res://3D/props/smithy/models/"
   },
   "by_charter": {
     "well": [
@@ -39,6 +40,13 @@
       "square:SE_Trough_Log",
       "square:SE_Trough_Stone",
       "square:SE_Trough_Stone"
+    ],
+    "_forge": "The smith's forge yard (3D/props/smithy) against the smithy's side wall: a 'set:NAME' entry places that set of models. A village hearth with a heap of charcoal, then a town forge with a coal bin and a grindstone.",
+    "forge": [
+      "set:forge_yard_village",
+      "set:forge_yard_village",
+      "set:forge_yard_town",
+      "set:forge_yard_town"
     ]
   },
   "_whole": "Centrepieces placed as their own node (keeping their automatic LODs) instead of merged with the props.",
@@ -68,6 +76,22 @@
   },
   "_sets": "Each entry: [model, x, y, z, yaw degrees] in the set's local frame (meters; +Z is the front, the side facing the viewer or the square).",
   "sets": {
+    "_forge_yards": "Forge yards (3D/props/smithy): +Z is the yard's front, the wall is behind (-Z); the forge backs onto it.",
+    "forge_yard_village": [
+      ["smithy:SE_Forge_Village", 0.25, 0, -0.55, 0],
+      ["smithy:SE_Anvil", 0.55, 0, 0.75, 20],
+      ["smithy:SE_SlackTub", 1.5, 0, 0.75, 0],
+      ["smithy:SE_CoalHeap", -1.25, 0, 0.35, 0],
+      ["smithy:SE_ToolRack", -1.05, 0, -1.0, 0]
+    ],
+    "forge_yard_town": [
+      ["smithy:SE_Forge_Town", -0.5, 0, -0.55, 0],
+      ["smithy:SE_Anvil", -0.15, 0, 0.8, 15],
+      ["smithy:SE_SlackTub", 0.85, 0, 0.9, 0],
+      ["smithy:SE_CoalBin", -1.9, 0, 0.25, 90],
+      ["smithy:SE_ToolRack", -1.75, 0, -1.05, 0],
+      ["smithy:SE_Grindstone", 1.8, 0, 0.88, 0]
+    ],
     "stall_fruit": [
       [
         "Stall_Empty",
@@ -660,15 +684,6 @@
   "_dressing": "Extra props around buildings by type: [set, ax, az, dx, dz, yaw degrees, chance]. Position = (ax * half width + dx, az * half depth + dz) in the building's frame (+Z is the door side). Items near a road or inside another building are skipped.",
   "dressing": {
     "smithy": [
-      [
-        "smith_anvil",
-        -1,
-        1,
-        1.5,
-        1.4,
-        15,
-        1.0
-      ],
       [
         "smith_bench",
         1,

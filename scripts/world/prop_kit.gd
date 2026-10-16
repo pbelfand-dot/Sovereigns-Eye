@@ -53,7 +53,15 @@ static func commons_model(type: String, charter: int) -> String:
 	if list.is_empty():
 		return ""
 	var model := str(list[clampi(charter, 0, list.size() - 1)])
+	if model.begins_with("set:"):
+		return model if set_ready(model.substr(4)) else ""
 	return model if not model.is_empty() and ResourceLoader.exists(model_path(model)) else ""
+
+
+## True if every model of a set (data/props.json "sets") is in the project.
+static func set_ready(set_name: String) -> bool:
+	var entries: Array = config().get("sets", {}).get(set_name, [])
+	return not entries.is_empty() and entries.all(func(e: Array) -> bool: return ResourceLoader.exists(model_path(str(e[0]))))
 
 
 ## False for a prop whose "by_charter" entry at this charter is empty (the
@@ -110,8 +118,13 @@ static func available() -> bool:
 		var sets: Dictionary = config().get("sets", {})
 		var ok := not sets.is_empty()
 		for set_name: String in sets:
+			if set_name.begins_with("_"):
+				continue
 			for entry: Array in sets[set_name]:
-				ok = ok and ResourceLoader.exists(model_path(str(entry[0])))
+				# The game's own families ("family:NAME") are checked where
+				# they're used (set_ready, commons_model).
+				if not str(entry[0]).contains(":"):
+					ok = ok and ResourceLoader.exists(model_path(str(entry[0])))
 		_available = 1 if ok else 0
 	return _available == 1
 

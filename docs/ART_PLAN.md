@@ -138,7 +138,7 @@ There are 11 types with 1–3 variants each. Footprints in `data/buildings.json`
   - manor: cauldron
   - cottages: a bucket or barrel
 - **Merging.** All props in a 64 m chunk merge into one mesh with one surface per kit material (4 trim materials plus vertex-colored variants). The whole village's props cost a handful of draw calls.
-- **Original families:** the well, charter banners and signposts in three charter tiers (`3D/props/village-commons/`); crops, field fences and gates by charter, haystacks, the log pile and scarecrows (`3D/props/farm-field/`); the square's kerb by charter, the market cross and the trough (`3D/props/market-square/`). The next original families are in `3D/BACKLOG.md`.
+- **Original families:** the well, charter banners and signposts in three charter tiers (`3D/props/village-commons/`); crops, field fences and gates by charter, haystacks, the log pile and scarecrows (`3D/props/farm-field/`); the square's kerb by charter, the market cross and the trough (`3D/props/market-square/`); the smith's forge yard (`3D/props/smithy/`). The next original families are in `3D/BACKLOG.md`.
 - **No collisions yet.** Props get no collision proxies because nothing collides with them (villagers follow the road graph). Add simple boxes when navmesh pathing arrives.
 - `tools/prefab_gallery.tscn -- <dir> props` renders every prop; `tools/capture.tscn -- <seed> <dir> art` includes stall, smithy and tavern close-ups.
 - Showcase: `docs/screenshots/props_showcase.jpg`.

@@ -7,7 +7,9 @@ Quaternius trim-sheet textures instead of copying them.
   MI_MetalOrnaments) are replaced with the kit's exact definitions, and their
   images point at the kit's PNGs by relative path, so Godot loads each texture
   once for buildings and commons alike.
-- The family's own materials (MI_Commons_*) get their definitions here.
+- The family's own materials (MI_Commons_*) get their definitions here;
+  other families pass theirs to pack(own=...). A spec may carry
+  "emissiveFactor" and "emissiveStrength" for parts that glow.
 - Geometry goes into the GLB's binary chunk; images stay external (relative URIs).
 """
 import json
@@ -63,6 +65,7 @@ def pack(src, dst, own=None):
         return {"index": image_index[path]}
 
     used = set()
+    used_ext = set()
     for i, m in enumerate(doc.get("materials", [])):
         name = m.get("name", "")
         spec = KIT.get(name) or OWN.get(name) or (own or {}).get(name)
@@ -77,7 +80,16 @@ def pack(src, dst, own=None):
         for k, v in spec["pbr"].items():
             pbr[k] = tex(os.path.join(image_dir, v)) if k.endswith("Texture") else v
         new["pbrMetallicRoughness"] = pbr
+        if "emissiveFactor" in spec:
+            # Glowing parts (forge embers): the colour, and how much brighter
+            # than 1.0 it shines (KHR_materials_emissive_strength).
+            new["emissiveFactor"] = spec["emissiveFactor"]
+            if spec.get("emissiveStrength", 1.0) != 1.0:
+                new["extensions"] = {"KHR_materials_emissive_strength": {"emissiveStrength": spec["emissiveStrength"]}}
+                used_ext.add("KHR_materials_emissive_strength")
         doc["materials"][i] = new
+    if used_ext:
+        doc["extensionsUsed"] = sorted(set(doc.get("extensionsUsed", [])) | used_ext)
     for k in ("images", "textures"):
         if not doc[k]:
             del doc[k]

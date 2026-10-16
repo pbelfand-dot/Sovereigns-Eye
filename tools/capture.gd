@@ -28,6 +28,7 @@ var talk_only := false
 var commons_only := false
 var farm_only := false
 var square_only := false
+var smithy_only := false
 
 
 func _ready() -> void:
@@ -46,6 +47,7 @@ func _ready() -> void:
 	commons_only = args.has("commons")
 	farm_only = args.has("farm")
 	square_only = args.has("square")
+	smithy_only = args.has("smithy")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -96,6 +98,10 @@ func _run() -> void:
 		return
 	if square_only:
 		await _square_shots()
+		get_tree().quit()
+		return
+	if smithy_only:
+		await _smithy_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -571,6 +577,77 @@ func _square_shots() -> void:
 			world.camera_rig.look_at_point(heir.global_position, 9.0, true)
 			await settle.call()
 			await _shot(tag + "cross_gameplay.png")
+		world.set_view_mode("overview", true)
+
+
+## The smith's forge yard in the game: for a village (hearth) and a town
+## (forge, grindstone) the yard at 3/4 from the map table, the heir walking
+## up to the anvil with the follow camera, and the smithy from the map table;
+## then the town forge at night. SMITHY_TIERS=1,3 renders only those.
+## Files: smithy_<tier>_<view>.png.
+func _smithy_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.5 * 60.0
+	var world := await _boot_world()
+	var st := world.state
+	world.ui._help.visible = false
+	world.paused = false
+	world.set_speed(0)
+	for t in world.ui.find_children("*", "ToastStack", true, false):
+		(t as CanvasItem).visible = false
+	var heir := world.player_npc()
+	var yard: Dictionary = st.layout.props_of_type("forge")[0]
+	var at: Vector3 = yard["pos"]
+	var front := Basis(Vector3.UP, float(yard["rot"])) * Vector3(0, 0, 1)
+	var smithy: BuildingData = null
+	for b in st.layout.buildings:
+		if b.type == "smithy":
+			smithy = b
+	var settle := func() -> void:
+		for k in 4:
+			world._process(0.05)
+		await _wait(4)
+	var only := OS.get_environment("SMITHY_TIERS").split(",", false)
+	for tier in [1, 3]:
+		if not only.is_empty() and not str(tier) in only:
+			continue
+		st.territory.charter = tier
+		world.builder.refresh_props()
+		world.territory_changed.emit()
+		await _wait(2)
+		var tag := "smithy_%d_" % tier
+		world.set_view_mode("overview", true)
+		heir.teleport(at + front * 3.4 + Vector3(front.z, 0, -front.x) * 1.5)
+		world.camera_rig.set_yaw(atan2(front.x, front.z) + 0.55, true)
+		world.camera_rig.look_at_point(at + Vector3(0, 0.8, 0), 9.5, true)
+		await settle.call()
+		await _shot(tag + "yard.png")
+		# On foot: the heir walking up to the anvil.
+		world.set_view_mode("walk", true)
+		heir.teleport(at + front * 4.2 + Vector3(front.z, 0, -front.x) * 0.8)
+		var to := at - heir.global_position
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.set_yaw(heir.rotation.y + 0.3, true)
+		world.camera_rig.look_at_point(heir.global_position, 7.0, true)
+		await settle.call()
+		await _shot(tag + "gameplay.png")
+		world.set_view_mode("overview", true)
+		world.camera_rig.set_yaw(_clear_yaw(st, smithy.position, 14.0, atan2(front.x, front.z) + 0.9), true)
+		world.camera_rig.look_at_point(smithy.position.lerp(at, 0.5), 20.0, true)
+		await settle.call()
+		await _shot(tag + "smithy.png")
+	# The town forge at night: the embers glow.
+	if only.is_empty() or "3" in only:
+		st.minutes += 11.0 * 60.0
+		world.set_view_mode("walk", true)
+		heir.teleport(at + front * 4.2 + Vector3(front.z, 0, -front.x) * 0.8)
+		var to_n := at - heir.global_position
+		heir.rotation.y = atan2(-to_n.x, -to_n.z)
+		world.camera_rig.set_yaw(heir.rotation.y + 0.3, true)
+		world.camera_rig.look_at_point(heir.global_position, 7.0, true)
+		await settle.call()
+		await _wait(6)
+		await _shot("smithy_3_night.png")
 		world.set_view_mode("overview", true)
 
 
