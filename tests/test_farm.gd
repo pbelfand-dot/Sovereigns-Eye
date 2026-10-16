@@ -189,8 +189,11 @@ func test_our_own_textures_import_like_the_kits() -> void:
 	# VRAM-compressed with mipmaps, as the Quaternius trim sheets are: an
 	# uncompressed atlas costs ~4 MB and crops shimmer far away without mips.
 	var seen := 0
-	for family in DirAccess.get_directories_at("res://3D/props/"):
-		var dir := "res://3D/props/%s/textures/" % family
+	var dirs: Array[String] = []
+	for category in ["props", "buildings"]:
+		for family in DirAccess.get_directories_at("res://3D/%s/" % category):
+			dirs.append("res://3D/%s/%s/textures/" % [category, family])
+	for dir in dirs:
 		if not DirAccess.dir_exists_absolute(dir):
 			continue
 		for f in DirAccess.get_files_at(dir):
