@@ -203,6 +203,36 @@ static func migrate(data: Dictionary) -> Dictionary:
 					props.append({"type": yard["type"], "pos": [snappedf(pos.x, 0.01), snappedf(pos.z, 0.01)], "rot": snappedf(float(yard["rot"]), 0.0001)})
 			l["props"] = props
 		data["save_version"] = 11
+		version = 11
+	if version == 11:
+		# v12 (Chapel & Churchyard) gives each chapel its churchyard at its
+		# east end (or beside the nave), where the generator would put it
+		# now, clear of buildings going up; barrels and crates move out of it.
+		var l: Dictionary = data.get("layout", {})
+		if not l.is_empty():
+			var layout := VillageLayout.from_dict(l)
+			var props: Array = l.get("props", [])
+			var avoid := []
+			for sd: Dictionary in (data.get("territory", {}) as Dictionary).get("sites", []):
+				var sb := BuildingData.from_dict(sd.get("building", {}))
+				avoid.append({"center": sb.position, "rot": sb.rotation, "half": sb.footprint * 0.5})
+			if not props.any(func(p: Dictionary) -> bool: return str(p["type"]).begins_with("churchyard")):
+				for b in layout.buildings:
+					if b.type != "chapel":
+						continue
+					var yard := VillageLayoutGenerator.churchyard(layout, b, true, avoid)
+					if yard.is_empty():
+						continue
+					var rect := {"center": yard["pos"], "rot": yard["rot"], "half": VillageLayoutGenerator.YARD_HALF[yard["type"]]}
+					props = props.filter(func(p: Dictionary) -> bool:
+						var at := Vector3(float(p["pos"][0]), 0, float(p["pos"][1]))
+						return not (str(p["type"]) in ["barrel", "crate"] and VillageLayoutGenerator._point_in_rect(at, rect, 0.5)))
+					var pos: Vector3 = yard["pos"]
+					var entry := {"type": yard["type"], "pos": [snappedf(pos.x, 0.01), snappedf(pos.z, 0.01)], "rot": snappedf(float(yard["rot"]), 0.0001)}
+					props.append(entry)
+					layout.props.append({"type": entry["type"], "pos": pos, "rot": float(yard["rot"])})  # a second chapel keeps clear of it
+			l["props"] = props
+		data["save_version"] = 12
 	return data
 
 

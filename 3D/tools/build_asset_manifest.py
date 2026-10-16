@@ -138,6 +138,11 @@ COLLECTIONS = {
         "license": "props/training-yard/LICENSE.txt",
         "preview_root": "props/training-yard/previews",
     },
+    "chapel-grounds": {
+        "source": "original (Sovereign's Eye): props/chapel-grounds/source/build_chapel.py",
+        "license": "props/chapel-grounds/LICENSE.txt",
+        "preview_root": "props/chapel-grounds/previews",
+    },
     "thatch-repair": {
         "source": "original (Sovereign's Eye): buildings/thatch-repair/source/build_thatch.py",
         "license": "buildings/thatch-repair/LICENSE.txt",
@@ -299,6 +304,11 @@ def collection_for(path: Path) -> tuple[str, str]:
             if path.stem.startswith(prefix):
                 return "training-yard", category
         return "training-yard", "targets"
+    if relative.parts[:2] == ("props", "chapel-grounds"):
+        for prefix, category in (("SE_Grave_", "graves"), ("SE_Wall_", "walls"), ("SE_Cross_", "chapel"), ("SE_Belfry", "chapel")):
+            if path.stem.startswith(prefix):
+                return "chapel-grounds", category
+        return "chapel-grounds", "churchyard"
     if relative.parts[:2] == ("buildings", "thatch-repair"):
         for prefix, category in (("SE_Thatch_", "roofs"), ("SE_Patch_", "patches"), ("SE_Shutters_", "shutters")):
             if path.stem.startswith(prefix):

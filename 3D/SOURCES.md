@@ -29,6 +29,7 @@ Retrieved on 2026-10-13 from the original publishers, Kenney, KayKit, and Quater
 | Status Wear (original) | Made for Sovereign's Eye: [`characters/status-wear/`](characters/status-wear/) | 1.0 | CC0 1.0 | 32 skinned GLB pieces and ten 512 × 1024 atlases, one per dye (skinned to the Quaternius outfit rig) |
 | Smithy (original) | Made for Sovereign's Eye: [`props/smithy/`](props/smithy/) | 1.0 | CC0 1.0 | 8 GLB models (uses the Medieval Village MegaKit's trim sheets) |
 | Training Yard (original) | Made for Sovereign's Eye: [`props/training-yard/`](props/training-yard/) | 1.0 | CC0 1.0 | 8 GLB models and one 512 atlas (uses the Medieval Village MegaKit's trim sheets and the Farm & Field atlas) |
+| Chapel & Churchyard (original) | Made for Sovereign's Eye: [`props/chapel-grounds/`](props/chapel-grounds/) | 1.0 | CC0 1.0 | 14 GLB models and one 512 atlas (uses the Medieval Village MegaKit's trim sheets; the churchyard fences are Farm & Field's) |
 | Thatch & Repair (original) | Made for Sovereign's Eye: [`buildings/thatch-repair/`](buildings/thatch-repair/) | 1.0 | CC0 1.0 | 12 GLB models (thatched roofs, wall patches, plank shutters), two 1024 thatch tiles, their normal map and a 1024 atlas; made to sit on the Medieval Village MegaKit's walls |
 
 The repository includes a single glTF 2.0 version of each model, all required PNG

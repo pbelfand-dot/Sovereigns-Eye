@@ -69,7 +69,7 @@
   },
 
   "placement": {
-    "_comment": "Meters. New buildings snap beside a road and face it; lanes are laid automatically from the door to the nearest road. Nothing is built in the manor's forecourt (manor_clear around its door).",
+    "_comment": "Meters. New buildings snap beside a road and face it; lanes are laid automatically from the door to the nearest road. Nothing is built in the manor's forecourt (manor_clear around its door). yard_names: the yards (layout props) a building may not stand on anywhere in their footprint, nor its lane cross, and what the Build panel calls them.",
     "manor_clear": 11.0,
     "road_snap": 8.0,
     "setback": 2.6,
@@ -80,7 +80,8 @@
     "lane_width": 3.0,
     "lane_min": 1.5,
     "lane_max": 28.0,
-    "tree_clear": 1.8
+    "tree_clear": 1.8,
+    "yard_names": { "forge": "forge yard", "training": "training yard", "training_small": "training yard", "churchyard": "churchyard", "churchyard_small": "churchyard" }
   },
 
   "hiring": {

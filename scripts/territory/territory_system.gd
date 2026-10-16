@@ -383,9 +383,16 @@ static func check_placement(state: WorldState, type: String, pos: Vector3, rot: 
 			out["reason"] = "That's farmland."
 			return out
 	var pgap := float(cfg.get("prop_gap", 1.2))
+	var yard_names: Dictionary = cfg.get("yard_names", {})
 	for p in layout.props:
-		if str(p["type"]) != "rock" and point_in_rect(p["pos"], pos, rot, half, pgap):
-			out["reason"] = "The %s is in the way." % str(p["type"])
+		var ptype := str(p["type"])
+		if VillageLayoutGenerator.YARD_HALF.has(ptype) and yard_names.has(ptype):
+			# A yard is in the way anywhere in its footprint, not just at its middle.
+			if rects_overlap(pos, rot, half + Vector2(pgap, pgap), p["pos"], float(p["rot"]), VillageLayoutGenerator.YARD_HALF[ptype]):
+				out["reason"] = "The %s is in the way." % str(yard_names[ptype])
+				return out
+		elif ptype != "rock" and point_in_rect(p["pos"], pos, rot, half, pgap):
+			out["reason"] = "The %s is in the way." % ptype
 			return out
 	var manor_clear := float(cfg.get("manor_clear", 11.0))
 	for m in layout.buildings_of_type("manor"):
@@ -430,6 +437,12 @@ static func check_placement(state: WorldState, type: String, pos: Vector3, rot: 
 			for f in layout.fields:
 				if point_in_rect(q, f["center"], float(f["rot"]), (f["size"] as Vector2) * 0.5, 0.3):
 					out["reason"] = "Fields block the way to the road."
+					return out
+			for p in layout.props:
+				var ptype := str(p["type"])
+				if yard_names.has(ptype) and VillageLayoutGenerator.YARD_HALF.has(ptype) \
+						and point_in_rect(q, p["pos"], float(p["rot"]), VillageLayoutGenerator.YARD_HALF[ptype], 0.3):
+					out["reason"] = "The %s blocks the way to the road." % str(yard_names[ptype])
 					return out
 	out["lane"] = lane
 	# Clear trees and rocks under the building and along the lane.
@@ -716,6 +729,8 @@ static func complete(state: WorldState, site: ConstructionSite) -> Array[Diction
 	var fields: Array = def.get("fields", [])
 	if fields.size() == 2:
 		place_fields(state, b, Seeds.rng(state.world_seed, "fields_%d" % b.id).randi_range(int(fields[0]), int(fields[1])))
+	if b.type == "chapel":
+		add_churchyard(state, b)
 	state.house.log_event(state.day(), "%s was finished." % b.name, "build")
 	events.append({"text": "The %s is finished!" % display_name(b.type), "kind": "good", "building": b.id})
 	events.append_array(staff(state, b, false))
@@ -723,6 +738,30 @@ static func complete(state: WorldState, site: ConstructionSite) -> Array[Diction
 	for s in t.sites:
 		refresh_crew(state, s)
 	return events
+
+
+## A new chapel's churchyard at its east end (or beside the nave), clear of
+## the buildings still going up and of trees (3D/props/chapel-grounds).
+## Returns whether one fitted.
+static func add_churchyard(state: WorldState, b: BuildingData) -> bool:
+	var avoid := []
+	for s in state.territory.sites:
+		avoid.append({"center": s.building.position, "rot": s.building.rotation, "half": s.building.footprint * 0.5})
+	var cleared := state.territory.cleared_trees
+	var layout := state.layout
+	# Felled trees don't count: only the ones still standing block it.
+	var standing := layout.trees.duplicate()
+	for i in range(standing.size() - 1, -1, -1):
+		if cleared.has(i):
+			standing.remove_at(i)
+	var kept := layout.trees
+	layout.trees = standing
+	var yard := VillageLayoutGenerator.churchyard(layout, b, false, avoid)
+	layout.trees = kept
+	if yard.is_empty():
+		return false
+	layout.props.append({"type": yard["type"], "pos": yard["pos"], "rot": yard["rot"]})
+	return true
 
 
 ## Fills a building's open jobs from the hiring pool. `quiet` skips the

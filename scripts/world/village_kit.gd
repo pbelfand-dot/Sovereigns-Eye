@@ -339,6 +339,7 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 	var upper_set := str(block.get("walls", "plaster"))
 	var ground_set := str(block.get("ground", upper_set))
 	var tall_windows := str(block.get("windows", "")) == "tall"
+	var belfry := str(block.get("belfry", ""))
 	var wall_h := stories * sh
 
 	# Ground floor so windows don't look into the void (paved under arches).
@@ -374,6 +375,11 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 				var xf := Transform3D(basis, pos)
 				if set_name == "arcade":
 					shell.add("Wall_Arch", xf)
+					continue
+				# The belfry: the top story's walls are arched windows left
+				# open (no glazing, no shutters), so the bell inside shows.
+				if belfry != "" and s == stories - 1:
+					shell.add(set_def["window"][0], xf)
 					continue
 				if i == door_i:
 					var door_wall: String = _pick(set_def["door"], rng)
@@ -419,15 +425,24 @@ static func _build_block(block: Dictionary, recipe: Dictionary, rng: RandomNumbe
 		shell.add("Floor_WoodDark", Transform3D(Basis(), bx))
 		shell.add("Balcony_Cross_Straight", Transform3D(Basis(), bx))
 
+	if belfry != "":
+		shell.add(belfry, Transform3D(Basis(), origin + Vector3(0, wall_h - sh, 0)))
+
 	var top := wall_h
 	match str(block.get("roof", "tiles")):
 		"tiles":
 			top = _add_tiled_roof(origin, w, d, wall_h, str(block.get("ridge", "x")), recipe, shell)
+			if block.has("gable_cross"):
+				_add_gable_cross(origin, w, d, str(block.get("ridge", "x")), top, block, shell)
 		"thatch", "thatch_worn":
 			top = _add_thatched_roof(origin, w, d, wall_h, str(block.get("ridge", "x")), str(block["roof"]), recipe, shell)
 		"tower":
 			shell.add("Roof_Tower_RoundTiles", Transform3D(Basis(), origin + Vector3(0, wall_h, 0)))
-			top = wall_h + 6.8
+			var spire := module_mesh("Roof_Tower_RoundTiles")
+			var tip := spire.get_aabb().end.y if spire else 6.8
+			top = wall_h + tip
+			if block.has("finial"):
+				shell.add(str(block["finial"]), Transform3D(Basis(), origin + Vector3(0, wall_h + tip - 0.06, 0)))
 	boxes.append(AABB(origin + Vector3(-w * 0.5, 0, -d * 0.5), Vector3(w, wall_h + (top - wall_h) * 0.5, d)))
 	return top
 
@@ -450,6 +465,23 @@ static func _add_tiled_roof(origin: Vector3, w: float, d: float, base: float, ri
 		shell.add(gable, Transform3D(gb, origin + n * (length * 0.5) + Vector3(0, base, 0)))
 	_add_chimney(origin, length, along_x, base, rise, recipe, shell)
 	return base + rise
+
+
+## A stone cross riding the ridge at the block's back end (-Z for a ridge
+## along z, -X along x: a chapel's east end), "gable_inset" m in from the
+## roof's end, its saddle stone over the ridge tiles at `ridge_top`.
+static func _add_gable_cross(origin: Vector3, w: float, d: float, ridge: String, ridge_top: float, block: Dictionary, shell: _Assembler) -> void:
+	var along_x := ridge == "x"
+	var span := int(round(d if along_x else w))     # as _add_tiled_roof names the roof
+	var length := int(round(w if along_x else d))
+	var roof := module_mesh("Roof_RoundTiles_%dx%d" % [span, length])
+	var reach := length * 0.5 + 0.5
+	if roof:
+		reach = -roof.get_aabb().position.z   # the roof's back end (it runs along z before it is turned)
+	var at := reach - float(block.get("gable_inset", 0.45))
+	var n := Vector3(-1, 0, 0) if along_x else Vector3(0, 0, -1)
+	var basis := Basis(Vector3.UP, PI * 0.5 if along_x else 0.0)
+	shell.add(str(block["gable_cross"]), Transform3D(basis, origin + n * at + Vector3(0, ridge_top - 0.06, 0)))
 
 
 ## Hipped thatched roof (3D/buildings/thatch-repair, building_kit.json
