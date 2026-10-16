@@ -2,7 +2,7 @@ extends Node3D
 ## Renders every kit building prefab (and, if present, a lineup of villagers)
 ## to PNGs for review. Needs a display/GPU (use xvfb-run on servers).
 ##
-##   godot --path . res://tools/prefab_gallery.tscn -- <output_dir> [people|wear|nature|props]
+##   godot --path . res://tools/prefab_gallery.tscn -- <output_dir> [people|wear|bodies|nature|props]
 
 var out_dir := "user://gallery"
 var _camera: Camera3D
@@ -65,6 +65,10 @@ func _run() -> void:
 		await _people()
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("bodies"):
+		await _bodies()
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("wear"):
 		await _wear()
 		get_tree().quit()
@@ -92,6 +96,49 @@ func _run() -> void:
 		await _shot("prefab_%s_back.png" % t)
 	await _people()
 	get_tree().quit()
+
+
+## Age and build (BodyShape): the same farmhand at 35, 62, 75 and 88, a man and
+## a woman, in profile (the stoop), then four builds face on (girth).
+func _bodies() -> void:
+	var w := WorldGenerator.generate("gallery")
+	var base: CharacterData = null
+	for c in w.characters:
+		if c.age >= 25 and c.age < 50:
+			base = c
+			break
+	var lineup := [
+		["male", 35, 1.0], ["male", 62, 1.0], ["male", 75, 1.0], ["male", 88, 1.0],
+		["female", 35, 1.0], ["female", 62, 1.0], ["female", 75, 1.0], ["female", 88, 1.0],
+		["male", 40, 0.85], ["male", 40, 1.0], ["male", 40, 1.1], ["male", 40, 1.2],
+	]
+	var models: Array[CharacterModel] = []
+	for i in lineup.size():
+		var c := CharacterData.from_dict(base.to_dict())
+		c.id = 9500 + i
+		c.occupation_id = "farmhand"
+		c.gender = str(lineup[i][0])
+		c.age = int(lineup[i][1])
+		c.appearance["build"] = float(lineup[i][2])
+		c.appearance["hair_style"] = "short"
+		var m := HumanModel.for_character(c)
+		add_child(m)
+		m.position = Vector3(-6.6 + (i % 4) * 1.4, 0, 40 - floorf(i / 4.0) * 4.0)
+		m.rotation.y = PI if i >= 8 else PI * 0.5  # the ages in profile, the builds face on
+		# The same idle at the same moment for everyone, so only the body differs.
+		m._clip = "Idle"
+		m._player.play("Idle")
+		m._player.seek(0.0, true)
+		models.append(m)
+	for f in 20:
+		for m in models:
+			m.animate("idle", f * 0.1, 1.0 / 30.0)
+	for row in 3:
+		var z := 40.0 - row * 4.0
+		_look(Vector3(-4.5, 1.1, z + 10.0), Vector3(-4.5, 0.9, z), 17.0)  # a long lens, so every figure is seen square on
+		for j in models.size():
+			models[j].visible = floori(j / 4.0) == row
+		await _shot("bodies_%d.png" % row)
 
 
 ## Status Wear (3D/characters/status-wear): one villager per headwear and

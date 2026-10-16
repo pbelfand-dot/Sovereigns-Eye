@@ -132,10 +132,15 @@ func _build_human(c: CharacterData) -> bool:
 		_attach_hair(hair_name, hair_color)
 	if g == "male" and bool(ap.get("beard", false)):
 		_attach_hair("Hair_Beard", hair_color)
+	# Age and build over the animation: an old villager stoops, a heavy one is broad in the belly.
+	var shape := BodyShape.for_character(c)
+	if shape:
+		_skeleton.add_child(shape)
 
 	# Size: appearance height already includes childhood growth.
 	var s := float(ap.get("height", 1.0)) * float(TARGET_HEIGHT[g]) / float(SOURCE_HEIGHT[g])
-	var b := lerpf(0.93, 1.1, inverse_lerp(0.85, 1.2, float(ap.get("build", 1.0))))
+	var widths: Array = GameData.appearance().get("body_shape", {}).get("width_range", [0.96, 1.06])
+	var b := lerpf(float(widths[0]), float(widths[1]), inverse_lerp(0.85, 1.2, float(ap.get("build", 1.0))))
 	scale = Vector3(s * b, s, s * b)
 	body_height = s
 	_head_y = float(body["head_y"])
