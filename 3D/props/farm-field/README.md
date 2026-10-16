@@ -31,6 +31,8 @@ crops from the map table and up close.
 | `SE_LogPile` | Lumber | Seasoning logs between stakes, a chopping block with an axe, split wood | 596 | 2 | 2.47 × 1.11 × 1.75 m |
 | `SE_Scarecrow` | In some fields | A pole and arms, a stuffed sacking head under a straw hat, a ragged coat, straw at the cuffs | 498 | 3 | 1.55 × 2.24 × 0.71 m |
 
+![Field fences by charter, from the follow camera](previews/_fence_tiers.jpg)
+
 **16 models.**
 
 - **Fences and gates:** three charter tiers each. They are new silhouettes and craft, not recolours. The tier table is in `data/farm.json` (`fence.by_charter`, `fence.gates`).
@@ -97,12 +99,12 @@ Haystacks and log piles are merged into the props' chunk meshes like the other s
 - **LOD.**
   - Godot generates LODs on import (1–4 levels per surface).
   - A MultiMesh picks one LOD for all its instances, so each field is its own MultiMesh; this is the per-chunk split Godot's maintainers recommend.
-  - At the far map-table zoom the fields add about 36k triangles and 62 draw calls to a 3.4M-triangle frame:
+  - At the far map-table zoom the fields add about 34k triangles and 70 draw calls to a 3.3M-triangle frame (Forward+, 1280 × 720):
 
     | Village overview (seed 9) | Triangles | Draw calls |
     | --- | ---: | ---: |
-    | With fields | 3.418M | 1,755 |
-    | Without fields | 3.382M | 1,693 |
+    | With fields | 3.284M | 1,649 |
+    | Without fields | 3.250M | 1,579 |
 
 ## Rebuilding
 
