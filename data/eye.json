@@ -1,10 +1,13 @@
 {
   "_comment": "The Sovereign's Eye reveal. A person's tier comes from their greatest potential; each tier plays its own timeline of steps (seconds). The same steps drive every tier, so new reveals only need data. Tiers are told apart by name, crest shape, pips and frame pattern as well as color, never by color alone.",
 
-  "_steps": "dim {to, time} | focus {distance, time} (camera, parallel) | heartbeat {beats, time} | eye {open, time, rays, spin} | card_back {time} | sweep {time} | clue {kind: role|gift|silhouette|motto, time} | shake {strength, time} | flash {time} | sting {file, fade, time} | flip {time} | card_front {time} | particles {amount} | stats {mode: together|ascending, time} | stamp {time} | sound {event, caption} (instant) | wait {time}. Any step may carry sound + caption. Reduced motion drops focus, shake and spins, swaps flips for fades and scales times by reduced_motion_time. Reduce flashes drops flash steps and dims light sweeps.",
+  "_steps": "dim {to, time} | focus {distance, time} (camera, parallel) | heartbeat {beats, time} | eye {open, time, rays, spin} | card_back {time} | sweep {time} | clue {kind: role|gift|silhouette|motto, time} | shake {strength, time} (the seal cracks) | flash {time} | flip {time} | card_front {time} | particles {amount (sparks), motes, halo, rays, ring, flakes} | stats {mode: together|ascending, time, rows: [a sound per ability as it shows, weakest first]} | stamp {time} | sound {event, caption} (instant) | wait {time}. Any step may carry sound (an event in data/audio.json) + caption, cue (a tier's music, audio/stings/; it cuts the cue before it) and cut (fade the playing cue out over that many seconds). The last cue is the landing: a skipped reveal still plays it. Reduced motion drops focus, shake and spins, swaps flips for fades and scales times by reduced_motion_time; reduce flashes drops flash steps; a dropped step's sounds and cues still play. The rises (audio/stings/*_rise.ogg) are made to peak when their tier's clues end; tools/audio/make_stings.py makes them all.",
 
   "reduced_motion_time": 0.7,
   "caption_seconds": 1.8,
+  "_duck": "While the Eye is open the music and ambience are lowered by duck_db; the tier's music plays at cue_db on the SFX bus.",
+  "duck_db": -12.0,
+  "cue_db": -2.0,
 
   "tiers": [
     {
@@ -12,10 +15,10 @@
       "crest": "none", "pips": 1, "frame": "plain",
       "colors": { "main": "#9a9488", "accent": "#5e584e", "glow": "#e8e0cc", "ink": "#2b2219" },
       "steps": [
-        { "type": "dim", "to": 0.35, "time": 0.2 },
-        { "type": "eye", "open": 0.55, "time": 0.35, "rays": 0.0, "sound": "eye_soft", "caption": "[A soft chime]" },
-        { "type": "card_front", "time": 0.3 },
-        { "type": "stats", "mode": "together", "time": 0.45 }
+        { "type": "dim", "to": 0.4, "time": 0.15 },
+        { "type": "eye", "open": 0.55, "time": 0.4, "rays": 0.0, "cue": "res://audio/stings/ordinary.ogg", "caption": "[A lute, softly]" },
+        { "type": "card_front", "time": 0.25 },
+        { "type": "stats", "mode": "together", "time": 0.4 }
       ]
     },
     {
@@ -23,13 +26,13 @@
       "crest": "shield", "pips": 2, "frame": "single",
       "colors": { "main": "#c9d3df", "accent": "#5f7590", "glow": "#e6f0ff", "ink": "#22262c" },
       "steps": [
-        { "type": "dim", "to": 0.5, "time": 0.25 },
-        { "type": "eye", "open": 0.85, "time": 0.5, "rays": 0.4, "sound": "eye_open", "caption": "[A low bell]" },
+        { "type": "dim", "to": 0.55, "time": 0.2 },
+        { "type": "eye", "open": 0.85, "time": 0.5, "rays": 0.4, "sound": "eye_bell_small", "caption": "[A small bell]" },
         { "type": "card_back", "time": 0.3 },
         { "type": "sweep", "time": 0.45, "sound": "eye_sweep", "caption": "[A bright shimmer]" },
-        { "type": "flip", "time": 0.3, "sound": "eye_flip" },
-        { "type": "particles", "amount": 24 },
-        { "type": "stats", "mode": "together", "time": 0.6 },
+        { "type": "flip", "time": 0.3, "sound": "eye_flip", "cue": "res://audio/stings/skilled_land.ogg", "caption": "[A harp, rising]" },
+        { "type": "particles", "amount": 40, "motes": 10, "halo": 0.35 },
+        { "type": "stats", "mode": "together", "time": 0.55 },
         { "type": "stamp", "time": 0.25, "sound": "eye_stamp_light" }
       ]
     },
@@ -38,17 +41,18 @@
       "crest": "sun", "pips": 3, "frame": "double",
       "colors": { "main": "#e9bf62", "accent": "#2c3e7a", "glow": "#fff1c4", "ink": "#2a1d0c" },
       "steps": [
-        { "type": "dim", "to": 0.68, "time": 0.35 },
+        { "type": "dim", "to": 0.7, "time": 0.3 },
         { "type": "focus", "distance": 18.0, "time": 0.6 },
-        { "type": "eye", "open": 1.0, "time": 0.7, "rays": 1.0, "sound": "eye_open", "caption": "[A deep bell rings out]" },
-        { "type": "card_back", "time": 0.3 },
-        { "type": "clue", "kind": "role", "time": 0.5 },
-        { "type": "clue", "kind": "gift", "time": 0.6, "sound": "eye_shimmer", "caption": "[Rising chimes]" },
-        { "type": "shake", "strength": 4.0, "time": 0.3, "sound": "eye_seal", "caption": "[The seal cracks]" },
-        { "type": "flash", "time": 0.2 },
-        { "type": "flip", "time": 0.35, "sound": "eye_flip" },
-        { "type": "particles", "amount": 60 },
-        { "type": "stats", "mode": "ascending", "time": 1.0 },
+        { "type": "eye", "open": 1.0, "time": 0.75, "rays": 1.0, "sound": "eye_bell_deep", "caption": "[A deep bell rings out]" },
+        { "type": "card_back", "time": 0.3, "cue": "res://audio/stings/exceptional_rise.ogg", "caption": "[Harp and drums, rising]" },
+        { "type": "clue", "kind": "role", "time": 0.6 },
+        { "type": "clue", "kind": "gift", "time": 0.6 },
+        { "type": "shake", "strength": 4.0, "time": 0.45, "sound": "eye_seal", "caption": "[The seal cracks]" },
+        { "type": "wait", "time": 0.15, "cut": 0.1 },
+        { "type": "flash", "time": 0.15, "cue": "res://audio/stings/exceptional_land.ogg", "caption": "[A drum, a harp, bells]" },
+        { "type": "flip", "time": 0.3, "sound": "eye_flip" },
+        { "type": "particles", "amount": 80, "motes": 24, "halo": 0.6, "ring": true },
+        { "type": "stats", "mode": "ascending", "time": 0.9, "rows": ["eye_row_1", "eye_row_2", "eye_row_3"] },
         { "type": "stamp", "time": 0.4, "sound": "eye_stamp", "caption": "[A bell strikes]" }
       ]
     },
@@ -57,21 +61,21 @@
       "crest": "crown", "pips": 4, "frame": "filigree",
       "colors": { "main": "#f2c14e", "accent": "#8e1b2c", "glow": "#ffe6a8", "ink": "#2a0d10" },
       "steps": [
-        { "type": "dim", "to": 0.86, "time": 0.5 },
+        { "type": "dim", "to": 0.86, "time": 0.45 },
         { "type": "focus", "distance": 12.0, "time": 1.2 },
-        { "type": "heartbeat", "beats": 2, "time": 0.8, "sound": "eye_heartbeat", "caption": "[A slow heartbeat]" },
-        { "type": "eye", "open": 1.0, "time": 1.0, "rays": 1.0, "spin": true, "sound": "eye_open", "caption": "[A great bell tolls]" },
-        { "type": "card_back", "time": 0.3 },
+        { "type": "heartbeat", "beats": 2, "time": 0.9, "sound": "eye_heartbeat", "caption": "[A slow heartbeat]" },
+        { "type": "eye", "open": 1.0, "time": 1.0, "rays": 1.0, "spin": true, "sound": "eye_bell_great", "caption": "[A great bell tolls]" },
+        { "type": "card_back", "time": 0.3, "cue": "res://audio/stings/legendary_rise.ogg", "caption": "[Harp, drums and bells, rising]" },
         { "type": "clue", "kind": "silhouette", "time": 0.7 },
         { "type": "clue", "kind": "role", "time": 0.45 },
-        { "type": "clue", "kind": "motto", "time": 0.5, "sound": "eye_shimmer", "caption": "[Chimes climb higher]" },
-        { "type": "shake", "strength": 7.0, "time": 0.45, "sound": "eye_seal", "caption": "[The seal bursts]" },
-        { "type": "flash", "time": 0.25 },
-        { "type": "sting", "file": "res://audio/music/randommind-medieval/victory.ogg", "fade": 4.5, "time": 0.0, "caption": "[Trumpets and drums: a legend]" },
+        { "type": "clue", "kind": "motto", "time": 0.6 },
+        { "type": "shake", "strength": 7.0, "time": 0.5, "sound": "eye_seal", "caption": "[The seal bursts]" },
+        { "type": "wait", "time": 0.2, "cut": 0.12 },
+        { "type": "flash", "time": 0.2, "cue": "res://audio/stings/legendary_land.ogg", "caption": "[Trumpets, drums and bells: a legend]" },
         { "type": "flip", "time": 0.4, "sound": "eye_flip" },
-        { "type": "particles", "amount": 140 },
-        { "type": "stats", "mode": "ascending", "time": 1.3 },
-        { "type": "stamp", "time": 0.55, "sound": "eye_stamp", "caption": "[A bell strikes twice]" }
+        { "type": "particles", "amount": 160, "motes": 40, "halo": 0.8, "rays": 1.0, "ring": true, "flakes": 36 },
+        { "type": "stats", "mode": "ascending", "time": 1.0, "rows": ["eye_row_1", "eye_row_2", "eye_row_3"] },
+        { "type": "stamp", "time": 0.6, "sound": "eye_stamp_twice", "caption": "[A bell strikes twice]" }
       ]
     }
   ],

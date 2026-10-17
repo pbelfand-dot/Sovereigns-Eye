@@ -35,6 +35,8 @@ var _anim_wait := 0.0
 var _anim_count := 0
 var _anim_last := ""
 var focused := false
+## Hides the ring and name over them (while the Eye's reveal shows them).
+var quiet := false
 
 
 func setup(c: CharacterData) -> void:
@@ -138,14 +140,14 @@ static func _marker_triangle(width: float, height: float, color: Color, priority
 
 
 func refresh_markers() -> void:
-	_ring.visible = (hovered or selected or focused) and visible
+	_ring.visible = (hovered or selected or focused) and visible and not quiet
 	if selected:
 		_ring.material_override = Mats.emissive(Color("#f0c24a"), 1.6)
 	elif focused:
 		_ring.material_override = Mats.emissive(Color("#bcd6f2"), 1.1)
 	else:
 		_ring.material_override = Mats.emissive(Color("#f4ead2"), 0.8)
-	_label.visible = hovered or selected or focused
+	_label.visible = (hovered or selected or focused) and not quiet
 	if _crest:
 		# The hover label already says "Heir (You)"; don't stack the crest on it.
 		_crest.visible = _is_player and _crest_on and not _label.visible

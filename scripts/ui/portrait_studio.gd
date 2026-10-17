@@ -2,14 +2,20 @@ class_name PortraitStudio
 extends SubViewport
 ## Renders a live portrait of a character from their 3D model.
 ##
-## A tiny private 3D world (own_world_3d) holds a camera, two lights and a
-## copy of the character's model. No image files or external AI are needed;
-## when real character models are added, portraits upgrade automatically.
+## A tiny private 3D world (own_world_3d) holds a camera, lights and a copy
+## of the character's model. No image files or external AI are needed; when
+## real character models are added, portraits upgrade automatically.
+##
+## Lit like a painted miniature: a warm key light high on the left, a soft
+## cool fill on the right and two rim lights behind that edge the figure
+## (in `rim_color`, so the Eye's card can light them in their tier's color).
 
 var _camera: Camera3D
 var _holder: Node3D
 var _model: CharacterModel
 var _phase := 0.0
+## The rim lights' color (set before the studio enters the tree).
+var rim_color := Color("#9fb6ff")
 
 
 func _init() -> void:
@@ -26,7 +32,7 @@ func _ready() -> void:
 	env.background_color = Color("#3b2c1f")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("#d9c3a0")
-	env.ambient_light_energy = 0.55
+	env.ambient_light_energy = 0.38
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var we := WorldEnvironment.new()
 	we.name = "Env"
@@ -34,17 +40,10 @@ func _ready() -> void:
 	add_child(we)
 	if transparent_bg:
 		env.background_mode = Environment.BG_CLEAR_COLOR
-
-	var key := DirectionalLight3D.new()
-	key.rotation_degrees = Vector3(-25, 155, 0)
-	key.light_energy = 1.2
-	key.light_color = Color("#fff1dc")
-	add_child(key)
-	var rim := DirectionalLight3D.new()
-	rim.rotation_degrees = Vector3(-10, -30, 0)
-	rim.light_energy = 0.6
-	rim.light_color = Color("#9fb6ff")
-	add_child(rim)
+	_light(Vector3(-32, 150, 0), 1.35, Color("#ffe9cc"))   # key: high, front left
+	_light(Vector3(-8, -150, 0), 0.32, Color("#c6d2ff"))   # fill: low, front right
+	_light(Vector3(-18, -25, 0), 1.1, rim_color)           # rims: behind, either side
+	_light(Vector3(-18, 25, 0), 0.8, rim_color)
 
 	_holder = Node3D.new()
 	add_child(_holder)
@@ -52,6 +51,14 @@ func _ready() -> void:
 	_camera.fov = 28.0
 	add_child(_camera)
 	_camera.make_current()
+
+
+func _light(degrees: Vector3, energy: float, color: Color) -> void:
+	var l := DirectionalLight3D.new()
+	l.rotation_degrees = degrees
+	l.light_energy = energy
+	l.light_color = color
+	add_child(l)
 
 
 ## A framing for posters and reveal cards: head and shoulders, wider.

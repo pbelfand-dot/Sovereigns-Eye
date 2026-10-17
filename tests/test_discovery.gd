@@ -188,7 +188,8 @@ func test_reveal_tiers_are_clearly_different() -> void:
 	var types := []
 	for s: Dictionary in legend["steps"]:
 		types.append(s["type"])
-	check(types.has("sting") and types.has("clue") and types.has("particles"), "the legendary reveal has a sting, clues and particles")
+	var cues: Array = (legend["steps"] as Array).filter(func(s: Dictionary) -> bool: return s.has("cue"))
+	check(cues.size() >= 2 and types.has("clue") and types.has("particles"), "the legendary reveal has its music, clues and particles")
 	check(types.find("stamp") == types.size() - 1, "the top skill lands last")
 
 

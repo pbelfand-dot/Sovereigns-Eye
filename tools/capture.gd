@@ -15,6 +15,10 @@ extends Node
 ## a home being upgraded, home levels, a building card and settlers arriving.
 ## "talk" renders a conversation on foot: the offer terms, a refusal with
 ## the terms still open, and the better offer that is accepted.
+## "eye" plays the Sovereign's Eye on foot for one person of each tier and
+## saves stills at its beats: the Eye open, the sealed card and its clues,
+## the card turned with its sparks, and the end. Run it with --fixed-fps 30
+## so the stills land on the same frames every time.
 
 var out_dir := "user://captures"
 var seed_text := "12345"
@@ -35,6 +39,7 @@ var training_only := false
 var chapel_only := false
 var castle_only := false
 var harbour_only := false
+var eye_only := false
 
 
 func _ready() -> void:
@@ -60,6 +65,7 @@ func _ready() -> void:
 	chapel_only = args.has("chapel")
 	castle_only = args.has("castle")
 	harbour_only = args.has("harbour")
+	eye_only = args.has("eye")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -138,6 +144,10 @@ func _run() -> void:
 		return
 	if harbour_only:
 		await _harbour_shots()
+		get_tree().quit()
+		return
+	if eye_only:
+		await _eye_shots()
 		get_tree().quit()
 		return
 	if court_only:
@@ -1241,6 +1251,106 @@ func _talk_shots() -> void:
 	panel._on_make()
 	await _wait(4)
 	await _shot("33_new_terms.png")
+
+
+## One person of each tier, met on foot: the heir stands a few paces off
+## and looks at them with the Eye. The beats: "eye" when the Eye has opened,
+## "card" at the last clue on the sealed card (or the light sweep), "crack"
+## as the seal breaks, "burst" just after the card turns and the sparks fly,
+## "final" at the end with the choices. EYE_TIERS=skilled,legendary limits
+## the tiers; EYE_CALM=1 turns on reduced motion and reduced flashes.
+func _eye_shots() -> void:
+	GameSettings.memory_only = true
+	GameSettings.set_bool("accessibility/captions", true)
+	GameSettings.set_bool("accessibility/reduced_motion", OS.get_environment("EYE_CALM") == "1")
+	GameSettings.set_bool("accessibility/reduce_flashes", OS.get_environment("EYE_CALM") == "1")
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	world.set_speed(0)
+	var st := world.state
+	var heir := world.player_npc()
+	var only := OS.get_environment("EYE_TIERS")
+	for tier_id: String in ["ordinary", "skilled", "exceptional", "legendary"]:
+		if not only.is_empty() and not tier_id in only.split(","):
+			continue
+		GameSettings.set_bool("eye/seen_" + tier_id, false)
+		var c: CharacterData = null
+		for p in st.characters:
+			if st.is_player(p) or CourtSystem.is_kin(st, p) or p.age < 18 or Discovery.tier_id(p) != tier_id:
+				continue
+			var npc := world.npc_of(p.id)
+			if npc == null or not npc.visible:
+				continue
+			if c == null or (p.best_potential() > c.best_potential()) == (tier_id != "ordinary"):
+				c = p
+		if c == null:
+			print("eye: no %s person outdoors" % tier_id)
+			continue
+		var target := world.npc_of(c.id)
+		var spot := target.global_position + Vector3(0, 0, 3.0)
+		for i in 16:
+			var p := target.global_position + Vector3(cos(TAU * i / 16.0), 0, sin(TAU * i / 16.0)) * 3.0
+			if not WorldGeometry.inside_building(st, p, 0.6) and not WorldGeometry.line_blocked(st, p, target.global_position):
+				spot = p
+				break
+		target.brain.set_errand({"type": "hold", "face": spot})
+		heir.teleport(spot)
+		var to := target.global_position - spot
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.follow_target = heir
+		world.camera_rig.set_yaw(heir.rotation.y + 0.5, true)
+		# As in play: the person faced is the one in focus.
+		world._preferred_focus = c.id
+		world._set_focus(target)
+		world._process(0.05)
+		# The welcome notice has had its say by the time anyone is looked at.
+		for n in world.ui.find_children("*", "", true, false):
+			if n is ToastStack:
+				for t in n.get_children():
+					t.queue_free()
+		await _wait(20)
+		var check := world.scan_check(c.id)
+		if not check["ok"]:
+			print("eye: can't look at %s: %s" % [c.full_name(), check["reason"]])
+			continue
+		world.use_eye(c.id)
+		var reveal: EyeReveal = world._reveal
+		# When each beat falls, from the tier's own steps.
+		var steps := EyeReveal.steps_for(reveal.tier, false, reveal.reduced, reveal.no_flash)
+		var scale := float(Discovery.eye_config().get("reduced_motion_time", 0.7)) if reveal.reduced else 1.0
+		var beats := {}
+		var t := 0.0
+		for s: Dictionary in steps:
+			var type := str(s.get("type", ""))
+			var dt := 0.0 if type in ["focus", "particles", "sound"] else float(s.get("time", 0.0)) * scale
+			if type == "eye":
+				beats["eye"] = t + dt * 0.92
+			elif type in ["clue", "sweep"]:
+				beats["card"] = t + dt * 0.9
+			elif type == "shake":
+				beats["crack"] = t + dt * 0.95
+			elif type == "particles":
+				beats["burst"] = t + 0.3
+			t += dt
+		var elapsed := 0.0
+		var order := beats.keys()
+		order.sort_custom(func(a: String, b: String) -> bool: return float(beats[a]) < float(beats[b]))
+		for beat: String in order:
+			while elapsed < float(beats[beat]) and not reveal.done:
+				await get_tree().process_frame
+				elapsed += get_process_delta_time()
+			await _shot("eye_%s_%s.png" % [tier_id, beat])
+		while not reveal.done:
+			await get_tree().process_frame
+		await _wait(45)
+		await _shot("eye_%s_final.png" % tier_id)
+		print("eye: %s  %s (%s, best %d), %.2f s" % [tier_id, c.full_name(), c.occupation_id, c.best_potential(), t])
+		reveal._finish("close")
+		await _wait(10)
 
 
 ## Main menu Sound panel and the in-game pause menu (volume sliders).

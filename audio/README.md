@@ -1,8 +1,9 @@
 # Audio library
 
 This folder is a ship-ready CC0 audio starter library for Sovereign's Eye.
-It contains 297 `.ogg` files: 10 music tracks, 6 location ambience beds, and
-281 short sound effects. Attribution is not required, but source and license
+It contains 312 `.ogg` files: 10 music tracks, 6 location ambience beds,
+281 short sound effects, and 15 bells and cues for the Sovereign's Eye that
+the game makes itself. Attribution is not required, but source and license
 records are kept here so every asset remains traceable.
 
 ## Folder map
@@ -14,6 +15,7 @@ records are kept here so every asset remains traceable.
 | `sfx/kenney-rpg/` | 51 | doors, books, coins, cloth, knives, pots and other medieval interactions |
 | `sfx/kenney-impact/` | 130 | footsteps and wood, metal, glass, mining and general impacts |
 | `sfx/kenney-interface/` | 100 | buttons, confirmation, errors, opening, closing, scrolling and selection |
+| `stings/` | 15 | the Sovereign's Eye: bells, each tier's music, a note per ability, the stamp ([README](stings/README.md)) |
 
 `AUDIO_MANIFEST.csv` records the codec, duration, channels, sample rate, byte
 size, SHA-256 checksum, license and source page for every audio file.
@@ -62,6 +64,9 @@ used, modified and distributed commercially without attribution.
   [`ambience/freesound-cc0/README.md`](ambience/freesound-cc0/README.md).
 - SFX: Kenney. Each SFX folder contains the license file distributed with its
   original pack.
+- Stings: made for the game by `tools/audio/make_stings.py` (CC0 1.0). The
+  Legendary landing carries the first phrase of RandomMind's victory theme.
+  See [`stings/README.md`](stings/README.md).
 
 The CC0 legal code is available at <https://creativecommons.org/publicdomain/zero/1.0/>.
 

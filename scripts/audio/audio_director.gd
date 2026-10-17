@@ -12,8 +12,12 @@ extends Node
 ## - Every button clicks on its own. Set meta "sfx" on a button to play another
 ##   event instead, or "" for silence. Tab clicks turn a page.
 ## - Volume sliders are 0..1 per bus, saved in user://settings.cfg.
+## - duck(db, time) lowers the music and ambience together (the Eye's
+##   reveal hushes the world), duck(0.0, time) brings them back.
 
 const BUSES := ["Music", "Ambience", "SFX", "UI"]
+## The buses duck() lowers.
+const DUCKED := ["Music", "Ambience"]
 
 var settings_path := "user://settings.cfg"
 var music_context := ""
@@ -27,6 +31,8 @@ var _music_active := 0
 var _music_tween: Tween
 var _gap_left := -1.0
 var _rng := RandomNumberGenerator.new()
+var _duck_db := 0.0
+var _duck_tween: Tween
 
 
 static func config() -> Dictionary:
@@ -92,9 +98,31 @@ func set_level(bus: String, value: float, save := true) -> void:
 	if idx >= 0:
 		var base := float(config().get("buses", {}).get(bus, {}).get("volume_db", 0.0))
 		AudioServer.set_bus_mute(idx, value <= 0.001)
-		AudioServer.set_bus_volume_db(idx, base + linear_to_db(maxf(value, 0.001)))
+		AudioServer.set_bus_volume_db(idx, base + linear_to_db(maxf(value, 0.001)) + (_duck_db if bus in DUCKED else 0.0))
 	if save:
 		save_settings()
+
+
+## Lowers the music and ambience by `db` (negative) over `time` seconds;
+## duck(0.0, time) restores them. The sliders' levels are kept as they are.
+func duck(db: float, time: float) -> void:
+	if _duck_tween and _duck_tween.is_valid():
+		_duck_tween.kill()
+	if time <= 0.0:
+		_set_duck(db)
+		return
+	_duck_tween = create_tween()
+	_duck_tween.tween_method(_set_duck, _duck_db, db, time)
+
+
+func ducked_db() -> float:
+	return _duck_db
+
+
+func _set_duck(db: float) -> void:
+	_duck_db = db
+	for bus: String in DUCKED:
+		set_level(bus, level(bus), false)
 
 
 func load_settings() -> void:

@@ -63,7 +63,7 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 1-2 | Launch & start a new game | Main menu → **New Game** → leave the seed blank (random) or type one → **Begin** |
 | 3 | Walk the village as your heir | **WASD** (or the left stick) to walk, **Shift** to run; drag with the mouse (or the right stick, or the arrow keys) to turn the camera, scroll to zoom. Buildings block your way and your view |
 | 4 | NPCs walking around | Speed up time with **2**, **3**, **4**: people go to work, the tavern, the chapel and home to bed |
-| 5 | Look at someone with the Sovereign's Eye | Get near someone and face them: their name shows at the bottom. Press **Q** (controller **Y**). No talk needed, but they must be close (about 10 paces) and in plain sight, so you can't read a whole town from a menu. The reveal grows grander the rarer the person (Ordinary → Skilled → Exceptional → Legendary). See [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 5 | Look at someone with the Sovereign's Eye | Get near someone and face them: their name shows at the bottom. Press **Q** (controller **Y**). No talk needed, but they must be close (about 10 paces) and in plain sight, so you can't read a whole town from a menu. The reveal grows grander the rarer the person (Ordinary → Skilled → Exceptional → Legendary), each with its own music, light and sparks. See [docs/ROADMAP.md](docs/ROADMAP.md) |
 | 6 | Talk to the promising ones | Walk up and press **E** (controller **A**). Their talk may hint at a gift. **Ask about their life** to learn what they want, in their own words |
 | 7 | Win them over | **Make an offer**: a daily wage, a home (a free one, rooms at the manor, or a promise), a place (household, training, an office, a workplace with tools, a squire's place) and an appeal to their duty. They accept, name their terms, or refuse, and say why. A refusal never closes the door: change the offer and propose again. Your own retainers can be offered new terms (a raise, an office) the same way. Different people want different things |
 | 8 | Keep your word | Wages are paid from the treasury every day, families really move into the homes you give, jobs need a real workplace, and a broken promise costs trust, your house's standing, and sometimes the person |
@@ -85,6 +85,7 @@ The same seed always creates the same village and the same people.
 
 ![On foot: the person you face comes into focus](docs/screenshots/on_foot.jpg)
 ![The Sovereign's Eye: a Legendary reveal](docs/screenshots/eye_reveal.jpg)
+![The four tiers: the Eye opening, the sealed card, the card turned](docs/screenshots/eye_tiers.jpg)
 ![Talking it through: what they want, your offer, their counteroffer](docs/screenshots/court_recruit.jpg)
 ![A retainer's office and training](docs/screenshots/court_retainer.jpg)
 ![The Court panel (K)](docs/screenshots/court_panel.jpg)
@@ -275,9 +276,10 @@ See [`3D/README.md`](3D/README.md) for the full catalog and
 
 ## 6. Audio library (`audio/`)
 
-The [`audio/`](audio/) folder contains 297 CC0 Ogg files: 10 medieval music
-tracks, 6 lived-in settlement ambience beds, and 281 interaction, footstep,
-impact and UI sounds. Every file is cataloged with source, license, duration,
+The [`audio/`](audio/) folder contains 312 CC0 Ogg files: 10 medieval music
+tracks, 6 lived-in settlement ambience beds, 281 interaction, footstep,
+impact and UI sounds, and the Sovereign's Eye's own bells and music (15,
+made by `tools/audio/make_stings.py`, see [`audio/stings/`](audio/stings/README.md)). Every file is cataloged with source, license, duration,
 codec and checksum in [`audio/AUDIO_MANIFEST.csv`](audio/AUDIO_MANIFEST.csv).
 
 The location layers are intended to make the world feel occupied: indistinct

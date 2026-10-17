@@ -70,9 +70,19 @@
     "plate_heavy": {"dir": "res://audio/sfx/kenney-impact/", "prefix": "impactPlate_heavy_"},
     "bell_heavy": {"dir": "res://audio/sfx/kenney-impact/", "prefix": "impactBell_heavy_"},
     "glass_medium": {"dir": "res://audio/sfx/kenney-impact/", "prefix": "impactGlass_medium_"},
-    "soft_heavy": {"dir": "res://audio/sfx/kenney-impact/", "prefix": "impactSoft_heavy_"}
+    "soft_heavy": {"dir": "res://audio/sfx/kenney-impact/", "prefix": "impactSoft_heavy_"},
+    "eye_bell_small": {"dir": "res://audio/stings/", "prefix": "bell_small"},
+    "eye_bell_deep": {"dir": "res://audio/stings/", "prefix": "bell_deep"},
+    "eye_bell_great": {"dir": "res://audio/stings/", "prefix": "bell_great"},
+    "eye_heartbeat": {"dir": "res://audio/stings/", "prefix": "heartbeat"},
+    "eye_row_1": {"dir": "res://audio/stings/", "prefix": "row_1"},
+    "eye_row_2": {"dir": "res://audio/stings/", "prefix": "row_2"},
+    "eye_row_3": {"dir": "res://audio/stings/", "prefix": "row_3"},
+    "eye_stamp": {"dir": "res://audio/stings/", "prefix": "stamp_once"},
+    "eye_stamp_twice": {"dir": "res://audio/stings/", "prefix": "stamp_twice"}
   },
 
+  "_stings": "The eye_* families in audio/stings/ are the game's own bells, notes and music for the Sovereign's Eye (one file each, made by tools/audio/make_stings.py; the tiers' cues are named in data/eye.json).",
   "_events": "What the game plays. bus: which slider controls it; volume_db: level within the bus; pitch: random pitch spread (1.05 = +/-5%).",
   "events": {
     "ui_click": { "family": "click", "bus": "UI", "volume_db": -4.0, "pitch": 1.04 },
@@ -99,15 +109,19 @@
     "work_metal": { "family": "metal_strike", "bus": "SFX", "volume_db": -9.0, "pitch": 1.06 },
     "work_soft": { "family": "soft_thud", "bus": "SFX", "volume_db": -12.0, "pitch": 1.08 },
     "work_pot": { "family": "pot", "bus": "SFX", "volume_db": -10.0, "pitch": 1.05 },
-    "eye_soft": {"family": "chime", "bus": "UI", "volume_db": -4.0, "pitch": 1.02},
-    "eye_open": {"family": "bong", "bus": "UI", "volume_db": -1.0, "pitch": 1.0},
+    "eye_bell_small": {"family": "eye_bell_small", "bus": "SFX", "volume_db": 0.0, "pitch": 1.0},
+    "eye_bell_deep": {"family": "eye_bell_deep", "bus": "SFX", "volume_db": -3.0, "pitch": 1.0},
+    "eye_bell_great": {"family": "eye_bell_great", "bus": "SFX", "volume_db": -4.0, "pitch": 1.0},
     "eye_sweep": {"family": "whoosh", "bus": "UI", "volume_db": -6.0, "pitch": 1.04},
     "eye_flip": {"family": "page", "bus": "UI", "volume_db": 0.0, "pitch": 1.04},
     "eye_seal": {"family": "plate_heavy", "bus": "SFX", "volume_db": -4.0, "pitch": 1.03},
-    "eye_stamp": {"family": "bell_heavy", "bus": "SFX", "volume_db": -2.0, "pitch": 1.0},
+    "eye_row_1": {"family": "eye_row_1", "bus": "SFX", "volume_db": -1.0, "pitch": 1.0},
+    "eye_row_2": {"family": "eye_row_2", "bus": "SFX", "volume_db": -0.5, "pitch": 1.0},
+    "eye_row_3": {"family": "eye_row_3", "bus": "SFX", "volume_db": 1.0, "pitch": 1.0},
+    "eye_stamp": {"family": "eye_stamp", "bus": "SFX", "volume_db": -2.0, "pitch": 1.0},
+    "eye_stamp_twice": {"family": "eye_stamp_twice", "bus": "SFX", "volume_db": -2.0, "pitch": 1.0},
     "eye_stamp_light": {"family": "glass_medium", "bus": "SFX", "volume_db": -6.0, "pitch": 1.03},
-    "eye_shimmer": {"family": "chime", "bus": "UI", "volume_db": -3.0, "pitch": 1.06},
-    "eye_heartbeat": {"family": "soft_heavy", "bus": "SFX", "volume_db": -2.0, "pitch": 1.0}
+    "eye_heartbeat": {"family": "eye_heartbeat", "bus": "SFX", "volume_db": -2.0, "pitch": 1.0}
   },
 
   "foley": {

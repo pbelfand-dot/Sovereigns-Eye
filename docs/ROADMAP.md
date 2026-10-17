@@ -10,7 +10,7 @@ playable build. Numbers and content live in `data/*.json`.
 | Art | Kit buildings, meadow, outfits, nature, props, sound | Done |
 | 3.1 | Territory: stores, Build menu, construction sites, Master of Works | Done |
 | 3.2 | Growth: settlers, homes that build and upgrade themselves | Done |
-| **Eye** | **On foot: scan first, then talk and persuade** (below) | **In progress: gameplay video waiting for approval** |
+| **Eye** | **On foot: scan first, then talk and persuade** (below) | Done (optional extras below) |
 | 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done |
 | 4+ | Dynasties (ageing, marriage, children, succession), wider realm, military | Later |
 
@@ -80,15 +80,20 @@ in the heir's boots.
 4. **The reveal scales with real talent**, in the game's own medieval look:
    a sealed card with the Eye pressed in wax, clues, the seal breaking, and
    the card turning over.
-   - **Ordinary:** a quick, quiet reveal. Plain frame, soft chime.
-   - **Skilled:** a light sweep, a sharper bell, a silver frame and a few
-     sparks.
-   - **Exceptional:** gold and royal blue, a longer build-up, the camera
-     moves closer, clues (their role, then the gift without its rank),
-     layered bells, and a big stat reveal.
-   - **Legendary:** the biggest sequence. The Eye's rune ring turns, a
-     heartbeat plays, the person's silhouette appears, a motto, a fanfare
-     sting, the most sparks, and the top skill lands last.
+   - **Ordinary:** a quick, quiet reveal. Plain frame, a lute's open fifth.
+   - **Skilled:** a small bell, a light sweep, a silver frame, a harp
+     strummed as the card turns and a few sparks.
+   - **Exceptional:** gold and royal blue, a longer build-up. The camera
+     moves closer, a deep bell rings, and clues come (their role, then the
+     gift without its rank) over a rising harp and drum roll. The seal
+     cracks with light, a held breath, then the card turns on a drum stroke
+     and bells, a ring of light runs out and each ability lands on its own
+     note.
+   - **Legendary:** the biggest sequence. A heartbeat, a great bell, and the
+     Eye's inscribed ring turns. The person's silhouette appears in the
+     card's window, then a motto, and the seal bursts. The card turns on the
+     victory fanfare, with rays of light, the most sparks and falling gold
+     leaf, and the top skill lands last on a double bell.
 5. **The first reveal is cinematic; later looks are a quick card.** A tier's
    full sequence can be skipped once you've seen it.
 6. **Accessible:** reduce motion (no camera moves, shakes, spins or flips;
@@ -162,9 +167,29 @@ Different people, different paths (each one is a test in
 - [x] Motive-based recruitment (`Recruitment`): asking about their life,
       offers, counteroffers, plain-language reasons, enforced terms and
       promises, the house's standing
-- [ ] **Approval of the gameplay video** before final polish (video sent:
+- [x] Go-ahead for the final polish (the gameplay video:
       `tools/gameplay_demo.tscn` records it)
-- [ ] Polish: per-tier timing, custom eye-opening art, richer particles,
-      a dedicated sting for each tier, card portrait lighting
+- [x] Polish (capture mode `eye`, tests in `tests/test_eye.gd`):
+  - **Per-tier timing.** The steps keep to one clock, so beats never
+    drift, and each tier's music is scored to its steps.
+  - **Custom eye-opening art.** `EyeEmblem` is an illuminated roundel. Its
+    lids part on a slit of light to show an ivory eye with a fibred iris,
+    and the pupil narrows as it focuses. The ring grows richer by tier, up
+    to the legend OCVLVS PRINCIPIS OMNIA VIDET.
+  - **Richer particles** (`RevealFX`): sparks burst from the card's edges,
+    a ring of light runs out when the seal breaks, and embers rise. The
+    rarest tiers add a halo, turning rays and falling gold leaf.
+  - **A dedicated sting for each tier.** Bells, harp, lute, drums and a
+    drone, synthesized by `tools/audio/make_stings.py`
+    ([audio/stings/](../audio/stings/README.md)). A rise plays under the
+    clues and a landing as the card turns, then a note for each ability
+    and the stamp's bell. The world's music and ambience are lowered while
+    the Eye is open.
+  - **Card portrait lighting.** The portrait sits in an arched niche lit in
+    the tier's colors, with a warm key light and rim lights in the tier's
+    glow (`PortraitStudio.rim_color`).
+  - **The card itself.** The back is tooled leather, with a window for the
+    silhouette and a wax seal on ribbons that cracks, light leaking
+    through. The front is grained parchment.
 - [ ] Optional: idle "bark" lines villagers say aloud as you pass; rebinding
       keys

@@ -12,6 +12,13 @@ extends CanvasLayer
 ## for important sounds. A tier's full sequence can be skipped once the
 ## player has seen it.
 ##
+## Each tier has its own music, in cues that steps start ("cue") and cut
+## ("cut"): a rise under the clues, a landing as the card turns, a note for
+## each ability as it shows ("rows"). Cues start on their steps, so they
+## stay with the picture at any speed; skipping still plays the landing.
+## Steps keep to one clock, so the beats never drift. The music and
+## ambience are lowered while the Eye is open.
+##
 ## Ends with choices (talk, appoint, remember, card, close) and emits
 ## `finished(action)`.
 
@@ -36,6 +43,13 @@ var _tweens: Array[Tween] = []
 var _spin := false
 var _shake := 0.0
 var _card_home := Vector2.ZERO
+var _clock := 0.0          # seconds since the sequence began
+var _mark := 0.0           # when the current step's wait ends, on that clock
+var _cue_player: AudioStreamPlayer
+var _final_cue := ""       # the tier's last cue (its landing), played even when skipped
+var _final_played := false
+var _fx_done := false
+var _closing := false
 
 var _root: Control
 var _dim: ColorRect
@@ -48,8 +62,9 @@ var _caption_left := 0.0
 var _skip_hint: Label
 var _actions: HBoxContainer
 var _studio: PortraitStudio
-var _sting: AudioStreamPlayer
-var _sting_fade := 0.0
+var _vignette: TextureRect
+var _fx: RevealFX
+var _front_fx: Control
 
 
 func _init() -> void:
@@ -72,8 +87,22 @@ func play(owner_world: VillageWorld, c: CharacterData, is_compact: bool) -> void
 		_was_paused = world.paused
 		world.paused = true
 		world.speed_changed.emit(world.time_scale())
+	for st: Dictionary in steps_for(tier, compact, reduced, no_flash):
+		if st.has("cue"):
+			_final_cue = str(st["cue"])
+	if not compact:
+		Audio.duck(float(_cfg.get("duck_db", -12.0)), 0.4)
+	_quiet(true)
 	_build()
 	_run()
+
+
+## Their name and ring step aside while the Eye shows them.
+func _quiet(on: bool) -> void:
+	var npc := world.npc_of(character.id) if world and character else null
+	if npc and is_instance_valid(npc):
+		npc.quiet = on
+		npc.refresh_markers()
 
 
 ## Step lists used for a tier (or the compact reveal), after accessibility
@@ -84,23 +113,26 @@ static func steps_for(tier_def: Dictionary, is_compact: bool, reduced_motion: bo
 	var out := []
 	for s: Dictionary in src:
 		var type := str(s.get("type", ""))
-		if reduced_motion and type in ["focus", "shake"]:
-			if s.has("sound"):
-				out.append({"type": "sound", "sound": s["sound"], "caption": s.get("caption", ""), "time": 0.0})
-			continue
-		if reduce_flash and type == "flash":
+		if (reduced_motion and type in ["focus", "shake"]) or (reduce_flash and type == "flash"):
+			# No camera move, shaking or flash, but its sounds, music and the
+			# seal's cracks still come, at once.
+			var still := {"type": "sound", "time": 0.0, "crack": type == "shake"}
+			for key: String in ["sound", "caption", "cue", "cut"]:
+				if s.has(key):
+					still[key] = s[key]
+			out.append(still)
 			continue
 		out.append(s)
 	return out
 
 
-## Seconds a sequence takes (the steps run one after another; focus and
-## sting run alongside).
+## Seconds a sequence takes (the steps run one after another; focus,
+## particles and sounds run alongside).
 static func duration(tier_def: Dictionary, is_compact: bool, reduced_motion: bool, reduce_flash: bool) -> float:
 	var scale := float(Discovery.eye_config().get("reduced_motion_time", 0.7)) if reduced_motion else 1.0
 	var total := 0.0
 	for s: Dictionary in steps_for(tier_def, is_compact, reduced_motion, reduce_flash):
-		if str(s.get("type", "")) in ["focus", "sting", "particles", "sound"]:
+		if str(s.get("type", "")) in ["focus", "particles", "sound"]:
 			continue
 		total += float(s.get("time", 0.0)) * scale
 	return total
@@ -120,10 +152,23 @@ func _build() -> void:
 	_dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_dim)
+	# The edges fall darker than the middle, drawing the eye in.
+	_vignette = TextureRect.new()
+	_vignette.texture = RevealCard.edge_shade()
+	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_vignette.modulate = Color(0.02, 0.015, 0.01, 0.0)
+	_root.add_child(_vignette)
 	var colors: Dictionary = tier.get("colors", {})
+	_fx = RevealFX.new()
+	_fx.set_colors(colors)
+	_fx.reduced = reduced
+	_root.add_child(_fx)
 	_eye = EyeEmblem.new()
 	_eye.set_colors(colors)
-	_eye.ornate = str(tier.get("id", "")) == "legendary"
+	_eye.ornament = int(tier.get("pips", 1)) - 1
 	_eye.size = Vector2(320, 320)
 	_eye.position = view * 0.5 - _eye.size * 0.5 - Vector2(0, 20)
 	_eye.pivot_offset = _eye.size * 0.5
@@ -135,7 +180,9 @@ func _build() -> void:
 	if tex == null:
 		_studio = PortraitStudio.new()
 		_studio.transparent_bg = true
-		_studio.framing = 2.2
+		_studio.framing = 2.0
+		_studio.size = Vector2i(256, 262)
+		_studio.rim_color = Color(str(colors.get("glow", "#e8e0cc")))
 		add_child(_studio)
 		_studio.show_character(character)
 		tex = _studio.get_texture()
@@ -145,6 +192,11 @@ func _build() -> void:
 	_card.position = _card_home
 	_card.modulate.a = 0.0
 	_root.add_child(_card)
+	_fx.center = _card_home + RevealCard.SIZE * 0.5
+	_front_fx = Control.new()
+	_front_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_front_fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_root.add_child(_front_fx)
 	_ribbon = UITheme.label("", 20, Color(str(colors.get("glow", "#fff1c4"))), true)
 	_ribbon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ribbon.size = Vector2(view.x, 30)
@@ -180,10 +232,17 @@ func _build() -> void:
 # --- Running the sequence ---------------------------------------------------------------------
 
 func _run() -> void:
-	for step: Dictionary in steps_for(tier, compact, reduced, no_flash):
+	var steps := steps_for(tier, compact, reduced, no_flash)
+	for step: Dictionary in steps:
 		if _skipping:
 			break
 		await _step(step)
+	if not _final_played and not _final_cue.is_empty():
+		_play_cue(_final_cue)
+	if not _fx_done:
+		for step: Dictionary in steps:
+			if str(step.get("type", "")) == "particles":
+				_particles(step, false)
 	_show_final()
 	if not compact:
 		GameSettings.mark_eye_seen(str(tier.get("id", "")))
@@ -200,14 +259,19 @@ func _tween() -> Tween:
 	return tw
 
 
+## Waits until `seconds` after the last wait ended, on the sequence's own
+## clock: a step that runs a frame long doesn't push the ones after it.
 func _wait(seconds: float) -> void:
-	var left := seconds
-	while left > 0.0 and not _skipping and is_inside_tree():
+	_mark += seconds
+	while _clock < _mark and not _skipping and is_inside_tree():
 		await get_tree().process_frame
-		left -= get_process_delta_time()
 
 
 func _cue(step: Dictionary) -> void:
+	if step.has("cut"):
+		_cut_cue(float(step["cut"]))
+	if step.has("cue"):
+		_play_cue(str(step["cue"]))
 	var ev := str(step.get("sound", ""))
 	if not ev.is_empty():
 		Audio.play(ev)
@@ -222,7 +286,9 @@ func _step(step: Dictionary) -> void:
 	var time := _t(step)
 	match str(step.get("type", "")):
 		"dim":
-			_tween().tween_property(_dim, "color:a", float(step.get("to", 0.5)), time)
+			var tw := _tween()
+			tw.tween_property(_dim, "color:a", float(step.get("to", 0.5)), time)
+			tw.tween_property(_vignette, "modulate:a", minf(float(step.get("to", 0.5)) + 0.25, 0.95), time)
 			await _wait(time)
 		"focus":
 			var npc := world.npc_of(character.id) if world else null
@@ -246,6 +312,7 @@ func _step(step: Dictionary) -> void:
 			tw.tween_property(_eye, "open", float(step.get("open", 1.0)), time).set_trans(Tween.TRANS_BACK)
 			tw.tween_property(_eye, "glow", 1.0, time)
 			tw.tween_property(_eye, "rays", float(step.get("rays", 0.0)), time)
+			tw.tween_property(_eye, "focus", 1.0, time * 0.45).set_delay(time * 0.55)
 			if not reduced:
 				_eye.scale = Vector2(0.85, 0.85)
 				tw.tween_property(_eye, "scale", Vector2.ONE, time)
@@ -271,6 +338,7 @@ func _step(step: Dictionary) -> void:
 			await _clue(str(step.get("kind", "role")), time)
 		"shake":
 			_shake = 0.0 if reduced else float(step.get("strength", 4.0))
+			_tween().tween_property(_card, "crack", 1.0, time).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
 			await _wait(time)
 			_shake = 0.0
 			_card.position = _card_home
@@ -279,8 +347,6 @@ func _step(step: Dictionary) -> void:
 			tw.tween_property(_flash, "color:a", 0.55, time * 0.35)
 			tw.chain().tween_property(_flash, "color:a", 0.0, time * 0.65)
 			await _wait(time)
-		"sting":
-			_play_sting(str(step.get("file", "")), float(step.get("fade", 4.0)))
 		"flip":
 			_ribbon.modulate.a = 0.0
 			if reduced:
@@ -298,9 +364,9 @@ func _step(step: Dictionary) -> void:
 				_tween().tween_property(_card, "scale:x", 1.0, time * 0.5).set_trans(Tween.TRANS_BACK)
 				await _wait(time * 0.5)
 		"particles":
-			_burst(int(step.get("amount", 30)))
+			_particles(step, true)
 		"stats":
-			await _stats(str(step.get("mode", "together")), time)
+			await _stats(str(step.get("mode", "together")), time, step.get("rows", []))
 		"stamp":
 			_card.show_stamp(true)
 			if not reduced:
@@ -311,6 +377,8 @@ func _step(step: Dictionary) -> void:
 				tw.tween_property(_card.stamp, "rotation", 0.0, time)
 			await _wait(time)
 		"wait", "sound":
+			if bool(step.get("crack", false)):
+				_card.crack = 1.0
 			await _wait(time)
 
 
@@ -325,7 +393,7 @@ func _clue(kind: String, time: float) -> void:
 		"motto":
 			text = str(_cfg.get("mottos", {}).get(str(top[0]["id"]), "A rare soul."))
 		"silhouette":
-			_tween().tween_property(_card.silhouette, "modulate:a", 0.92, time)
+			_tween().tween_method(_card.set_silhouette, 0.0, 0.92, time)
 			await _wait(time)
 			return
 	_ribbon.text = text
@@ -339,7 +407,7 @@ func _clue(kind: String, time: float) -> void:
 	await _wait(time)
 
 
-func _stats(mode: String, time: float) -> void:
+func _stats(mode: String, time: float, notes: Array = []) -> void:
 	var n := _card.row_count()
 	match mode:
 		"instant":
@@ -355,66 +423,76 @@ func _stats(mode: String, time: float) -> void:
 			# Weakest of the three first; the greatest gift lands last.
 			for k in n:
 				var i := n - 1 - k
+				if k < notes.size():
+					Audio.play(str(notes[k]))
 				var tw := _tween()
 				tw.tween_method(func(p: float) -> void: _card.set_row(i, p), 0.0, 1.0, time / n)
 				await _wait(time / n)
 				_card.set_row(i, 1.0)
 
 
-func _burst(amount: int) -> void:
-	var p := CPUParticles2D.new()
-	var colors: Dictionary = tier.get("colors", {})
-	p.position = _card_home + RevealCard.SIZE * 0.5
-	p.amount = maxi(4, roundi(amount * (0.3 if reduced else 1.0)))
-	p.one_shot = true
-	p.explosiveness = 0.92
-	p.lifetime = 1.4
-	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	p.emission_rect_extents = RevealCard.SIZE * 0.45
-	p.direction = Vector2(0, -1)
-	p.spread = 180.0
-	p.initial_velocity_min = 20.0 if reduced else 90.0
-	p.initial_velocity_max = 40.0 if reduced else 260.0
-	p.gravity = Vector2(0, 40 if reduced else 160)
-	p.scale_amount_min = 2.0
-	p.scale_amount_max = 4.5
-	var ramp := Gradient.new()
-	ramp.set_color(0, Color(str(colors.get("glow", "#ffffff"))))
-	ramp.set_color(1, Color(Color(str(colors.get("main", "#ffffff"))), 0.0))
-	p.color_ramp = ramp
-	p.texture = _spark_texture()
-	_root.add_child(p)
-	_root.move_child(p, _card.get_index())
-	p.emitting = true
-	get_tree().create_timer(2.0).timeout.connect(p.queue_free)
+## The tier's light and particles: sparks bursting from the card, the
+## ring running out, then the halo, rays, embers and gold leaf that stay
+## while the card shows. `burst` false gives only what stays (after a skip).
+func _particles(step: Dictionary, burst: bool) -> void:
+	_fx_done = true
+	var at := _card_home + RevealCard.SIZE * 0.5
+	if burst:
+		var sparks := _fx.sparks(int(step.get("amount", 30)), at, RevealCard.SIZE)
+		_front_fx.add_child(sparks)
+		sparks.emitting = true
+		get_tree().create_timer(2.5).timeout.connect(sparks.queue_free)
+		if bool(step.get("ring", false)) and not reduced:
+			_fx.ring = 0.001
+			_tween().tween_property(_fx, "ring", 1.0, 0.9).set_trans(Tween.TRANS_LINEAR)
+		var leaf := int(step.get("flakes", 0))
+		if leaf > 0 and not reduced:
+			# Behind the card, so no flake ever covers what it says.
+			var flakes := _fx.flakes(leaf, at, RevealCard.SIZE)
+			_fx.add_child(flakes)
+			flakes.emitting = true
+			get_tree().create_timer(6.0).timeout.connect(flakes.queue_free)
+	var motes := int(step.get("motes", 0))
+	if motes > 0:
+		var m := _fx.motes(motes, at, RevealCard.SIZE)
+		_fx.add_child(m)
+		m.emitting = true
+	var halo := float(step.get("halo", 0.0))
+	var rays := float(step.get("rays", 0.0))
+	var tw := create_tween().set_parallel()
+	tw.tween_property(_fx, "halo", halo, 0.6 if burst else 0.0)
+	tw.tween_property(_fx, "rays", rays, 0.8 if burst else 0.0)
 
 
-static func _spark_texture() -> Texture2D:
-	var img := Image.create(9, 9, false, Image.FORMAT_RGBA8)
-	for y in 9:
-		for x in 9:
-			var d := absf(x - 4) + absf(y - 4)
-			img.set_pixel(x, y, Color(1, 1, 1, clampf(1.0 - d / 4.5, 0.0, 1.0)))
-	return ImageTexture.create_from_image(img)
-
-
-func _play_sting(path: String, fade: float) -> void:
+## Starts a cue (a tier's music), cutting short the one before it.
+func _play_cue(path: String) -> void:
+	_cut_cue(0.08)
+	if path == _final_cue:
+		_final_played = true
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return
-	_sting = AudioStreamPlayer.new()
-	var stream := load(path) as AudioStream
-	if stream is AudioStreamOggVorbis:
-		stream = stream.duplicate()
-		(stream as AudioStreamOggVorbis).loop = false
-	_sting.stream = stream
-	_sting.bus = "SFX"
-	_sting.volume_db = -3.0
-	add_child(_sting)
-	_sting.play()
-	_sting_fade = fade
+	_cue_player = AudioStreamPlayer.new()
+	_cue_player.stream = load(path)
+	_cue_player.bus = "SFX"
+	_cue_player.volume_db = float(_cfg.get("cue_db", -2.0))
+	add_child(_cue_player)
+	_cue_player.play()
+
+
+## Fades the playing cue out over `fade` seconds.
+func _cut_cue(fade: float) -> void:
+	if _cue_player == null or not is_instance_valid(_cue_player):
+		_cue_player = null
+		return
+	var p := _cue_player
+	_cue_player = null
+	var tw := create_tween()
+	tw.tween_property(p, "volume_db", -60.0, maxf(fade, 0.01))
+	tw.tween_callback(p.queue_free)
 
 
 func _process(delta: float) -> void:
+	_clock += delta
 	if _spin:
 		_eye.ring_angle += delta * 0.9
 	if _shake > 0.0:
@@ -423,12 +501,6 @@ func _process(delta: float) -> void:
 		_caption_left -= delta
 		if _caption_left <= 0.0:
 			_caption.text = ""
-	if _sting and _sting.playing:
-		_sting_fade -= delta
-		if _sting_fade < 1.0:
-			_sting.volume_db = linear_to_db(maxf(_sting_fade, 0.001)) - 3.0
-		if _sting_fade <= 0.0:
-			_sting.stop()
 
 
 # --- End state & choices ---------------------------------------------------------------------
@@ -446,6 +518,7 @@ func _show_final() -> void:
 		if str(s.get("type", "")) == "dim":
 			dim_to = float(s.get("to", 0.6))
 	_dim.color.a = dim_to
+	_vignette.modulate.a = minf(dim_to + 0.25, 0.95)
 	_flash.color.a = 0.0
 	_eye.modulate.a = 0.0
 	_ribbon.modulate.a = 0.0
@@ -454,6 +527,7 @@ func _show_final() -> void:
 	_card.scale = Vector2.ONE
 	_card.modulate.a = 1.0
 	_card.set_sheen(0.0)
+	_fx.ring = 0.0
 	for i in _card.row_count():
 		_card.set_row(i, 1.0)
 	_card.show_stamp(true)
@@ -492,18 +566,35 @@ func _action(text: String, action: String, tip: String) -> Button:
 
 
 func _finish(action: String) -> void:
-	if not is_inside_tree():
+	if not is_inside_tree() or _closing:
 		return
-	if _sting:
-		_sting.stop()
+	_closing = true
+	_quiet(false)
+	if not compact:
+		Audio.duck(0.0, 1.2)
 	if world:
 		world.paused = _was_paused
 		world.speed_changed.emit(world.time_scale())
 	finished.emit(action)
+	# The music's tail fades out rather than stopping dead.
+	_root.visible = false
+	if _cue_player and is_instance_valid(_cue_player) and _cue_player.playing:
+		_cut_cue(0.5)
+		await get_tree().create_timer(0.55).timeout
 	queue_free()
 
 
+func _exit_tree() -> void:
+	# Torn down some other way (the world closing): bring the music back.
+	if not _closing and not compact:
+		Audio.duck(0.0, 0.5)
+	if not _closing:
+		_quiet(false)
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if _closing:
+		return
 	var press := (event is InputEventMouseButton and (event as InputEventMouseButton).pressed) or (event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo) \
 		or (event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed)
 	if not press:
@@ -520,6 +611,6 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _input(event: InputEvent) -> void:
 	# Clicks land on the full-screen root first; route them to skipping.
-	if not done and skippable and event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+	if not _closing and not done and skippable and event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
 		_skipping = true
 		get_viewport().set_input_as_handled()
