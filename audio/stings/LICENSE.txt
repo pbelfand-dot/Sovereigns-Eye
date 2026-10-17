@@ -1,0 +1,11 @@
+The Sovereign's Eye: bells and music (Sovereign's Eye)
+
+The sounds in this folder were synthesized for Sovereign's Eye by
+tools/audio/make_stings.py and are released under CC0 1.0 Universal
+(public domain dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+
+legendary_land.ogg also contains the first phrase of "Medieval: Victory
+Theme" by RandomMind (CC0 1.0), from
+https://opengameart.org/content/medieval-victory-theme, kept in
+audio/music/randommind-medieval/.

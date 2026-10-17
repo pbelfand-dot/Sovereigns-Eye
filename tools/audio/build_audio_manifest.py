@@ -86,6 +86,13 @@ def classify(path: Path) -> tuple[str, str, str]:
         return "Kenney Impact Sounds", "sfx", "https://kenney.nl/assets/impact-sounds"
     if parts[:2] == ("sfx", "kenney-interface"):
         return "Kenney Interface Sounds", "sfx", "https://kenney.nl/assets/interface-sounds"
+    if parts[:1] == ("stings",):
+        # Made for the game by tools/audio/make_stings.py (the Legendary landing
+        # also carries the victory theme's first phrase).
+        source = "tools/audio/make_stings.py"
+        if path.name == "legendary_land.ogg":
+            source += " + " + MUSIC_SOURCES["victory.ogg"]
+        return "Sovereign's Eye stings", "music" if "_land" in path.name or "_rise" in path.name or path.name == "ordinary.ogg" else "sfx", source
     raise ValueError(f"Unclassified audio file: {relative}")
 
 

@@ -296,3 +296,18 @@ audio/sfx/kenney-rpg/metalLatch.ogg,Kenney RPG Audio,sfx,10208,0.261,2,48000,vor
 audio/sfx/kenney-rpg/metalPot1.ogg,Kenney RPG Audio,sfx,31619,1.460,2,48000,vorbis,159def979e8e386c2c539f5e99cc30a080eb2dcb6c911fa2e4ccc0785b2522fd,CC0-1.0,https://kenney.nl/assets/rpg-audio
 audio/sfx/kenney-rpg/metalPot2.ogg,Kenney RPG Audio,sfx,22471,0.938,2,48000,vorbis,8e1f820d217d380fde10e969d109db34303e3f4d11c3951926eddef813d04ae2,CC0-1.0,https://kenney.nl/assets/rpg-audio
 audio/sfx/kenney-rpg/metalPot3.ogg,Kenney RPG Audio,sfx,23142,0.907,2,48000,vorbis,d306e5b848f6843332d0ca19f8f7dfe5796aeb56d8273902b085df463273f1dc,CC0-1.0,https://kenney.nl/assets/rpg-audio
+audio/stings/bell_deep.ogg,Sovereign's Eye stings,sfx,30055,6.247,2,44100,vorbis,7a562dc6445adace83b122c2309573c2cdcf454f782552804eee625117c8be79,CC0-1.0,tools/audio/make_stings.py
+audio/stings/bell_great.ogg,Sovereign's Eye stings,sfx,35001,9.017,2,44100,vorbis,61a17a5c828971a7ce36dd52ee586e77a4afdd31e327544251a34c08b6c16257,CC0-1.0,tools/audio/make_stings.py
+audio/stings/bell_small.ogg,Sovereign's Eye stings,sfx,22196,1.939,2,44100,vorbis,8119d0efab9970f260956ed62d76ca38b36215f0246e02e36788bab2c32f7f8c,CC0-1.0,tools/audio/make_stings.py
+audio/stings/exceptional_land.ogg,Sovereign's Eye stings,music,45450,4.309,2,44100,vorbis,d9e1db510ad159af926505e58cf0c9a7d84c3ba95c4015ebcc8e1da2a9261d4f,CC0-1.0,tools/audio/make_stings.py
+audio/stings/exceptional_rise.ogg,Sovereign's Eye stings,music,64500,3.150,2,44100,vorbis,726cc1f8bac9179142e1d24369b2448f9e6663c0f427577aa0e6bd4a0ab5b584,CC0-1.0,tools/audio/make_stings.py
+audio/stings/heartbeat.ogg,Sovereign's Eye stings,sfx,11522,1.200,2,44100,vorbis,0942d8a0084574c8b22d72ccb595f81f128547ff400eec695100fa9514a0d5da,CC0-1.0,tools/audio/make_stings.py
+audio/stings/legendary_land.ogg,Sovereign's Eye stings,music,121696,7.830,2,44100,vorbis,4ae32ae78934503755f99eeee1d5cd233feaa107bba5666af7be0d981d539795,CC0-1.0,tools/audio/make_stings.py + https://opengameart.org/content/medieval-victory-theme
+audio/stings/legendary_rise.ogg,Sovereign's Eye stings,music,75355,3.750,2,44100,vorbis,57fb0da685f8e371e80f5a8dc0ce21ad18c55642b089ef3b4e9edfbe6324c2fd,CC0-1.0,tools/audio/make_stings.py
+audio/stings/ordinary.ogg,Sovereign's Eye stings,music,32326,3.108,2,44100,vorbis,d56fed3837b11944d04826d6943d7dbdcde5efd8ec199c7b42196abe2651093f,CC0-1.0,tools/audio/make_stings.py
+audio/stings/row_1.ogg,Sovereign's Eye stings,sfx,27810,2.256,2,44100,vorbis,a889ed06eccda7b5280555f7eead09f845dec10d8e6992b54a0fd6d12dd93999,CC0-1.0,tools/audio/make_stings.py
+audio/stings/row_2.ogg,Sovereign's Eye stings,sfx,27749,2.264,2,44100,vorbis,44e099aeed31c79837d5d6922a7db4eb547bb33ccdbc435b994ca195a868f92d,CC0-1.0,tools/audio/make_stings.py
+audio/stings/row_3.ogg,Sovereign's Eye stings,sfx,24759,2.046,2,44100,vorbis,4e7f439fb7486cea3928d62d48e84c18fb6e018e780ae16faad0165921fad777,CC0-1.0,tools/audio/make_stings.py
+audio/stings/skilled_land.ogg,Sovereign's Eye stings,music,40499,3.439,2,44100,vorbis,fe22ba94b264caacc851aee35f48a260d61cd149e5e6e2d588f187965210cec6,CC0-1.0,tools/audio/make_stings.py
+audio/stings/stamp_once.ogg,Sovereign's Eye stings,sfx,28907,5.335,2,44100,vorbis,878e82c1ee4d2322858ceb7ff0d8e6c174000629e7a08af94d6a6e345216899d,CC0-1.0,tools/audio/make_stings.py
+audio/stings/stamp_twice.ogg,Sovereign's Eye stings,sfx,31066,5.444,2,44100,vorbis,f87975910b48b028bc0d86369374bc52764c52db98b2721c9fe11cbeec0622b2,CC0-1.0,tools/audio/make_stings.py

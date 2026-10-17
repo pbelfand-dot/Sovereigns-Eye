@@ -534,7 +534,12 @@ func test_a_charter_in_the_live_world() -> void:
 	await frames(2)
 
 
-## A real left click on a control, through the viewport like a player's.
+## A real left click on a control, through the viewport like a player's:
+## the pointer moves there, presses, releases. Headless runs have no real
+## pointer, and between frames Godot re-checks what is under the pointer's
+## real position (the corner), which takes the hover off the button and
+## loses the press. So the press and release go in the same frame, then the
+## click has a frame to take effect.
 func _click(world: VillageWorld, control: Control, device := 0) -> void:
 	var at := control.get_global_rect().get_center()
 	var move := InputEventMouseMotion.new()
@@ -550,7 +555,7 @@ func _click(world: VillageWorld, control: Control, device := 0) -> void:
 		ev.global_position = at
 		ev.device = device
 		world.get_viewport().push_input(ev, true)
-		await frames(1)
+	await frames(2)
 
 
 ## Talking is for making offers: the buttons answer real clicks and taps,
