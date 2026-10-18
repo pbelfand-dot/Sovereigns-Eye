@@ -13,6 +13,10 @@ const DRIFT_SCALE := 1.06
 const DRIFT_TIME := 38.0
 ## Narrower than this (px), or taller than wide, the column centres over the art.
 const NARROW := 900.0
+## What stays in view of the key art when the screen is narrower or taller
+## than the art (as fractions of it): the chapel and the heir. The slow
+## drift draws in toward it too.
+const ART_FOCUS := Vector2(0.68, 0.55)
 
 var _menu: VBoxContainer
 var _new_game_panel: PanelContainer
@@ -66,7 +70,10 @@ func _build_backdrop() -> void:
 	_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if ResourceLoader.exists(KEY_ART):
 		_bg.texture = load(KEY_ART)
-		_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		# Placed by _fit() to cover the screen round ART_FOCUS.
+		_bg.stretch_mode = TextureRect.STRETCH_SCALE
+		_bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		_bg.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	else:
 		_bg.texture = _gradient([Color("#3a2a1c"), Color("#0d0a07")], GradientTexture2D.FILL_RADIAL, Vector2(0.5, 0.42), Vector2(1.1, 1.1))
 		_bg.stretch_mode = TextureRect.STRETCH_SCALE
@@ -113,6 +120,16 @@ func _build_backdrop() -> void:
 	add_child(_motes)
 
 
+## Where the key art goes to cover a screen of size `screen`: scaled to
+## cover it without stretching, and shifted, as far as its edges allow, to
+## keep `focus` (a fraction of the art) in the middle.
+static func cover_rect(screen: Vector2, art: Vector2, focus: Vector2) -> Rect2:
+	var k := maxf(screen.x / art.x, screen.y / art.y)
+	var size := art * k
+	var pos := (screen * 0.5 - size * focus).clamp(screen - size, Vector2.ZERO)
+	return Rect2(pos, size)
+
+
 static func _gradient(colors: Array, fill: int, from: Vector2, to: Vector2, offsets: Array = []) -> GradientTexture2D:
 	var g := Gradient.new()
 	g.set_color(0, colors[0])
@@ -138,7 +155,15 @@ func _fit() -> void:
 	var narrow := s.x < NARROW or s.y > s.x
 	var dark := Color(0.05, 0.035, 0.025)
 	if narrow:
-		_shade.texture = _gradient([Color(dark, 0.72), Color(dark, 0.72)], GradientTexture2D.FILL_LINEAR, Vector2(0, 0), Vector2(1, 0))
+		if s.y > s.x:
+			# Upright (phones): dark behind the menu at the top, the scene
+			# showing below it, a little shade again under the footer.
+			var g := _gradient([Color(dark, 0.86), Color(dark, 0.45)], GradientTexture2D.FILL_LINEAR, Vector2(0, 0), Vector2(0, 1))
+			g.gradient.set_offset(0, 0.32)
+			g.gradient.add_point(0.82, Color(dark, 0.15))
+			_shade.texture = g
+		else:
+			_shade.texture = _gradient([Color(dark, 0.72), Color(dark, 0.72)], GradientTexture2D.FILL_LINEAR, Vector2(0, 0), Vector2(1, 0))
 		_column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		for side in ["left", "right"]:
 			_column.add_theme_constant_override("margin_" + side, int(maxf(16.0, (s.x - 460.0) * 0.5)))
@@ -152,7 +177,10 @@ func _fit() -> void:
 		_motes.position = Vector2(s.x * 0.5, s.y + 10.0)
 		_motes.emission_rect_extents = Vector2(s.x * 0.5, 10.0)
 	if _bg.texture and ResourceLoader.exists(KEY_ART):
-		_bg.pivot_offset = s * 0.5
+		var r := cover_rect(s, _bg.texture.get_size(), ART_FOCUS)
+		_bg.position = r.position
+		_bg.size = r.size
+		_bg.pivot_offset = r.size * ART_FOCUS
 		if not _bg.has_meta("drifting") and not GameSettings.reduced_motion():
 			_bg.set_meta("drifting", true)
 			var t := create_tween().set_loops().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -174,6 +202,7 @@ func _build_column() -> void:
 
 	var emblem := TextureRect.new()
 	emblem.texture = load(EMBLEM) if ResourceLoader.exists(EMBLEM) else load("res://icon.svg")
+	emblem.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	emblem.custom_minimum_size = Vector2(112, 112)
 	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

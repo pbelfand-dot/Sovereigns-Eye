@@ -1,18 +1,59 @@
 # Title screen art
 
-The title screen (`scripts/ui/main_menu.gd`) uses two images from this folder
-when they are here, and falls back to a warm gradient and the game's icon when
-they are not:
+The title screen (`scripts/ui/main_menu.gd`) uses two images from this folder,
+and falls back to a warm gradient and the game's icon when they are not here:
 
 | File | What | Size | Notes |
 | --- | --- | --- | --- |
-| `key_art.jpg` | The key art behind the menu | 2560 × 1440 (16:9), JPEG quality ~88 | Covers the screen (cropped to fit), drifts in slowly; the left side is darkened for the menu column, so keep the subject in the right two-thirds |
-| `emblem.png` | The heraldic emblem above the title | 512 × 512, PNG with transparency | Shown at 112 px |
+| `key_art.jpg` | The key art behind the menu | 2560 × 1440 (16:9), JPEG quality 90 | Covers the screen without stretching and drifts in slowly. The left side is darkened for the menu column, so the subject stays in the right two-thirds. On narrower or upright screens the crop moves to keep `ART_FOCUS` in view (the chapel and the heir); on phones the menu sits over the darkened top with the scene showing below it |
+| `emblem.png` | The emblem above the title | 512 × 512, PNG with transparency | Shown at 112 px, with mipmaps so it stays crisp that small |
 
-Both are made with Higgsfield (GPT Image 2.5, high quality, 4K for the key
-art, 2K with a transparent background for the emblem), then downscaled.
+![The title screen](../../../docs/screenshots/main_menu.jpg)
 
-## Prompts
+## How they're made
+
+Both are drawn by the game itself, from its own village and the Sovereign's
+Eye, with [`tools/key_art.gd`](../../../tools/key_art.gd):
+
+```
+godot --path . --resolution 2560x1440 res://tools/key_art.tscn            # both, into this folder
+godot --path . --resolution 1280x720 res://tools/key_art.tscn -- 9 DIR preview   # the candidate views, to choose from
+godot --path . --resolution 1280x720 res://tools/key_art.tscn -- 9 res://assets/ui/menu/ emblem   # the emblem only
+godot --headless --path . --import
+```
+
+It needs a display (xvfb works) and draws the key art at the window's size.
+
+- **The key art.** The village of seed 9 (Stonestead) a little before sunset,
+  seen from the hills to its south.
+  - **The heir** stands on the rise in the right foreground, seen from
+    behind, looking down over the village.
+  - **The village:** the road leads in to the square and the chapel tower,
+    with villagers walking home along it.
+  - **Dressed for the picture, never the game:** a sky with clouds lit by
+    the low sun (`tools/key_art_sky.gdshader`), haze and light in the air,
+    and hills running on past the map's edge into the distance. The trees in
+    the line of sight and the grass under the lens are left out.
+- **The emblem.** The Eye as a reveal shows it at its fullest (`EyeEmblem`),
+  gold on royal blue, ringed by its legend OCVLVS PRINCIPIS OMNIA VIDET.
+
+To change the picture, edit `HOUR`, `VIEWS` and `KEY_VIEW` in the tool and
+render the previews first.
+
+## Rights
+
+Both images are renders of the game's own assets and are released, like the
+game's own 3D families, under CC0 1.0. The village kit and characters are
+Quaternius' (CC0 1.0), the props and buildings the game made itself (CC0 1.0).
+See [3D/SOURCES.md](../../../3D/SOURCES.md).
+
+## Painted art instead
+
+The art can be replaced by painted key art at any time: drop a `key_art.jpg`
+(2560 × 1440) and an `emblem.png` (512, transparent) here; nothing else
+changes. Briefs for an image generator, written for Higgsfield (GPT Image
+2.5, high quality, 4K for the key art, 2K with a transparent background for
+the emblem, then downscaled):
 
 **Key art** (16:9):
 
@@ -22,11 +63,6 @@ art, 2K with a transparent background for the emblem), then downscaled.
 
 > A heraldic game emblem, front view, centered, isolated on a fully transparent background. A gilded open human eye with a deep blue iris and a tiny gold glint, set in the middle of a radiant sunburst of fine gold rays, all on a heater shield of dark navy blue enamel with a thin raised gold border, a small simple gold crown above the shield. Medieval illuminated-manuscript and goldsmith style, crisp clean edges, subtle bevel and metallic sheen, symmetrical, no text, no letters, no background, no shadow.
 
-A dusk variant of the key art and a round seal variant of the emblem were
-made from the same brief; pick whichever reads best behind the menu.
-
-## Rights
-
 Images generated with Higgsfield are used under the Higgsfield account
-holder's plan terms; keep that plan's commercial-use terms in mind before
-shipping. They are not CC0 like the game's 3D families.
+holder's plan terms; check that plan's commercial-use terms before shipping
+them. They are not CC0 like the renders above.

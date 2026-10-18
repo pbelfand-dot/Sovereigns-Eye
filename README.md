@@ -8,6 +8,7 @@ with S+ Leadership. Find them.
 > **Status: Phase 3 in progress: your village builds, grows and attracts settlers** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
+![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
 ![The village](docs/screenshots/village.jpg)
 ![Town square](docs/screenshots/town_square.jpg)
 ![Appraising a villager](docs/screenshots/character_card.jpg)
