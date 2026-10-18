@@ -23,6 +23,8 @@ var _new_game_panel: PanelContainer
 var _seed_edit: LineEdit
 var _slots: SaveSlotDialog
 var _sound_panel: PanelContainer
+var _keys_panel: PanelContainer
+var _keys: ControlsSettings
 var _bg: TextureRect
 var _shade: TextureRect
 var _column: MarginContainer
@@ -260,10 +262,25 @@ func _build_column() -> void:
 	var sound_col := VBoxContainer.new()
 	sound_col.add_theme_constant_override("separation", 10)
 	_sound_panel.add_child(sound_col)
-	sound_col.add_child(UITheme.label("Settings", 22, UITheme.TEXT, true))
+	# Back and Keys beside the heading, where they're seen without scrolling.
+	var settings_head := HBoxContainer.new()
+	settings_head.add_theme_constant_override("separation", 10)
+	sound_col.add_child(settings_head)
+	var settings_title := UITheme.label("Settings", 22, UITheme.TEXT, true)
+	settings_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	settings_head.add_child(settings_title)
+	settings_head.add_child(UITheme.button("Keys...", _show_keys))
+	settings_head.add_child(UITheme.button("Back", _show_menu))
 	sound_col.add_child(SoundSettings.new())
 	sound_col.add_child(AccessibilitySettings.new())
-	sound_col.add_child(UITheme.button("Back", _show_menu))
+	_keys_panel = PanelContainer.new()
+	_keys_panel.visible = false
+	_keys_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	col.add_child(_keys_panel)
+	_keys = ControlsSettings.new()
+	_keys.list_height = 250.0
+	_keys.closed.connect(_show_sound)
+	_keys_panel.add_child(_keys)
 	_slots = SaveSlotDialog.new()
 	_slots.visible = false
 	_slots.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -371,6 +388,7 @@ func _show_menu() -> void:
 	_menu.visible = true
 	_new_game_panel.visible = false
 	_sound_panel.visible = false
+	_keys_panel.visible = false
 	_slots.visible = false
 	_set_header(true)
 	_focus_first()
@@ -378,8 +396,15 @@ func _show_menu() -> void:
 
 func _show_sound() -> void:
 	_menu.visible = false
+	_keys_panel.visible = false
 	_sound_panel.visible = true
 	_set_header(false)
+
+
+func _show_keys() -> void:
+	_sound_panel.visible = false
+	_keys_panel.visible = true
+	_keys.refresh()
 
 
 func _show_new_game() -> void:
@@ -420,7 +445,10 @@ func _latest_slot() -> String:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("menu") and not _menu.visible:
-		_show_menu()
+		if _keys_panel.visible:
+			_show_sound()
+		else:
+			_show_menu()
 		get_viewport().set_input_as_handled()
 
 

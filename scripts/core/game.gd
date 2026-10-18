@@ -8,6 +8,8 @@ signal before_save
 signal game_saved(slot: String)
 ## UI toast messages from anywhere in the game.
 signal notify(text: String, color: Color)
+## The player changed their keys (ControlsSettings): prompts and help re-read them.
+signal keys_changed
 
 const WORLD_SCENE := "res://scenes/world/world.tscn"
 const MENU_SCENE := "res://scenes/main/main.tscn"

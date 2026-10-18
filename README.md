@@ -66,6 +66,7 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 4 | NPCs walking around | Speed up time with **2**, **3**, **4**: people go to work, the tavern, the chapel and home to bed |
 | 5 | Look at someone with the Sovereign's Eye | Get near someone and face them: their name shows at the bottom. Press **Q** (controller **Y**). No talk needed, but they must be close (about 10 paces) and in plain sight, so you can't read a whole town from a menu. The reveal grows grander the rarer the person (Ordinary → Skilled → Exceptional → Legendary), each with its own music, light and sparks. See [docs/ROADMAP.md](docs/ROADMAP.md) |
 | 6 | Talk to the promising ones | Walk up and press **E** (controller **A**). Their talk may hint at a gift. **Ask about their life** to learn what they want, in their own words |
+| 6b | Listen as you pass | Villagers say a few words aloud as you walk by: a greeting that shows what they think of you, a word about their work, the hour or the season, a real worry (hunger, overwork, a crowded home) or a clue to a gift ("I won't be doing this forever. Mark me."). Never a rank or a number. Switch it off under **Esc → Villagers' remarks** |
 | 7 | Win them over | **Make an offer**: a daily wage, a home (a free one, rooms at the manor, or a promise), a place (household, training, an office, a workplace with tools, a squire's place) and an appeal to their duty. They accept, name their terms, or refuse, and say why. A refusal never closes the door: change the offer and propose again. Your own retainers can be offered new terms (a raise, an office) the same way. Different people want different things |
 | 8 | Keep your word | Wages are paid from the treasury every day, families really move into the homes you give, jobs need a real workplace, and a broken promise costs trust, your house's standing, and sometimes the person |
 | 9 | Happiness, loyalty, personality | Click anyone for their card → **Personality** tab, including *why* they feel that way |
@@ -85,6 +86,7 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 The same seed always creates the same village and the same people.
 
 ![On foot: the person you face comes into focus](docs/screenshots/on_foot.jpg)
+![Passing the steward: "I won't be doing this forever. Mark me."](docs/screenshots/remarks.jpg)
 ![The Sovereign's Eye: a Legendary reveal](docs/screenshots/eye_reveal.jpg)
 ![The four tiers: the Eye opening, the sealed card, the card turned](docs/screenshots/eye_tiers.jpg)
 ![Talking it through: what they want, your offer, their counteroffer](docs/screenshots/court_recruit.jpg)
@@ -155,6 +157,15 @@ new floors rise inside scaffolding.
 ![A new farmstead with its fields](docs/screenshots/new_farmstead.jpg)
 
 ### Controls
+
+Every key below can be changed: **Esc → Keys...** (or **Settings → Keys...**
+on the title screen). Click a key and press the new one. If that key is
+already used where it works, the two swap. On foot and on the map table one
+key may do different things (Q is the Eye on foot and turns the map). Prompts
+and the help overlay always name your keys, as your keyboard labels them.
+Controller buttons don't change.
+
+![Changing keys](docs/screenshots/keys.jpg)
 
 **On foot (as the heir)**
 
@@ -371,7 +382,7 @@ tools/run_tests.sh                       # Headless tests (generation, determini
                                          # court, territory, save/load, art pipeline, audio,
                                          # live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
-# Screenshots (needs a display): court | art | menus | build
+# Screenshots (needs a display): court | art | menus | build | barks | ...
 godot --path . res://tools/capture.tscn -- 12345 /tmp/shots build
 ```
 

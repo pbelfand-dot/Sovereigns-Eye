@@ -11,6 +11,7 @@ skill (current vs. hidden potential). Read `docs/ARCHITECTURE.md` first.
 - One test suite: `TEST_FILTER=recruitment tools/run_tests.sh`
 - Who'd join for what (tuning `data/recruitment.json`): `godot --headless --path . --script res://tools/recruit_report.gd -- <seed>`
 - Gameplay video (needs a display): `godot --path . --resolution 1280x720 --write-movie out.avi --fixed-fps 30 res://tools/gameplay_demo.tscn -- <seed>` (charters: `tools/charter_demo.tscn`)
+- Villagers' remarks as the heir walks past (needs a display): `godot --path . --resolution 1600x900 res://tools/capture.tscn -- <seed> <out_dir> barks`; the lines are in `data/barks.json`.
 - The Eye's reveal, each tier at its beats (needs a display): `godot --path . --resolution 1280x720 --fixed-fps 30 res://tools/capture.tscn -- <seed> <out_dir> eye` (`EYE_TIERS=legendary`, `EYE_CALM=1`). Its bells and music: `python3 tools/audio/make_stings.py` (then `--import` and `python3 tools/audio/build_audio_manifest.py`).
 - Title screen art (key art + emblem, rendered from the game into `assets/ui/menu/`, needs a display): `godot --path . --resolution 2560x1440 res://tools/key_art.tscn` (`-- 9 <dir> preview` for candidate views, `-- 9 res://assets/ui/menu/ emblem` for the emblem only; see `assets/ui/menu/README.md`).
 - Charter pacing (steward bot, data only): `godot --headless --path . --script res://tools/charter_sim.gd -- <seed> [days]`

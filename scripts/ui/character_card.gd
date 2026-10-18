@@ -20,6 +20,7 @@ var _age_label: Label
 var _family_label: Label
 var _home_label: Label
 var _now_label: Label
+var _follow: Button
 var _banner: PanelContainer
 var _banner_label: Label
 var _tabs: TabContainer
@@ -85,9 +86,9 @@ func _ready() -> void:
 	_now_label = UITheme.label("", 14, UITheme.TEXT_DIM)
 	_now_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(_now_label)
-	var follow := UITheme.button("Follow (C)", _on_follow)
-	follow.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	info.add_child(follow)
+	_follow = UITheme.button("Follow", _on_follow)
+	_follow.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	info.add_child(_follow)
 
 	_banner = PanelContainer.new()
 	_banner_label = UITheme.label("", 15, UITheme.TEXT, true)
@@ -158,6 +159,7 @@ func _process(delta: float) -> void:
 func refresh() -> void:
 	if character == null:
 		return
+	_follow.text = "Follow (%s)" % InputSetup.key_name("focus_selected", false)
 	var c := character
 	var st := world.state
 	_name_label.text = c.display_name()
@@ -343,7 +345,7 @@ func _build_court_recruit() -> void:
 		var weights := Recruitment.motives(st, who)
 		for id: String in c.known_motives:
 			_court_box.add_child(_motive_row(id, float(weights.get(id, 0.0))))
-	_court_box.add_child(_wrap_label("Offers are made face to face: walk up to %s and press E to talk." % c.first_name, 13, UITheme.TEXT_DIM))
+	_court_box.add_child(_wrap_label("Offers are made face to face: walk up to %s and press %s to talk." % [c.first_name, world.key_hint("interact")], 13, UITheme.TEXT_DIM))
 	_court_box.add_child(_wrap_label("Household: %d / %d  -  Gold: %d  -  Your word: %s" % [CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st), st.house.gold, Recruitment.standing_label(st.house.standing)], 13, UITheme.TEXT_DIM))
 
 

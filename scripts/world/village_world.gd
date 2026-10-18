@@ -80,6 +80,10 @@ var _ghost: BuildGhost
 var _turn := 0
 var _placement: Dictionary = {}
 var _placement_check: Dictionary = {}
+## Who has said what lately (data/barks.json), on a real-time clock.
+var barks: Barks
+var _bark_clock := 0.0
+var _bark_wait := 0.0
 
 
 func _ready() -> void:
@@ -228,7 +232,46 @@ func _process(delta: float) -> void:
 		_update_hover()
 		if mode == "walk" and talking_to < 0:
 			_update_focus()
+	_update_barks(delta)
 	_update_fades()
+
+
+## Villagers say a few words as the heir walks past them, checked a few
+## times a second (data/barks.json). Only on foot, with time running, one
+## voice at a time, and never over a conversation, the Eye or a menu.
+func _update_barks(delta: float) -> void:
+	_bark_clock += delta
+	_bark_wait -= delta
+	if _bark_wait > 0.0:
+		return
+	_bark_wait = 0.25
+	var heir := player_npc()
+	if heir == null or mode != "walk" or paused or talking_to >= 0 or is_revealing() \
+			or (ui and ui.is_menu_open()) or not GameSettings.remarks():
+		return
+	if barks == null:
+		barks = Barks.new(state.world_seed)
+	# One voice at a time: no one talks over someone still speaking.
+	for npc: NPC in npcs.values():
+		if npc.is_speaking():
+			return
+	var from := heir.global_position
+	for npc: NPC in npcs.values():
+		if npc == heir or not npc.visible:
+			continue
+		var d := Vector2(npc.global_position.x - from.x, npc.global_position.z - from.z).length()
+		if not barks.passing(npc.character, d, _bark_clock) or WorldGeometry.line_blocked(state, from, npc.global_position):
+			continue
+		var text := barks.remark(state, npc.character, _bark_clock)
+		if not text.is_empty():
+			npc.say(text, Barks.duration(text, barks.cfg))
+			return
+
+
+## Everyone stops mid-remark (a conversation or the Eye begins).
+func hush_remarks() -> void:
+	for npc: NPC in npcs.values():
+		npc.hush()
 
 
 func _check_new_day() -> void:
@@ -831,6 +874,7 @@ func set_view_mode(new_mode: String, force: bool = false) -> void:
 	var heir := player_npc()
 	if new_mode == "overview":
 		end_conversation()
+		hush_remarks()
 		_set_focus(null)
 		if heir_ctl:
 			heir_ctl.cancel_auto_walk()
@@ -853,7 +897,7 @@ func _hint_paused() -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	if now - _paused_hint_at > 6.0:
 		_paused_hint_at = now
-		Game.notify.emit("The game is paused. Press %s to walk on." % ("Space" if not (ui and ui.using_pad()) else "the D-pad down"), Game.COLOR_INFO)
+		Game.notify.emit("The game is paused. Press %s to walk on." % key_hint("toggle_pause"), Game.COLOR_INFO)
 
 
 ## How to press an action on the device in use ("E", "A"...).
@@ -934,7 +978,7 @@ func talk_check(character_id: int) -> Dictionary:
 	if c == null or heir == null or target == null:
 		return {"ok": false, "reason": ""}
 	if mode != "walk":
-		return {"ok": false, "reason": "Step down from the map table first (Tab)."}
+		return {"ok": false, "reason": "Step down from the map table first (%s)." % key_hint("toggle_overview")}
 	return Discovery.talk_check(state, heir.global_position, c, target.global_position)
 
 
@@ -946,7 +990,7 @@ func scan_check(character_id: int) -> Dictionary:
 	if c == null or heir == null or target == null:
 		return {"ok": false, "reason": ""}
 	if mode != "walk":
-		return {"ok": false, "reason": "The Eye works face to face: step down from the map table (Tab) and walk over."}
+		return {"ok": false, "reason": "The Eye works face to face: step down from the map table (%s) and walk over." % key_hint("toggle_overview")}
 	return Discovery.scan_check(state, heir.global_position, c, target.global_position)
 
 
@@ -968,6 +1012,7 @@ func try_talk(character_id: int) -> bool:
 	heir.face_point(target.global_position)
 	heir.set_anim("talk")
 	talking_to = character_id
+	hush_remarks()
 	_set_focus(target)
 	var cam_cfg := StrategyCamera.cfg()
 	camera_rig.close_in(float(cam_cfg.get("talk_distance", 7.0)), float(cam_cfg.get("talk_shift", -1.15)))
@@ -1028,6 +1073,7 @@ func use_eye(character_id: int) -> void:
 		heir.face_point(target.global_position)
 	_preferred_focus = character_id
 	var first := not c.appraised
+	hush_remarks()
 	_reveal = EyeReveal.new()
 	add_child(_reveal)
 	_reveal.finished.connect(_on_reveal_finished.bind(c.id, first))
@@ -1102,7 +1148,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if SaveManager.exists("quicksave"):
 			Game.load_game("quicksave")
 		else:
-			Game.notify.emit("No quicksave yet (press F5 to quicksave).", Game.COLOR_BAD)
+			Game.notify.emit("No quicksave yet (press %s to quicksave)." % InputSetup.key_name("quicksave", false), Game.COLOR_BAD)
 	elif event.is_action_pressed("toggle_overview"):
 		if not is_placing():
 			toggle_overview()

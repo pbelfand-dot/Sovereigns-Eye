@@ -190,7 +190,7 @@ func _growth(st: WorldState) -> void:
 
 func _orders(st: WorldState) -> void:
 	_heading("Order a building")
-	_body.add_child(_wrap("Pick one, then click beside a road to place it. It turns to face the road and a lane is laid to its door. T turns it, Shift+click places another, Esc cancels.", 13, UITheme.TEXT_DIM))
+	_body.add_child(_wrap(InputSetup.fill("Pick one, then click beside a road to place it. It turns to face the road and a lane is laid to its door. {key:turn_building} turns it, Shift+click places another, Esc cancels."), 13, UITheme.TEXT_DIM))
 	for def: Dictionary in TerritorySystem.buildable():
 		var type := str(def["type"])
 		var allowed := TerritorySystem.can_build(st, type)

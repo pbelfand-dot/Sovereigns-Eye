@@ -40,6 +40,7 @@ var chapel_only := false
 var castle_only := false
 var harbour_only := false
 var eye_only := false
+var barks_only := false
 
 
 func _ready() -> void:
@@ -66,6 +67,7 @@ func _ready() -> void:
 	castle_only = args.has("castle")
 	harbour_only = args.has("harbour")
 	eye_only = args.has("eye")
+	barks_only = args.has("barks")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -144,6 +146,10 @@ func _run() -> void:
 		return
 	if harbour_only:
 		await _harbour_shots()
+		get_tree().quit()
+		return
+	if barks_only:
+		await _bark_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1259,6 +1265,63 @@ func _talk_shots() -> void:
 ## as the seal breaks, "burst" just after the card turns and the sparks fly,
 ## "final" at the end with the choices. EYE_TIERS=skilled,legendary limits
 ## the tiers; EYE_CALM=1 turns on reduced motion and reduced flashes.
+## Villagers' remarks as the heir walks past (Barks): a few people at work
+## and about the square, each spoken to through the real system.
+func _bark_shots() -> void:
+	GameSettings.memory_only = true
+	GameSettings.set_bool("gameplay/remarks", true)
+	Game.state = WorldGenerator.generate(seed_text)
+	Game.state.minutes += 3.0 * 60.0
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	world.set_speed(0)
+	var st := world.state
+	var heir := world.player_npc()
+	world.barks = Barks.new(st.world_seed)
+	world.barks.cfg["chance"] = 1.0
+	world.barks.cfg["chance_traits"] = {}
+	world.barks.cfg["gap"] = 0.0
+	var shots := 0
+	var seen := {}
+	for p in st.characters:
+		if shots >= 4:
+			break
+		var npc := world.npc_of(p.id)
+		if st.is_player(p) or npc == null or not npc.visible or seen.has(p.occupation_id):
+			continue
+		var spot := Vector3.INF
+		for i in 16:
+			var q := npc.global_position + Vector3(cos(TAU * i / 16.0), 0, sin(TAU * i / 16.0)) * 3.2
+			if not WorldGeometry.inside_building(st, q, 0.8) and not WorldGeometry.line_blocked(st, q, npc.global_position):
+				spot = q
+				break
+		if spot == Vector3.INF:
+			continue
+		seen[p.occupation_id] = true
+		npc.brain.set_errand({"type": "hold", "face": spot})
+		heir.teleport(spot + (spot - npc.global_position).normalized() * 12.0)
+		world._process(0.3)
+		heir.teleport(spot)
+		var to := npc.global_position - spot
+		heir.rotation.y = atan2(-to.x, -to.z)
+		world.camera_rig.follow_target = heir
+		world.camera_rig.set_yaw(heir.rotation.y + 0.6, true)
+		for n in world.ui.find_children("*", "", true, false):
+			if n is ToastStack:
+				for t in n.get_children():
+					t.queue_free()
+		for i in 6:
+			world._process(0.1)
+		await _wait(24)
+		if npc.is_speaking():
+			print("barks: %s (%s): %s" % [p.full_name(), p.occupation_name(), npc.speech()])
+			shots += 1
+			await _shot("bark_%d.png" % shots)
+		world.hush_remarks()
+
+
 func _eye_shots() -> void:
 	GameSettings.memory_only = true
 	GameSettings.set_bool("accessibility/captions", true)
@@ -1366,6 +1429,9 @@ func _menu_shots() -> void:
 	menu.call("_show_sound")
 	await _wait(5)
 	await _shot("16_menu_sound.png")
+	menu.call("_show_keys")
+	await _wait(5)
+	await _shot("16_menu_keys.png")
 	menu.queue_free()
 	Game.state = WorldGenerator.generate(seed_text)
 	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
@@ -1374,6 +1440,15 @@ func _menu_shots() -> void:
 	world.ui.open_pause_menu()
 	await _wait(5)
 	await _shot("17_pause_sound.png")
+	# The keys, one of them waiting for its new key.
+	GameSettings.memory_only = true
+	world.ui._open_keys()
+	world.ui._keys.assign("sovereign_eye", KEY_G)
+	world.ui._keys._capture("interact")
+	await _wait(5)
+	await _shot("18_pause_keys.png")
+	world.ui._keys.cancel()
+	InputSetup.reset_keys()
 
 
 

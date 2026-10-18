@@ -1,0 +1,139 @@
+{
+  "_comment": "What villagers say aloud as the heir walks past them (Barks, NPC.say). A few words, then they carry on. Like a conversation (data/dialogue.json), a remark never names a rank or a number: a gift shows only as a clue, the stronger the gift the more often the talk turns to it, and modesty or boasting bends how it sounds. Worries are real: someone only grumbles about hunger, crowding or overwork when it's true. {lord} = my lord / my lady, {title} = lord / lady, {site} = a building going up, {charter} = the settlement's charter.",
+
+  "range": 6.0,
+  "leave_range": 9.0,
+  "_range": "The heir must come within `range` paces to be remarked on, and go past `leave_range` before the same person speaks again.",
+  "chance": 0.4,
+  "chance_traits": { "gregarious": 1.8, "cheerful": 1.4, "arrogant": 1.2, "shy": 0.35, "melancholic": 0.6, "humble": 0.8 },
+  "child_chance": 1.4,
+  "cooldown": 60.0,
+  "gap": 5.0,
+  "_timing": "Seconds of real time: no one speaks twice within `cooldown`, and no two remarks come within `gap` of each other.",
+  "duration": { "base": 2.2, "per_char": 0.045, "min": 2.6, "max": 5.5 },
+  "recent": 12,
+  "_recent": "A line isn't said again until this many others have been.",
+
+  "weights": { "greet": 3.0, "work": 3.0, "time": 1.2, "season": 1.0, "worry": 4.0, "happy": 1.5, "gift": 2.5, "village": 1.5, "eyed": 1.5 },
+  "fond_at": 30,
+  "sour_at": -20,
+  "lean_days": 3,
+  "_moods": "Opinion of the heir at or above `fond_at` is fond, at or below `sour_at` sour. The stores are lean below `lean_days` of food.",
+
+  "greet": {
+    "fond":  ["{lord}! Good to see you.", "Ah, {lord}! Always a pleasure.", "Fair day to you, {lord}!", "There's our {title}!"],
+    "civil": ["{lord}.", "Good day, {lord}.", "{lord}, God keep you.", "Your servant, {lord}."],
+    "sour":  ["Hmph.", "Oh. It's you.", "Come to count our chickens, {lord}?", "Don't let me keep you, {lord}."],
+    "sworn": ["At your command, {lord}.", "Anything you need, {lord}, just say.", "The house stands with you, {lord}."],
+    "kin":   ["There you are! Off on your rounds?", "Don't be late for supper.", "Mind you're back before dark."],
+    "child": ["Hello!", "Are you really the {title}?", "Mam says I have to bow to you.", "Is that a real sword?"]
+  },
+
+  "work": {
+    "lord":          ["Walk with me another time. I've petitions to hear.", "Our neighbours watch us closely. Remember it."],
+    "lady":          ["The household eats more than it earns, I swear it.", "Mind your boots in the hall."],
+    "noble_scion":   ["Latin again. Always Latin.", "My tutor says I'll make a scholar yet."],
+    "dowager":       ["In my day the hall was never this quiet.", "Sit with me before the light goes."],
+    "steward":       ["Three barrels short. Again.", "Every penny accounted for, {lord}."],
+    "housekeeper":   ["Out from under my feet, the bread's rising.", "Someone's tracked mud through my kitchen again."],
+    "knight":        ["Keep your guard up, {lord}. Always.", "The lads are slow on the left today."],
+    "guard_captain": ["All quiet on the roads, {lord}.", "I'll have the watch doubled after dark."],
+    "soldier":       ["Long road, short pay.", "Nothing on the road but carts and crows."],
+    "farmer":        ["Rain or shine, the furrows won't wait.", "Good black earth, this.", "Mind the seedlings, {lord}."],
+    "farmhand":      ["My back's not what it was.", "One more row, then bread."],
+    "woodcutter":    ["Stand clear, {lord}, she's coming down!", "Good straight oak, this."],
+    "miller":        ["The wheel's singing today.", "Mind the flour dust, {lord}. It gets everywhere."],
+    "baker":         ["Fresh loaves by noon, {lord}.", "Ovens are hot. Stand back a pace."],
+    "blacksmith":    ["Strike while it's hot, they say. They're right.", "This iron's got a temper on it."],
+    "carpenter":     ["Measure twice, cut once.", "Good seasoned timber. Hard to come by."],
+    "apprentice":    ["I'll get it right this time. I will.", "The master says my joints are crooked."],
+    "merchant":      ["Fine cloth, {lord}, fresh from the coast!", "Prices are up again. Blame the roads."],
+    "innkeeper":     ["The ale's good today, {lord}. Better than yesterday's.", "Another barrel to tap before the evening."],
+    "tavern_hand":   ["Mind the tray!", "Four tankards, two pies... or was it three pies?"],
+    "priest":        ["Bless you, {lord}.", "The roof leaks over the altar again."],
+    "herbalist":     ["Feverfew, yarrow, comfrey...", "Mind where you tread, that's good sorrel."],
+    "stonecutter":   ["Good stone rings true when you strike it.", "Dust in my lungs, dust in my bread."],
+    "laborer":       ["A day's work for a day's bread.", "Whatever needs hauling, I'll haul it."],
+    "builder":       ["Mind the scaffold, {lord}!", "Another course of stone by sundown."],
+    "_any":          ["Busy, busy, {lord}.", "No rest till sundown."]
+  },
+  "leisure": ["A fine day to do nothing at all.", "Have you heard the news from the mill?", "Sit, {lord}, take the weight off.", "A cup of ale and a bit of sun. That's all I ask."],
+  "play":    ["Can't catch me!", "I'm a knight! You be the dragon!", "Look, {lord}, a frog!", "Race you to the well!"],
+  "home":    ["Just fetching water, {lord}.", "Supper won't cook itself.", "Off home. My feet are done in."],
+
+  "time": {
+    "morning": ["Up with the larks, {lord}?", "Cold morning. It'll warm up.", "Early start, {lord}?"],
+    "midday":  ["Is it noon already?", "Sun's high. Time for bread and cheese."],
+    "evening": ["Nearly done for the day, thank the saints.", "Long shadows. Supper soon."],
+    "night":   ["Late to be abroad, {lord}.", "Mind the dark lanes, {lord}."]
+  },
+  "hours": { "morning": [5, 10], "midday": [10, 14], "evening": [17, 21], "night": [21, 5] },
+
+  "season": {
+    "Spring": ["Lambing season. No one's slept in a week.", "Smell that? Spring's here.", "Mud to the ankles. Good for the seed, though."],
+    "Summer": ["Hot enough to bake bread on the stones.", "Haymaking soon. Pray it stays dry."],
+    "Autumn": ["Harvest's in, or near enough.", "Leaves turning already.", "The geese are leaving. Winter's on its way."],
+    "Winter": ["Bitter cold. My fingers have forgotten me.", "Snow's coming. I can feel it in my knees."]
+  },
+
+  "worry": {
+    "hungry":     ["The stores are bare, {lord}. The children cry for bread.", "Nothing in the pot again tonight.", "We can't work on empty bellies, {lord}."],
+    "lean":       ["The granary's looking thin, {lord}.", "Bread's dear this week.", "Pray the harvest comes early."],
+    "overworked": ["I've not stopped since dawn. Nor yesterday.", "Too much work, too few hands.", "When do I sleep, {lord}?"],
+    "crowded":    ["Too many of us under one roof.", "We sleep three to a bed at home."],
+    "lonely":     ["Nobody much to talk to, these days.", "Quiet, isn't it? Always quiet."],
+    "restless":   ["There must be more to life than this.", "Same work, every day. I could do so much more.", "I wasn't made for this, {lord}. I know it."],
+    "unhappy":    ["Hard times, {lord}. Hard times.", "Don't mind me. Just a bad day. A bad week."]
+  },
+  "happy": ["What a day, {lord}!", "Life's good in this village. I'll say that.", "Can't complain, {lord}. Truly."],
+  "_worries": "unhappy: happiness below 35; happy: above 78; restless: a gifted, ambitious person stuck in humble work (MoodSystem.wasted_talent_penalty).",
+
+  "gift": {
+    "leadership": [
+      ["Someone has to tell them what to do.", "Right, lads, one more push."],
+      ["They'd listen if I spoke up. They always do.", "If I don't sort this out, nobody will."],
+      ["Folk follow me without my asking. Strange, that.", "Put me in charge and you'd see this place run like a mill."]
+    ],
+    "combat": [
+      ["I could take him at wrestling. Probably.", "Feel that arm, {lord}. Solid."],
+      ["Feet apart, weight low. That's how you hold a staff.", "Nobody in the lane can best me with a cudgel."],
+      ["Three men jumped me on the road once. Once.", "A blade sits in my hand like it was made for it."]
+    ],
+    "intelligence": [
+      ["Why do the swallows leave, I wonder?", "Now how does that work, exactly?"],
+      ["If the wheel turned the other way it'd grind faster. I'm sure of it.", "I counted the stars last night. Then I counted them again."],
+      ["I've worked out the moon's turnings on the barn door. All of them.", "The priest's sums are wrong. I checked them thrice."]
+    ],
+    "politics": [
+      ["Did you hear what the miller's wife said?", "Everyone tells me their secrets."],
+      ["I could patch up that quarrel over the fence, if they'd let me.", "The merchant always gives me his best price. I just smile."],
+      ["Half the village owes me a favour. The other half doesn't know it yet.", "I always know who's lying, {lord}. Always."]
+    ],
+    "administration": [
+      ["Two sacks, three sacks... where's the fourth?", "A place for everything."],
+      ["I know to the egg what every house has put by.", "The steward's tallies are a mess. I could mend them."],
+      ["I could tell you what every house owes, and to whom.", "Give me the granary keys and nothing would go to waste. Nothing."]
+    ],
+    "ambition": [
+      ["A bigger plot someday, maybe.", "One day I'll have a cart of my own."],
+      ["I won't be doing this forever. Mark me.", "There's a world past those hills."],
+      ["One day they'll sing about me, {lord}.", "I'll have a hall of my own before I'm grey. You'll see."]
+    ]
+  },
+  "child_gift": {
+    "leadership":     ["I'm the leader of our gang!", "Everyone plays my game, because it's the best."],
+    "combat":         ["I beat Tom at wrestling. Twice!", "Watch! I can hit that post from here!"],
+    "intelligence":   ["Why is the sky blue? Do you know?", "I can read the signs on the inn. Ask me one!"],
+    "politics":       ["I know a secret about the miller!", "If you give me a sweet I'll tell you who broke the cart."],
+    "administration": ["I've got eleven pebbles. I counted.", "I keep all my treasures in a row."],
+    "ambition":       ["When I grow up I'm going to be a knight!", "I'm going to live in a castle one day."]
+  },
+  "child_age": 13,
+
+  "village": {
+    "building": ["All that hammering at the new {site}. Good work, though.", "They say the {site} will be finished soon.", "Have you seen the new {site} going up?"],
+    "charter":  ["A {charter} now, they say. Fancy that.", "Folk come from all round since we got our charter."]
+  },
+
+  "eyed": ["There's something in your eye, {lord}. Like you're weighing me.", "Folk say you see right through people.", "You looked at me strangely the other day, {lord}."]
+}

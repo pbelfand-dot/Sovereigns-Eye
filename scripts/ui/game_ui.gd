@@ -37,6 +37,10 @@ var _help: PanelContainer
 var _pause_overlay: Control
 var _pause_menu: PanelContainer
 var _slots: SaveSlotDialog
+var _keys_panel: PanelContainer
+var _keys: ControlsSettings
+## Texts that name keys: [node, property, text with {key:action}] (InputSetup.fill).
+var _keyed: Array = []
 var _paused_before_menu := false
 
 
@@ -64,6 +68,7 @@ func setup(owner_world: VillageWorld) -> void:
 	_touch.world = world
 	_root.add_child(_touch)
 	_build_pause_menu()
+	Game.keys_changed.connect(_refresh_keys)
 	world.selection_changed.connect(_on_selection_changed)
 	world.speed_changed.connect(_on_speed_changed)
 	world.day_passed.connect(func(_d: int) -> void: refresh())
@@ -77,7 +82,8 @@ func setup(owner_world: VillageWorld) -> void:
 	_on_mode_changed(world.mode)
 	var p := world.state.player()
 	if p:
-		Game.notify.emit("You are %s, heir of %s. Walk among your people (WASD). Look at someone nearby and press Q for the Sovereign's Eye; walk up and press E to talk." % [p.full_name(), CourtSystem.house_name(world.state)], UITheme.TEXT)
+		Game.notify.emit("You are %s, heir of %s. Walk among your people (%s). Look at someone nearby and press %s for the Sovereign's Eye; walk up and press %s to talk." % [
+			p.full_name(), CourtSystem.house_name(world.state), InputSetup.move_text(), world.key_hint("sovereign_eye"), world.key_hint("interact")], UITheme.TEXT)
 	else:
 		Game.notify.emit("Welcome to %s." % world.state.village_name, UITheme.TEXT)
 
@@ -115,7 +121,7 @@ func _build_top_bar() -> void:
 		var b := Button.new()
 		b.text = labels[i]
 		b.toggle_mode = true
-		b.tooltip_text = "Space" if i == 0 else "Key %d" % i
+		_key_text(b, "tooltip_text", "Pause ({key:toggle_pause})" if i == 0 else "%s game speed ({key:speed_%d})" % [labels[i], i])
 		var index := i
 		b.pressed.connect(func() -> void: _on_speed_button(index))
 		b.set_meta("sfx", "ui_tick")
@@ -135,16 +141,16 @@ func _build_top_bar() -> void:
 	_map_button.tooltip_text = "The map table: plan your lands from above (Tab or M). Press again to walk as your heir."
 	row.add_child(_map_button)
 	var build_button := UITheme.button("Build", toggle_build)
-	build_button.tooltip_text = "Order new buildings, see the stores (B)"
+	_key_text(build_button, "tooltip_text", "Order new buildings, see the stores ({key:toggle_build})")
 	row.add_child(build_button)
 	var court_button := UITheme.button("Court", toggle_court)
-	court_button.tooltip_text = "Your court (K)"
+	_key_text(court_button, "tooltip_text", "Your court ({key:toggle_court})")
 	row.add_child(court_button)
 	var ledger_button := UITheme.button("Ledger", toggle_ledger)
-	ledger_button.tooltip_text = "Village ledger (L)"
+	_key_text(ledger_button, "tooltip_text", "Village ledger ({key:toggle_ledger})")
 	row.add_child(ledger_button)
 	var save_button := UITheme.button("Save", func() -> void: Game.save_game("quicksave"))
-	save_button.tooltip_text = "Quicksave (F5)"
+	_key_text(save_button, "tooltip_text", "Quicksave ({key:quicksave})")
 	row.add_child(save_button)
 	var menu_button := UITheme.button("Menu", open_pause_menu)
 	menu_button.tooltip_text = "Menu (Esc)"
@@ -200,7 +206,7 @@ func _layout_top_bar() -> void:
 		_house_label.add_theme_color_override("font_color", UITheme.BAD if st.house.in_debt else UITheme.ACCENT)
 	var width := _bar_row.size.x if _bar_row.size.x > 0.0 else get_viewport().get_visible_rect().size.x - 16.0
 	var charter := CharterSystem.title(st) if st.territory else ""
-	_charter_label.tooltip_text = "Charter: %s. Room for %d people. Build panel (B) to petition for the next." % [charter, CharterSystem.max_population(st)] if st.territory else ""
+	_charter_label.tooltip_text = "Charter: %s. Room for %d people. Build panel (%s) to petition for the next." % [charter, CharterSystem.max_population(st), InputSetup.key_name("toggle_build", false)] if st.territory else ""
 	var key := "%s|%s|%s|%s|%d" % [full_clock, appraised, house[0], charter, roundi(width)]
 	if key == _bar_key:
 		return
@@ -434,7 +440,8 @@ func _build_map_banner() -> void:
 	_map_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_map_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_map_banner.add_theme_stylebox_override("panel", UITheme.box(Color("#2a1f14e8"), UITheme.GOLD, 1, 6, 8))
-	var l := UITheme.label("The Map Table  -  plan from above.  Tab or M to walk as your heir again.", 15, UITheme.ACCENT)
+	var l := UITheme.label("", 15, UITheme.ACCENT)
+	_key_text(l, "text", "The Map Table  -  plan from above.  {keys:toggle_overview} to walk as your heir again.")
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_map_banner.add_child(l)
 	_map_banner.visible = false
@@ -444,7 +451,7 @@ func _build_map_banner() -> void:
 func _on_mode_changed(mode: String) -> void:
 	_map_banner.visible = mode == "overview" and world.heir_ctl != null
 	_map_button.text = "Walk" if mode == "overview" else "Map"
-	_map_button.tooltip_text = "Back to walking as your heir (Tab or M)" if mode == "overview" else "The map table: plan your lands from above (Tab or M)"
+	_map_button.tooltip_text = InputSetup.fill("Back to walking as your heir ({keys:toggle_overview})" if mode == "overview" else "The map table: plan your lands from above ({keys:toggle_overview})")
 
 
 ## The last input came from a controller (for button names in prompts).
@@ -565,7 +572,7 @@ func _update_stores_bar() -> void:
 		l.add_theme_color_override("font_color", UITheme.BAD if hungry else Color(str(TerritorySystem.resource_def(r).get("color", "#ffffff"))))
 	var people: Label = _stores_row.get_node("people")
 	people.text = "People %d" % st.characters.size()
-	people.tooltip_text = "Villagers, homes and the settler bar: open Build (B)"
+	people.tooltip_text = "Villagers, homes and the settler bar: open Build (%s)" % InputSetup.key_name("toggle_build", false)
 	var sites: Label = _stores_row.get_node("sites")
 	sites.visible = not st.territory.sites.is_empty()
 	sites.text = "Building %d" % st.territory.sites.size()
@@ -591,7 +598,9 @@ func _build_place_hint() -> void:
 	col.add_child(top)
 	_place_title = UITheme.label("", 17, UITheme.ACCENT, true)
 	top.add_child(_place_title)
-	top.add_child(UITheme.button("Turn (T)", func() -> void: world.turn_ghost()))
+	var turn := UITheme.button("", func() -> void: world.turn_ghost())
+	_key_text(turn, "text", "Turn ({key:turn_building})")
+	top.add_child(turn)
 	top.add_child(UITheme.button("Cancel (Esc)", func() -> void: world.cancel_placing()))
 	_place_reason = UITheme.label("", 15)
 	col.add_child(_place_reason)
@@ -656,18 +665,36 @@ func _build_help() -> void:
 		"Eye - the Sovereign's Eye on the person you face (be near, in sight)\n" + \
 		"Talk - speak with them when you're beside them\n" + \
 		"Map - the map table (build, plan)    Tap a villager - their card"
-	var text := UITheme.label(touch_help if GameSettings.touch_controls() else
-		"WASD / left stick - walk    Shift - run    Drag / right stick / arrows - turn the camera\n" +
-		"Q / (Y) - Sovereign's Eye on the person you look at (be near, in sight)\n" +
-		"E / (A) - talk: ask what they want, make an offer\n" +
-		"Tab or M - the map table (build, plan)    Click a villager - their card\n" +
-		"Wheel / pinch / R,F - zoom    Space - pause    1-4 - game speed\n" +
-		"B - build    K - your court    L - village ledger    F5 / F9 - quicksave / quickload\n" +
-		"Esc - close / menu    H - hide this help", 14, UITheme.TEXT_DIM)
+	var text := UITheme.label(touch_help, 14, UITheme.TEXT_DIM)
+	if not GameSettings.touch_controls():
+		_key_text(text, "text",
+			"{key:move} / left stick - walk    {key:run} - run    Drag / right stick / {key:look} - turn the camera\n" +
+			"{key:sovereign_eye} / (Y) - Sovereign's Eye on the person you look at (be near, in sight)\n" +
+			"{key:interact} / (A) - talk: ask what they want, make an offer\n" +
+			"{keys:toggle_overview} - the map table (build, plan)    Click a villager - their card\n" +
+			"Wheel / pinch / {key:cam_zoom_in},{key:cam_zoom_out} - zoom    {key:toggle_pause} - pause    {key:speed_1}-{key:speed_4} - game speed\n" +
+			"{key:toggle_build} - build    {key:toggle_court} - your court    {key:toggle_ledger} - village ledger    {key:quicksave} / {key:quickload} - quicksave / quickload\n" +
+			"Esc - close / menu    {key:toggle_help} - hide this help")
 	_help.add_child(text)
 	_root.add_child(_help)
 	# Fade the help away after a while; H brings it back.
 	get_tree().create_timer(45.0).timeout.connect(_auto_hide_help)
+
+
+## Sets `node.property` to `text` with its keys filled in, and keeps it up
+## to date when the player changes their keys.
+func _key_text(node: Object, property: String, text: String) -> void:
+	_keyed.append([node, property, text])
+	node.set(property, InputSetup.fill(text))
+
+
+func _refresh_keys() -> void:
+	for k: Array in _keyed:
+		if is_instance_valid(k[0]):
+			(k[0] as Object).set(str(k[1]), InputSetup.fill(str(k[2])))
+	_on_mode_changed(world.mode)
+	_bar_key = ""
+	refresh()
 
 
 func _auto_hide_help() -> void:
@@ -691,23 +718,43 @@ func _build_pause_menu() -> void:
 	center.add_child(stack)
 
 	_pause_menu = PanelContainer.new()
-	_pause_menu.custom_minimum_size = Vector2(320, 0)
 	stack.add_child(_pause_menu)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	_pause_menu.add_child(col)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 10)
+	_pause_menu.add_child(outer)
 	var title := UITheme.label("Paused", 26, UITheme.ACCENT, true)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(title)
-	col.add_child(HSeparator.new())
+	outer.add_child(title)
+	outer.add_child(HSeparator.new())
+	# The choices beside the settings; one above the other on narrow screens.
+	var columns := HFlowContainer.new()
+	columns.add_theme_constant_override("h_separation", 24)
+	columns.add_theme_constant_override("v_separation", 14)
+	columns.custom_minimum_size.x = minf(640.0, get_viewport().get_visible_rect().size.x - 64.0)
+	outer.add_child(columns)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	col.custom_minimum_size.x = 240
+	columns.add_child(col)
 	col.add_child(UITheme.button("Resume", close_pause_menu))
 	col.add_child(UITheme.button("Save Game", func() -> void: _open_slots("save")))
 	col.add_child(UITheme.button("Load Game", func() -> void: _open_slots("load")))
+	col.add_child(UITheme.button("Keys...", _open_keys))
 	col.add_child(UITheme.button("Main Menu", Game.quit_to_menu))
 	col.add_child(UITheme.button("Quit to Desktop", Game.quit_game))
-	col.add_child(HSeparator.new())
-	col.add_child(SoundSettings.new())
-	col.add_child(AccessibilitySettings.new())
+	var settings := VBoxContainer.new()
+	settings.add_theme_constant_override("separation", 10)
+	settings.custom_minimum_size.x = 340
+	columns.add_child(settings)
+	settings.add_child(SoundSettings.new())
+	settings.add_child(AccessibilitySettings.new())
+
+	_keys_panel = PanelContainer.new()
+	_keys_panel.visible = false
+	stack.add_child(_keys_panel)
+	_keys = ControlsSettings.new()
+	_keys.closed.connect(_close_keys)
+	_keys_panel.add_child(_keys)
 
 	_slots = SaveSlotDialog.new()
 	_slots.visible = false
@@ -718,6 +765,17 @@ func _build_pause_menu() -> void:
 
 func _on_slots_cancelled() -> void:
 	_slots.visible = false
+	_pause_menu.visible = true
+
+
+func _open_keys() -> void:
+	_pause_menu.visible = false
+	_keys_panel.visible = true
+	_keys.refresh()
+
+
+func _close_keys() -> void:
+	_keys_panel.visible = false
 	_pause_menu.visible = true
 
 
@@ -734,6 +792,7 @@ func open_pause_menu() -> void:
 	_pause_overlay.visible = true
 	_pause_menu.visible = true
 	_slots.visible = false
+	_keys_panel.visible = false
 
 
 func close_pause_menu() -> void:
@@ -769,6 +828,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _pause_overlay.visible:
 			if _slots.visible:
 				_on_slots_cancelled()
+			elif _keys_panel.visible:
+				_keys.close()
 			else:
 				close_pause_menu()
 		elif _conversation.visible:
