@@ -51,7 +51,24 @@ func test_key_art_and_emblem_when_present() -> void:
 	var bg: TextureRect = m.get("_bg")
 	if ResourceLoader.exists(MENU.KEY_ART):
 		check(not (bg.texture is GradientTexture2D), "the key art fills the screen")
-		check_eq(bg.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_COVERED, "covering it without stretching")
+		check_eq(bg.texture.get_size(), Vector2(2560, 1440), "the key art is 2560 x 1440")
+		var emblem := load(MENU.EMBLEM) as Texture2D
+		check(emblem != null and emblem.get_size() == Vector2(512, 512) and emblem.get_image().detect_alpha() != Image.ALPHA_NONE,
+			"the emblem is 512 px square on a clear background")
 	else:
 		check(bg.texture is GradientTexture2D, "without key art, a warm gradient")
 	m.free()
+
+
+func test_the_key_art_covers_any_screen_round_its_focus() -> void:
+	var art := Vector2(2560, 1440)
+	for screen: Vector2 in [Vector2(1280, 720), Vector2(1920, 1080), Vector2(2560, 1080), Vector2(1024, 768), Vector2(720, 1280), Vector2(1080, 2400)]:
+		var r: Rect2 = MENU.cover_rect(screen, art, MENU.ART_FOCUS)
+		check(r.encloses(Rect2(Vector2.ZERO, screen)), "%s: covered edge to edge (%s)" % [screen, r])
+		check(is_equal_approx(r.size.x / r.size.y, art.x / art.y), "%s: never stretched" % screen)
+		# What the menu shows of the art: its focus (the chapel and the heir)
+		# whenever the art is wider than the screen can show.
+		var focus := r.position + r.size * MENU.ART_FOCUS
+		check(Rect2(Vector2.ZERO, screen).grow(1.0).has_point(focus), "%s: the chapel and the heir in view" % screen)
+	var wide: Rect2 = MENU.cover_rect(Vector2(1920, 1080), art, MENU.ART_FOCUS)
+	check(wide.position.is_zero_approx(), "a 16:9 screen shows the whole picture")
