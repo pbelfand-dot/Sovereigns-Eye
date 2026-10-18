@@ -1,6 +1,7 @@
 class_name AccessibilitySettings
 extends VBoxContainer
-## Switches for motion, flashes and captions (saved in user://settings.cfg).
+## Switches for motion, flashes, captions, controls and villagers' remarks
+## (saved in user://settings.cfg).
 
 const OPTIONS := [
 	["accessibility/reduced_motion", "Reduce motion", "No camera moves, shakes, spins or card flips; shorter reveals."],
@@ -8,6 +9,7 @@ const OPTIONS := [
 	["accessibility/captions", "Captions for sound cues", "Short text for important sounds, like the Eye's bells."],
 	["controls/click_to_move", "Click to move", "Right-click the ground, or a person, and your heir walks there."],
 	["controls/touch_controls", "On-screen controls", "A joystick and big buttons for touch screens (always on for phones and tablets)."],
+	["gameplay/remarks", "Villagers' remarks", "Villagers say a few words aloud, over their heads, as you walk past."],
 ]
 
 

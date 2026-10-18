@@ -191,5 +191,13 @@ Different people, different paths (each one is a test in
   - **The card itself.** The back is tooled leather, with a window for the
     silhouette and a wax seal on ribbons that cracks, light leaking
     through. The front is grained parchment.
-- [ ] Optional: idle "bark" lines villagers say aloud as you pass; rebinding
+- [x] Optional: idle "bark" lines villagers say aloud as you pass; rebinding
       keys
+  - **Villagers' remarks** (`Barks`, `data/barks.json`): as the heir walks
+    by, a villager may say a few words over their head: a greeting by what
+    they think of you, their work, the hour or season, a real worry, or a
+    clue to a gift. Never a rank or a number. One voice at a time, no one
+    repeats themselves, and it can be switched off.
+  - **Rebinding keys** (Esc → Keys...): every keyboard key except Esc, by
+    where it works; a clash swaps the two; saved between sessions; prompts
+    and help name the player's keys as their keyboard labels them.

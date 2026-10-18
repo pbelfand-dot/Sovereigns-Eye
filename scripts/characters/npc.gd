@@ -37,6 +37,9 @@ var _anim_last := ""
 var focused := false
 ## Hides the ring and name over them (while the Eye's reveal shows them).
 var quiet := false
+## A remark said aloud over their head (Barks), and how long it has left.
+var _speech: Label3D
+var _speech_left := 0.0
 
 
 func setup(c: CharacterData) -> void:
@@ -148,6 +151,9 @@ func refresh_markers() -> void:
 	else:
 		_ring.material_override = Mats.emissive(Color("#f4ead2"), 0.8)
 	_label.visible = (hovered or selected or focused) and not quiet
+	if _speech:
+		# Above the name when it shows.
+		_speech.offset.y = 44.0 if _label.visible else 0.0
 	if _crest:
 		# The hover label already says "Heir (You)"; don't stack the crest on it.
 		_crest.visible = _is_player and _crest_on and not _label.visible
@@ -234,7 +240,65 @@ func set_inside(inside: bool) -> void:
 	visible = not inside
 	if inside:
 		stop()
+		hush()
 	refresh_markers()
+
+
+# --- Remarks ----------------------------------------------------------------------
+
+## Says `text` aloud for `seconds`: the words float over their head, then fade.
+func say(text: String, seconds: float) -> void:
+	if _speech == null:
+		_speech = Label3D.new()
+		_speech.name = "Speech"
+		_speech.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_speech.no_depth_test = true
+		_speech.fixed_size = true
+		_speech.pixel_size = 0.0011
+		_speech.font = UITheme.body_font()
+		_speech.font_size = 25
+		_speech.outline_size = 9
+		_speech.modulate = Color("#fff7e6")
+		_speech.outline_modulate = Color(0.08, 0.05, 0.03, 0.92)
+		_speech.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_speech.width = 420.0
+		_speech.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		_speech.position.y = _label.position.y
+		add_child(_speech)
+	_speech.text = "\u201c%s\u201d" % text
+	_speech_left = seconds
+	_speech.modulate.a = 0.0
+	refresh_markers()
+	_tick_speech(0.0)
+
+
+func is_speaking() -> bool:
+	return _speech_left > 0.0
+
+
+## What they're saying now ("" when quiet).
+func speech() -> String:
+	return _speech.text if _speech and is_speaking() else ""
+
+
+func hush() -> void:
+	_speech_left = 0.0
+	if _speech:
+		_speech.visible = false
+
+
+## Fades the remark in and out, in real time (it's there to be read, at any
+## game speed).
+func _tick_speech(delta: float) -> void:
+	if _speech == null or (_speech_left <= 0.0 and not _speech.visible):
+		return
+	_speech_left -= delta
+	if _speech_left <= 0.0:
+		hush()
+		return
+	_speech.visible = not quiet
+	var a := minf(_speech.modulate.a + delta * 6.0, 1.0)
+	_speech.modulate.a = minf(a, _speech_left / 0.4)
 
 
 func teleport(p: Vector3) -> void:
@@ -245,6 +309,7 @@ func teleport(p: Vector3) -> void:
 func tick(delta: float, time_scale: float) -> void:
 	if not visible:
 		return
+	_tick_speech(delta)
 	if driven:
 		_tick_driven(delta, time_scale)
 		return

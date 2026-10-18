@@ -424,7 +424,7 @@ static func check_placement(state: WorldState, type: String, pos: Vector3, rot: 
 		for k in steps + 1:
 			var q := start.lerp(end, float(k) / steps)
 			if point_in_rect(q, pos, rot, half, 0.2):
-				out["reason"] = "Turn it so the door faces a road (T)."
+				out["reason"] = "Turn it so the door faces a road (%s)." % InputSetup.key_name("turn_building", false)
 				return out
 			for b in layout.buildings:
 				if point_in_rect(q, b.position, b.rotation, b.footprint * 0.5, 0.4):

@@ -1,16 +1,18 @@
 class_name GameSettings
 extends RefCounted
 ## Player preferences kept in user://settings.cfg (shared with the audio
-## volumes): accessibility switches and which Eye reveals have been seen.
+## volumes): accessibility switches, the player's keys and which Eye reveals
+## have been seen.
 ## Values are cached; every change is written straight away.
 
-const PATH := "user://settings.cfg"
+static var path := "user://settings.cfg"
 const DEFAULTS := {
 	"accessibility/reduced_motion": false,
 	"accessibility/reduce_flashes": false,
 	"accessibility/captions": false,
 	"controls/click_to_move": false,
 	"controls/touch_controls": false,
+	"gameplay/remarks": true,
 }
 
 static var _cache: Dictionary = {}
@@ -24,7 +26,7 @@ static func _load() -> void:
 		return
 	_loaded = true
 	var cf := ConfigFile.new()
-	if cf.load(PATH) != OK:
+	if cf.load(path) != OK:
 		return
 	for section in cf.get_sections():
 		if section == "audio":
@@ -39,15 +41,40 @@ static func get_bool(key: String) -> bool:
 
 
 static func set_bool(key: String, value: bool) -> void:
+	set_value(key, value)
+
+
+## Any other saved value ("keys/<action>" for the player's keys), null if unset.
+static func get_value(key: String, default: Variant = null) -> Variant:
+	_load()
+	return _cache.get(key, DEFAULTS.get(key, default))
+
+
+static func set_value(key: String, value: Variant) -> void:
 	_load()
 	_cache[key] = value
 	if memory_only:
 		return
 	var cf := ConfigFile.new()
-	cf.load(PATH)  # keep the other sections (audio volumes)
+	cf.load(path)  # keep the other sections (audio volumes)
 	var parts := key.split("/")
 	cf.set_value(parts[0], parts[1], value)
-	cf.save(PATH)
+	cf.save(path)
+
+
+## Forgets a saved value (back to its default).
+static func erase(key: String) -> void:
+	_load()
+	_cache.erase(key)
+	if memory_only:
+		return
+	var cf := ConfigFile.new()
+	if cf.load(path) != OK:
+		return
+	var parts := key.split("/")
+	if cf.has_section_key(parts[0], parts[1]):
+		cf.erase_section_key(parts[0], parts[1])
+		cf.save(path)
 
 
 static func reduced_motion() -> bool:
@@ -71,6 +98,11 @@ static func click_to_move() -> bool:
 ## optional elsewhere (touch-screen laptops).
 static func touch_controls() -> bool:
 	return OS.has_feature("mobile") or get_bool("controls/touch_controls")
+
+
+## Villagers say a few words aloud as the heir walks past (Barks).
+static func remarks() -> bool:
+	return get_bool("gameplay/remarks")
 
 
 ## Has the player watched this tier's full reveal before? (Then it may be skipped.)
