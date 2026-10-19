@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 4 in progress: the years turn. People grow up, marry, have children who inherit their gifts, and die; you choose your own match, and your kin's, and your house carries on** (internal codename "Project Appraisal").
+> **Status: Phase 4 done: the years turn. People grow up, marry, have children who inherit their gifts, and die; you choose your own match and your kin's, name your heir, and play on as them when you die** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -87,6 +87,9 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 24 | Marry | Talk to someone unmarried of an age with you and **Ask for their hand**. They weigh it and tell you why: what they think of you, the station it brings, a sweetheart already. Or wait for a suitor: a neighbouring noble house sends a son or daughter to stay at the manor for a season. Look at them with the Eye (their family's letter only praises), then **Accept the match** for the dowry, or **Send them home** |
 | 25 | Match your kin and retainers | Card → **Court** → **Find a match...**. Both must agree: kin do their duty unless they dislike the match or love someone else; retainers agree if they're loyal or fond. A gifted pair often has gifted children |
 | 26 | Children's lessons | The house's children (6 to 17) study with tutors at the manor, 1 gold a day each. Choose what they learn on their card's **Court** tab; the Eye shows where their gifts lie |
+| 27 | Name your heir | Open one of your children's cards → **Court** → **Name ... your heir**. Any child, not just the eldest: pass over a dull firstborn for the gift the Eye found (the elder takes it ill, once) |
+| 28 | Live and die | You age like everyone. Around 62 you're told your health is failing; when you die you go on as your heir. A ruler under 16 has a regent (Court panel → **Choose another regent...**) |
+| 29 | Let the years pass | Court panel (**K**) → **Let a season pass** / **Let a year pass**: the days run and you read what happened. It stops early for what needs you: a suitor, a death in the family, your health. **Family tree** shows the house from its eldest forebear down |
 
 The same seed always creates the same village and the same people.
 
@@ -197,6 +200,22 @@ Eye shows who is truly gifted. `MatchSystem`, `data/matches.json`.
 ![A suitor from a neighbouring house, met on the square: the match, their letter, and the answer to give](docs/screenshots/matches_suitor.jpg)
 ![The Court panel's Marriages: the suitor visiting, unmarried kin, the children at their lessons](docs/screenshots/matches_court.jpg)
 ![Matching a sister from her card: a rival refuses, and says why](docs/screenshots/matches_kin.jpg)
+
+### Succession (Phase 4, step 3)
+
+You don't play one life but a house. `Succession`, `data/succession.json`.
+
+| | What happens |
+|---|---|
+| **Your heir** | Your eldest child is your heir until you name another: any of your children, from their card. The Eye matters here: a younger child with S-rank Leadership may serve the house better than the eldest. An older child passed over takes it ill (once) |
+| **Your death** | You live on the same gentle curve as everyone (mostly old age, in your 60s and 70s, now and then an illness), and you're warned once when your health starts to fail. When you die, you go on as your heir: their body is yours, the village's opinion of you is partly theirs, and what the Eye has seen stays seen. With no child, the line passes to a grandchild, then a brother or sister, then your husband or wife, then anyone of the house. Only when no one of the house is left is the game over |
+| **Regency** | A ruler under 16 rules through a regent: their living parent, else grown kin, else the most loyal retainer (choose another from the Court panel). A capable regent's Administration raises the house's income, a poor one's lowers it, and a regent with thin loyalty pockets some of each day's gold. At 16 you rule in your own right |
+| **The years** | **Let a season pass** or **Let a year pass** runs the days a few at a time (no one moves meanwhile) and then shows what happened: people, gold and renown before and after, births, deaths, weddings and settlers, and the news. It stops early for a suitor, a death in the family, your own death, your health failing or a regency ending |
+| **Family tree** | The house from its eldest known forebear down, each generation indented under its parents, with husbands and wives, the years each person lived and the years each ruler ruled |
+
+![The family tree after sixty years: five generations, three rulers, your named heir](docs/screenshots/succession_tree.jpg)
+![A lord dies young: his son, thirteen, rules through his mother as regent](docs/screenshots/succession_regency.jpg)
+![Letting a year pass: the village before and after, and the news](docs/screenshots/succession_years.jpg)
 
 ### Controls
 
@@ -424,24 +443,27 @@ tools/run_tests.sh                       # Headless tests (generation, determini
                                          # court, territory, save/load, art pipeline, audio,
                                          # live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
-# Screenshots (needs a display): court | art | menus | build | barks | life | matches | ...
+# Screenshots (needs a display): court | art | menus | build | barks | life | matches | succession | ...
 godot --path . res://tools/capture.tscn -- 12345 /tmp/shots build
 # A village through the years, data only (population, births, deaths, weddings)
 godot --headless --path . --script res://tools/life_sim.gd -- 12345 40
-# ...with a steward bot building, and the heir taking a gifted suitor
-godot --headless --path . --script res://tools/life_sim.gd -- 12345 20 steward matches
+# ...with a steward bot building, gifted suitors taken and the most gifted child
+# named heir: a century passes through several rulers
+godot --headless --path . --script res://tools/life_sim.gd -- 12345 100 steward matches heirs
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 4, step 2)
+## 9. Known limitations (Phase 4)
 
 * A Town holds 200 people; there is no charter beyond it yet.
-* Choosing your heir and playing on as them come in Phase 4 step 3. Until then
-  the heir can't die. The house's own (kin and retainers) don't court on their
-  own: match them from their card. Suitors come for the heir and kin, not for
-  retainers.
+* The house's own (kin and retainers) don't court on their own: match them
+  from their card. Suitors come for the heir and kin, not for retainers.
+* A regent only moves the house's income; they don't yet make decisions of
+  their own, and a child ruler can do everything a grown one can.
+* While the years pass no one walks about; everyone takes up their day again
+  afterwards. Births, deaths and new homes all happen, only unseen.
 * The noble houses round about are names, seats, renown and their regard for
   yours; you can't visit them or send your kin to them yet (the wider realm is
   Phase 5).

@@ -1,0 +1,34 @@
+{
+  "_comment": "Phase 4.3, succession (Succession). You live and die like everyone else (data/life.json \"death\"); when you die you play on as your heir. Decided with the player: any of your children can be named heir; a child who inherits rules through a regent until of_age; the years can be let pass a season or a year at a time.",
+
+  "heir": {
+    "_comment": "Naming a younger child over an older one hurts the older one (once each): opinion of you and, if they serve, loyalty. With no child the line passes to the nearest kin of the house: siblings, then a spouse, then the rest of the family (the grown and the eldest first).",
+    "passed_over_opinion": -30,
+    "passed_over_loyalty": -15
+  },
+
+  "health": {
+    "_comment": "When your yearly chance of dying reaches warn_yearly (about 62 on the curve) you're told your health is failing, once, so you can see to your heir.",
+    "warn_yearly": 0.025
+  },
+
+  "new_ruler": {
+    "_comment": "What people think of the new ruler: keep of what they thought of the old one, the rest from their own tie to the new one (their opinion of them, or 0 for strangers). Retainers' loyalty is to the house and stays.",
+    "keep": 0.6
+  },
+
+  "regency": {
+    "_comment": "A ruler under of_age rules through a regent: their living parent, else grown kin, else the most loyal grown retainer (you can choose another from the Court panel). The regent's Administration moves the house's income by income_per_point a point above or below income_pivot. A regent whose loyalty is below skim_below pockets skim_share of each day's income.",
+    "of_age": 16,
+    "income_pivot": 40,
+    "income_per_point": 0.004,
+    "skim_below": 40,
+    "skim_share": 0.2
+  },
+
+  "pass_time": {
+    "_comment": "Let the years pass (the Court panel): a season or a year (data/society.json calendar), a few days a frame, stopped early by what needs you: a suitor arriving, a death in the house, a new ruler, your health failing, a regency ending, the house ending.",
+    "days_per_frame": 2,
+    "stop_on": ["visitor", "kin_death", "succession", "health", "regency_end", "ended"]
+  }
+}

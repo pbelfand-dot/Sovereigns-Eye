@@ -31,6 +31,7 @@ func _init() -> void:
 		TerritorySystem.daily_update(st)
 		LifeSystem.daily_update(st)
 		MatchSystem.daily_update(st)
+		Succession.daily_update(st)
 		GrowthSystem.daily_update(st)
 		_build(st)
 		var r := CharterSystem.petition(st)

@@ -260,6 +260,18 @@ static func migrate(data: Dictionary) -> Dictionary:
 				taken.append(str(f.get("name", "")))
 			data["realm"] = RealmData.generate(int(data.get("seed", 0)), taken).to_dict()
 		data["save_version"] = 14
+		version = 14
+	if version == 14:
+		# v15 (Phase 4.3, succession): the house remembers its rulers in turn,
+		# starting with today's head; no heir is named and no regent rules.
+		var house: Dictionary = data.get("house", {})
+		if not house.is_empty() and not house.has("rulers"):
+			var head := -1
+			for f: Dictionary in data.get("families", []):
+				if int(f.get("id", -1)) == int(data.get("ruling_family", -1)):
+					head = int(f.get("head", -1))
+			house["rulers"] = [{"id": head, "from": 0, "to": -1}] if head >= 0 else []
+		data["save_version"] = 15
 	return data
 
 

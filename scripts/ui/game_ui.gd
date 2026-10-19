@@ -17,6 +17,11 @@ var _speed_buttons: Array[Button] = []
 var _card: CharacterCard
 var _ledger: LedgerPanel
 var _court: CourtPanel
+var _tree: FamilyTreePanel
+var _years_overlay: ColorRect
+var _years: YearsPanel
+var _ended_overlay: ColorRect
+var _ended_text: Label
 var _build: BuildPanel
 var _building_card: BuildingCard
 var _conversation: NegotiationPanel
@@ -55,6 +60,7 @@ func setup(owner_world: VillageWorld) -> void:
 	_build_card()
 	_build_ledger()
 	_build_court()
+	_build_tree()
 	_build_build_panel()
 	_build_building_card()
 	_build_conversation()
@@ -68,6 +74,8 @@ func setup(owner_world: VillageWorld) -> void:
 	_touch.world = world
 	_root.add_child(_touch)
 	_build_pause_menu()
+	_build_years()
+	_build_ended()
 	Game.keys_changed.connect(_refresh_keys)
 	world.selection_changed.connect(_on_selection_changed)
 	world.speed_changed.connect(_on_speed_changed)
@@ -78,14 +86,23 @@ func setup(owner_world: VillageWorld) -> void:
 	world.conversation_started.connect(_on_conversation_started)
 	world.conversation_ended.connect(func() -> void: _conversation.visible = false)
 	world.mode_changed.connect(_on_mode_changed)
+	world.player_changed.connect(func(_id: int) -> void: refresh())
+	world.house_ended.connect(_on_house_ended)
+	world.time_passing.connect(func(done: int, total: int) -> void: _years.show_progress(done, total, world.state.whole_minutes()))
 	_on_speed_changed(world.time_scale())
 	_on_mode_changed(world.mode)
 	var p := world.state.player()
 	if p:
-		Game.notify.emit("You are %s, heir of %s. Walk among your people (%s). Look at someone nearby and press %s for the Sovereign's Eye; walk up and press %s to talk." % [
-			p.full_name(), CourtSystem.house_name(world.state), InputSetup.move_text(), world.key_hint("sovereign_eye"), world.key_hint("interact")], UITheme.TEXT)
+		Game.notify.emit("You are %s, %s. Walk among your people (%s). Look at someone nearby and press %s for the Sovereign's Eye; walk up and press %s to talk." % [
+			p.full_name(), _role_phrase(p), InputSetup.move_text(), world.key_hint("sovereign_eye"), world.key_hint("interact")], UITheme.TEXT)
 	else:
 		Game.notify.emit("Welcome to %s." % world.state.village_name, UITheme.TEXT)
+
+
+## "heir of House Valcourt", "Lady of Stonestead".
+func _role_phrase(p: CharacterData) -> String:
+	var role := CourtSystem.role_name(world.state, p)
+	return role.substr(0, 1).to_lower() + role.substr(1) if role.begins_with("Heir") else role
 
 
 # --- Top bar -------------------------------------------------------------------------
@@ -292,12 +309,126 @@ func _build_court() -> void:
 	_court.close_requested.connect(toggle_court)
 
 
+func _build_tree() -> void:
+	_tree = FamilyTreePanel.new()
+	_tree.world = world
+	_tree.anchor_left = 0.0
+	_tree.anchor_right = 0.0
+	_tree.anchor_top = 0.0
+	_tree.anchor_bottom = 1.0
+	_tree.offset_left = 12
+	_tree.offset_right = 12 + 600
+	_tree.offset_top = 96
+	_tree.offset_bottom = -12
+	_tree.visible = false
+	_root.add_child(_tree)
+	_tree.character_chosen.connect(func(id: int) -> void: world.select_character(id, true))
+	_tree.close_requested.connect(toggle_tree)
+
+
+## The house's family tree (from the Court panel).
+func toggle_tree() -> void:
+	_tree.visible = not _tree.visible
+	Audio.play("panel_open" if _tree.visible else "panel_close")
+	if _tree.visible:
+		_court.visible = false
+		_ledger.visible = false
+		_tree.refresh()
+
+
+func is_tree_open() -> bool:
+	return _tree != null and _tree.visible
+
+
+# --- Letting the years pass (Phase 4.3) ----------------------------------------------------
+
+func _build_years() -> void:
+	_years_overlay = ColorRect.new()
+	_years_overlay.color = Color(0, 0, 0, 0.55)
+	_years_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_years_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_years_overlay.visible = false
+	_root.add_child(_years_overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_years_overlay.add_child(center)
+	_years = YearsPanel.new()
+	center.add_child(_years)
+	_years.closed.connect(func() -> void: _years_overlay.visible = false)
+
+
+## Lets `days` pass (a season, a year) and shows what happened.
+func pass_time(days: int) -> Dictionary:
+	if world.passing:
+		return {}
+	_court.visible = false
+	_tree.visible = false
+	_ledger.visible = false
+	world.deselect()
+	_years_overlay.visible = true
+	_years.show_progress(0, days, world.state.whole_minutes())
+	var summary: Dictionary = await world.pass_time(days)
+	if summary.is_empty():
+		_years_overlay.visible = false
+		return summary
+	Audio.play("panel_open")
+	_years.show_summary(summary)
+	refresh()
+	return summary
+
+
+func is_years_open() -> bool:
+	return _years_overlay != null and _years_overlay.visible
+
+
+# --- The house ended ------------------------------------------------------------------------
+
+func _build_ended() -> void:
+	_ended_overlay = ColorRect.new()
+	_ended_overlay.color = Color(0, 0, 0, 0.7)
+	_ended_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ended_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_ended_overlay.visible = false
+	_root.add_child(_ended_overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ended_overlay.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+	var title := UITheme.label("The House Is Ended", 26, UITheme.ACCENT, true)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+	_ended_text = UITheme.label("", 16, UITheme.TEXT)
+	_ended_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ended_text.custom_minimum_size.x = 480
+	box.add_child(_ended_text)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+	row.add_child(UITheme.button("Load Game", func() -> void:
+		_ended_overlay.visible = false
+		open_pause_menu()
+		_open_slots("load")))
+	row.add_child(UITheme.button("Main Menu", Game.quit_to_menu))
+
+
+func _on_house_ended(text: String) -> void:
+	_years_overlay.visible = false
+	_ended_text.text = "%s\n\nWith no one left to carry the name, your story in %s is over. Load a save to go back, or begin anew." % [text, world.state.village_name]
+	_ended_overlay.visible = true
+
+
 func toggle_ledger() -> void:
 	_ledger.visible = not _ledger.visible
 	Audio.play("panel_open" if _ledger.visible else "panel_close")
 	if _ledger.visible:
 		_help.visible = false
 		_court.visible = false
+		_tree.visible = false
 		_build.visible = false
 		_ledger.refresh()
 
@@ -308,6 +439,7 @@ func toggle_court() -> void:
 	if _court.visible:
 		_help.visible = false
 		_ledger.visible = false
+		_tree.visible = false
 		_build.visible = false
 		_court.refresh()
 
@@ -320,6 +452,7 @@ func toggle_build() -> void:
 		_help.visible = false
 		_ledger.visible = false
 		_court.visible = false
+		_tree.visible = false
 		_build.refresh()
 
 
@@ -351,6 +484,8 @@ func refresh() -> void:
 		_ledger.refresh()
 	if _court.visible:
 		_court.refresh()
+	if _tree.visible:
+		_tree.refresh()
 	if _build.visible:
 		_build.refresh()
 
@@ -780,7 +915,7 @@ func _close_keys() -> void:
 
 
 func is_menu_open() -> bool:
-	return _pause_overlay.visible
+	return _pause_overlay.visible or is_years_open() or (_ended_overlay != null and _ended_overlay.visible)
 
 
 func open_pause_menu() -> void:
@@ -832,6 +967,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				_keys.close()
 			else:
 				close_pause_menu()
+		elif is_years_open():
+			if not world.passing:
+				_years_overlay.visible = false
+		elif _ended_overlay.visible:
+			pass
 		elif _conversation.visible:
 			world.end_conversation()
 		elif _card.visible or _building_card.visible:
@@ -840,6 +980,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			toggle_ledger()
 		elif _court.visible:
 			toggle_court()
+		elif _tree.visible:
+			toggle_tree()
 		elif _build.visible:
 			toggle_build()
 		else:

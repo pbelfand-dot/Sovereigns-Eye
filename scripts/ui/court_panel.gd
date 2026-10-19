@@ -8,6 +8,7 @@ signal close_requested
 
 var world: VillageWorld
 var _body: VBoxContainer
+var _choosing_regent := false
 
 
 func _init() -> void:
@@ -51,6 +52,7 @@ func refresh() -> void:
 	if player:
 		var role := CourtSystem.role_name(st, player)
 		_body.add_child(_person_button(player, "%s: %s (you), %d" % ["Heir" if role.begins_with("Heir") else role, player.full_name(), player.age]))
+	_succession(st)
 	_marriages(st)
 	var income := CourtSystem.daily_income(st)
 	var wages := CourtSystem.daily_wages(st)
@@ -113,6 +115,81 @@ func refresh() -> void:
 			break
 
 
+## Your health and heir, a regency while you're young, the family tree, and
+## letting the years pass (Phase 4.3).
+func _succession(st: WorldState) -> void:
+	var player := st.player()
+	if player == null:
+		return
+	_heading("Succession")
+	var failing := Succession.failing(player)
+	_body.add_child(_wrap("Your health is failing (you are %d). See to your heir." % player.age if failing else "You are %d and in good health." % player.age,
+		14, UITheme.BAD if failing else UITheme.TEXT))
+	var heir := Succession.heir(st)
+	if heir:
+		var how := "named" if Succession.is_named(st, heir) else "your eldest"
+		_body.add_child(_person_button(heir, "Your heir: %s, %d (%s)  -  name another child from their card" % [heir.display_name(), heir.age, how]))
+	else:
+		var next := Succession.successor(st, player)
+		_body.add_child(_wrap("You have no child. Were you to die, %s." % ("the house would pass to %s" % next.full_name() if next else "no one would follow you and the house would end"),
+			14, UITheme.TEXT_DIM if next else UITheme.BAD))
+	if Succession.minority(st):
+		_regency(st, player)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.add_child(UITheme.button("Family tree", func() -> void: world.ui.toggle_tree()))
+	var season := UITheme.button("Let a season pass", func() -> void: world.ui.pass_time(Calendar.days_per_season()))
+	season.tooltip_text = "Skip %d days and read what happened. It stops early for what needs you: a suitor, a death in the family, your health." % Calendar.days_per_season()
+	row.add_child(season)
+	var year := UITheme.button("Let a year pass", func() -> void: world.ui.pass_time(Calendar.days_per_year()))
+	year.tooltip_text = "Skip %d days (a year) and read what happened. It stops early for what needs you." % Calendar.days_per_year()
+	row.add_child(year)
+	_body.add_child(row)
+
+
+## Who rules for you, how well, and who else could.
+func _regency(st: WorldState, player: CharacterData) -> void:
+	var r := Succession.regent(st)
+	var years := Succession.of_age() - player.age
+	if r:
+		var f := Succession.regent_income_factor(st)
+		_body.add_child(_person_button(r, "Regent: %s, %d  -  rules for you for %d more year%s" % [r.display_name(), r.age, years, "" if years == 1 else "s"]))
+		_body.add_child(_wrap("Their Administration (%d) moves the house's income %+d%%." % [r.get_current("administration"), roundi(f * 100.0)], 13, UITheme.GOOD if f >= 0.0 else UITheme.BAD))
+		var skim := Succession.regent_skim(st, CourtSystem.daily_income(st))
+		if skim > 0:
+			_body.add_child(_wrap("Their loyalty is thin (%d): they pocket %d gold a day." % [roundi(r.loyalty), skim], 13, UITheme.BAD))
+	else:
+		_body.add_child(_wrap("No one is fit to rule for you: you rule alone until you are %d." % Succession.of_age(), 14, UITheme.TEXT_DIM))
+	var toggle := UITheme.button("Hide" if _choosing_regent else "Choose another regent...", func() -> void:
+		_choosing_regent = not _choosing_regent
+		refresh())
+	toggle.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_body.add_child(toggle)
+	if not _choosing_regent:
+		return
+	var choices: Array[CharacterData] = []
+	for c in st.characters:
+		if c != r and Succession.can_be_regent(st, c)["ok"]:
+			choices.append(c)
+	choices.sort_custom(func(a: CharacterData, b: CharacterData) -> bool: return a.get_current("administration") > b.get_current("administration"))
+	if choices.is_empty():
+		_body.add_child(_wrap("No one else could: your grown kin and retainers may.", 13, UITheme.TEXT_DIM))
+	for c in choices.slice(0, 8):
+		var b := Button.new()
+		b.theme_type_variation = "RowButton"
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.add_theme_font_size_override("font_size", 14)
+		var adm := "Administration %d" % c.get_current("administration") if c.appraised else "Administration ? (not seen with the Eye)"
+		b.text = "Make regent: %s, %d, %s  -  %s  -  loyalty %d" % [c.display_name(), c.age, CourtSystem.role_name(st, c).to_lower(), adm, roundi(c.loyalty)]
+		b.pressed.connect(func() -> void:
+			var res := Succession.set_regent(st, c)
+			Game.notify.emit(str(res["text"]), Game.COLOR_GOOD if res["ok"] else Game.COLOR_BAD)
+			_choosing_regent = false
+			refresh())
+		_body.add_child(b)
+
+
 ## Who is married, the suitor visiting now, who is still to be matched, and
 ## the children at their lessons.
 func _marriages(st: WorldState) -> void:
@@ -140,7 +217,8 @@ func _marriages(st: WorldState) -> void:
 	for id in (fam.member_ids if fam else []):
 		var k := st.get_character(id)
 		if k and not st.is_player(k) and MatchSystem.seeks(st, k):
-			_body.add_child(_person_button(k, "%s, %d  -  unmarried (choose a match from their card)" % [k.display_name(), k.age]))
+			var widowed := not k.relationships_of_type(["late_spouse"]).is_empty()
+			_body.add_child(_person_button(k, "%s, %d  -  %s (choose a match from their card)" % [k.display_name(), k.age, "widowed" if widowed else "unmarried"]))
 	var pupils := CourtSystem.tutored(st)
 	if not pupils.is_empty():
 		var names: Array[String] = []

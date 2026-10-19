@@ -55,7 +55,7 @@ static func attr_name(attr_id: String) -> String:
 ## Creates the house, picks the player and rolls everyone's opinion of them.
 ## Runs for new games and for saves made before Phase 2. Deterministic.
 static func initialize(state: WorldState) -> void:
-	if state.house != null and state.get_character(state.player_id) != null:
+	if state.house != null and (state.get_character(state.player_id) != null or state.house.ended):
 		return
 	var h := section("house")
 	state.house = HouseData.new()
@@ -70,6 +70,9 @@ static func initialize(state: WorldState) -> void:
 	if p:
 		p.player_opinion = 100.0
 		p.appraised = true  # you know yourself
+	var fam := state.ruling_family()
+	if fam and fam.head_id >= 0:
+		state.house.rulers.append({"id": fam.head_id, "from": state.day(), "to": -1})
 	state.house.log_event(state.day(), "%s takes up the running of %s's household." % [p.full_name() if p else "The heir", house_name(state)], "house")
 
 
@@ -139,6 +142,10 @@ static func role_name(state: WorldState, c: CharacterData) -> String:
 		return "Heir of %s" % house_name(state)
 	if c.is_visitor():
 		return "Suitor from House %s" % state.realm.get_house(c.house_id).get("name", "?") if state.realm else "A guest"
+	if Succession.regent(state) == c:
+		return "Regent of %s" % state.village_name
+	if Succession.heir(state) == c:
+		return "Your heir"
 	if not c.office.is_empty():
 		return office_name(c.office)
 	if c.retainer:
@@ -262,8 +269,9 @@ static func join(state: WorldState, c: CharacterData) -> void:
 	state.house.log_event(state.day(), "%s joined the household." % c.full_name(), "join")
 
 
-## Releases a retainer. `left` = they quit rather than being dismissed.
-static func dismiss(state: WorldState, c: CharacterData, left: bool = false) -> void:
+## Releases a retainer. `left` = they quit rather than being dismissed;
+## `quiet` = they rise to rule the house (Succession): no penalty, no news.
+static func dismiss(state: WorldState, c: CharacterData, left: bool = false, quiet: bool = false) -> void:
 	if not c.retainer:
 		return
 	if not c.office.is_empty():
@@ -284,6 +292,8 @@ static func dismiss(state: WorldState, c: CharacterData, left: bool = false) -> 
 		if int(p.get("character", -1)) != c.id:
 			open_promises.append(p)
 	state.house.promises = open_promises
+	if quiet:
+		return  # they rise above service (they rule now, Succession)
 	if left:
 		c.player_opinion = clampf(c.player_opinion - 10.0, -100.0, 100.0)
 		c.add_history(state.current_year(), state.current_season(), "career", "Left the service of %s" % house_name(state))
@@ -516,6 +526,8 @@ static func daily_income(state: WorldState) -> int:
 	var steward := state.get_character(state.house.holder_of("steward"))
 	if steward:
 		base *= 1.0 + steward.get_current("administration") / float(office_def("steward").get("effect_divisor", 200.0))
+	# A young ruler's regent runs the house well or badly (Succession).
+	base *= maxf(0.0, 1.0 + Succession.regent_income_factor(state))
 	return roundi(base)
 
 
@@ -697,7 +709,8 @@ static func daily_update(state: WorldState, rng: RandomNumberGenerator) -> Array
 		return events
 	var h := state.house
 	var day := state.day()
-	h.gold += daily_income(state)
+	var income := daily_income(state)
+	h.gold += income - Succession.regent_skim(state, income)
 	var wages := daily_wages(state)
 	var w_cfg := section("wages")
 	var paid := not (wages > 0 and h.gold < wages)

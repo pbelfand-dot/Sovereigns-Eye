@@ -102,7 +102,6 @@ func test_deaths_are_gentle() -> void:
 	await _with_life({"death": {"yearly": [[18, 0.95], [100, 0.95]]}, "courtship": {"start_yearly": 0.0}, "births": {"yearly": 0.0}}, func() -> void:
 		var st := WorldGenerator.generate("life-death")
 		var kids := st.characters.filter(func(c: CharacterData) -> bool: return c.age < 17).map(func(c: CharacterData) -> int: return c.id)
-		var player := st.player()
 		var start := st.characters.size()
 		for d in 40:
 			st.minutes += Calendar.MINUTES_PER_DAY
@@ -112,7 +111,8 @@ func test_deaths_are_gentle() -> void:
 			check(gone.age >= 18, "%s was grown (%d): no child dies" % [gone.full_name(), gone.age])
 			check(st.get_character(gone.id) == null, "the departed aren't among the living")
 			check(gone.departed_how == "died" and not gone.departed_cause.is_empty(), "and what took them is written down")
-		check(st.get_character(player.id) != null, "the heir is spared until succession comes (Phase 4.3)")
+		# The player dies like anyone now (Phase 4.3); someone of the house goes on.
+		check(st.player() != null and not st.house.ended, "someone of the house goes on as you (%s)" % (st.player().full_name() if st.player() else "no one"))
 		check(kids.all(func(id: int) -> bool: return st.get_character(id) != null), "every child is still here")
 		# Nothing points at the dead as if alive.
 		for f in st.families:

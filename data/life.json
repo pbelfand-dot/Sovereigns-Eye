@@ -18,12 +18,12 @@
   },
 
   "death": {
-    "_comment": "Yearly chance of dying by age (straight lines between the points). Never below min_age. Old age names the cause from old_age_from; before that it's an illness, rarely.",
+    "_comment": "Yearly chance of dying by age (straight lines between the points). Never below min_age. Old age names the cause from old_age_from; before that it's an illness, rarely. The player lives on the same curve (Phase 4.3, data/succession.json); spare_player keeps them alive (a testing switch).",
     "min_age": 18,
     "yearly": [[18, 0.002], [35, 0.003], [45, 0.006], [55, 0.012], [62, 0.025], [70, 0.05], [78, 0.1], [85, 0.18], [92, 0.32], [100, 0.6]],
     "old_age_from": 68,
     "illness": ["a fever", "a winter cough", "a wasting sickness", "a fall from a cart", "a sudden illness"],
-    "spare_player": true
+    "spare_player": false
   },
 
   "mourning": {

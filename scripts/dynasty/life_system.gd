@@ -101,7 +101,7 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 		var p := death_yearly(c.age)
 		if c.is_visitor():
 			continue  # a guest's fate is their own house's
-		if p > 0.0 and not (state.is_player(c) and bool(section("death").get("spare_player", true))) and rng.randf() < daily(p):
+		if p > 0.0 and not (state.is_player(c) and bool(section("death").get("spare_player", false))) and rng.randf() < daily(p):
 			var old_age: bool = c.age >= int(section("death").get("old_age_from", 68))
 			die(state, c, "old age" if old_age else str(Seeds.pick(rng, section("death").get("illness", ["an illness"]))), events)
 	_courtship(state, rng, events)
@@ -273,7 +273,14 @@ static func die(state: WorldState, c: CharacterData, cause: String, events: Arra
 	c.add_history(state.current_year(), state.current_season(), "life", "Died of %s" % cause)
 	var notable := _notable(state, c)
 	var lord := state.ruling_family() and state.ruling_family().head_id == c.id
+	# You: who goes on is chosen while the family is still whole (Succession).
+	var you := state.is_player(c) and state.house != null
+	var next := Succession.successor(state, c) if you else null
 	depart(state, c, "died", cause, events)
+	if you:
+		text = Succession.pass_on(state, c, next, lord, cause, events)
+		events.append({"text": text, "kind": "bad", "gone": c.id, "player": state.player_id, "succession": true})
+		return
 	if lord:
 		text = _succeed(state, c, cause, events)
 	elif not c.office.is_empty() or c.retainer:
@@ -356,9 +363,10 @@ static func _next_head(state: WorldState, fam: FamilyData) -> int:
 	return best.id if best else -1
 
 
-## The lord is dead; the heir inherits. Returns the news.
+## The lord (not you) is dead; you, their heir, inherit (Succession.crown:
+## the widow is the dowager, your spouse the lady, a regent if you're
+## young). Returns the news.
 static func _succeed(state: WorldState, lord: CharacterData, cause: String, events: Array[Dictionary]) -> String:
-	var fam := state.ruling_family()
 	var heir := state.player()
 	var word := lord.display_name()
 	if heir == null:
@@ -369,24 +377,12 @@ static func _succeed(state: WorldState, lord: CharacterData, cause: String, even
 			word = "Your %s, %s," % ["father" if lord.gender == "male" else "mother", lord.display_name()]
 		"grandparent":
 			word = "Your %s, %s," % ["grandfather" if lord.gender == "male" else "grandmother", lord.display_name()]
-	fam.head_id = heir.id
-	for r in lord.relationships_of_type(["spouse"]):
-		var widow := state.get_character(int(r["target"]))
-		if widow and widow.occupation_id in ["lady", "lord"]:
-			widow.occupation_id = "dowager"
-			events.append({"text": "", "job": widow.id})
-	# The heir's own husband or wife is now the lady (or lord consort).
-	var consort := spouse_of(state, heir)
-	if consort:
-		consort.occupation_id = "lady"
-		events.append({"text": "", "job": consort.id})
-	heir.occupation_id = "lord"
-	heir.social_status = "noble"
-	heir.work_building_id = CourtSystem._building_of_type(state, "manor")
-	var title := "%s of %s" % [heir.occupation_name(), state.village_name]
-	heir.add_history(state.current_year(), state.current_season(), "appointment", "Became %s on the death of %s" % [title, lord.full_name()])
-	events.append({"text": "", "job": heir.id})
-	return "%s has died of %s. You are now %s." % [word, cause, title]
+	var title := Succession.crown(state, heir, lord, events)
+	var text := "%s has died of %s. You are now %s." % [word, cause, title]
+	var reg := Succession.regent(state)
+	if reg:
+		text += " Until you are %d, %s rules as regent." % [Succession.of_age(), reg.full_name()]
+	return text
 
 
 # --- Courtship and marriage ------------------------------------------------------------------
