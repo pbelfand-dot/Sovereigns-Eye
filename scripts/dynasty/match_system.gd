@@ -270,7 +270,9 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 		return events
 	var day := state.day()
 	for c in state.characters.duplicate():
-		if c.is_visitor() and day >= c.visiting_until:
+		if c.is_visitor() and state.get_character(c.suitor_for) == null:
+			send_home(state, c, "bereaved", events)
+		elif c.is_visitor() and day >= c.visiting_until:
 			send_home(state, c, "lapse", events)
 	if visitor(state) != null:
 		return events
@@ -383,11 +385,14 @@ static func decline(state: WorldState, suitor: CharacterData, events: Array[Dict
 	return {"ok": true, "text": text}
 
 
-## A suitor leaves for home: declined, or the visit ran out with no answer.
+## A suitor leaves for home: declined, the visit ran out with no answer
+## ("lapse"), or the one they came for died ("bereaved", no offence).
 static func send_home(state: WorldState, suitor: CharacterData, why: String, events: Array[Dictionary]) -> void:
 	var house := state.realm.get_house(suitor.house_id)
 	var s := section("suitors")
 	var cost := int(s.get("standing_lapse", -12)) if why == "lapse" else int(s.get("standing_decline", -8))
+	if why == "bereaved":
+		cost = 0
 	if not house.is_empty():
 		house["standing"] = clampi(int(house["standing"]) + cost, -100, 100)
 	suitor.add_history(state.current_year(), state.current_season(), "family", "Went home from %s unwed" % state.village_name)
@@ -395,6 +400,8 @@ static func send_home(state: WorldState, suitor: CharacterData, why: String, eve
 	if why == "lapse":
 		text = "%s has gone home to %s: no answer came. %s is offended." % [suitor.full_name(), house.get("seat", ""), state.realm.house_title(suitor.house_id)]
 		state.house.log_event(state.day(), text, "bad")
+	elif why == "bereaved":
+		text = "%s has gone home to %s: the one they came to marry has died." % [suitor.full_name(), house.get("seat", "")]
 	else:
 		state.house.log_event(state.day(), "You declined the hand of %s." % suitor.full_name(), "match")
 	suitor.visiting_until = -1

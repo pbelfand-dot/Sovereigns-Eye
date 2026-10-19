@@ -80,6 +80,7 @@ func _play_forward(st: WorldState) -> void:
 		TerritorySystem.daily_update(st)
 		LifeSystem.daily_update(st)
 		MatchSystem.daily_update(st)
+		Succession.daily_update(st)
 		GrowthSystem.daily_update(st)
 		if st.territory.sites.size() < 3:
 			if GrowthSystem.food_days(st) < 8.0:

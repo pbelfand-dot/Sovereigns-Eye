@@ -2,12 +2,14 @@ extends SceneTree
 ## Lives a village through the years, data only, and reports how its people
 ## fare: population, births, deaths, marriages, those who left, the spread
 ## of ages, and the house. For tuning data/life.json.
-##   godot --headless --path . --script res://tools/life_sim.gd -- <seed> [years] [steward] [matches]
+##   godot --headless --path . --script res://tools/life_sim.gd -- <seed> [years] [steward] [matches] [heirs]
 ## With "steward" a simple steward also orders farmsteads and homes and
 ## petitions for charters (as tools/charter_sim.gd does), so the village can
 ## grow; without it, only what the village does by itself. With "matches"
 ## the house accepts the first suitor (for the heir or kin) with a gift of
-## B rank or better and sends the rest home.
+## B rank or better and sends the rest home. With "heirs" the most gifted
+## child is named heir each year. You live and die on the same curve as
+## everyone (Phase 4.3), so a long run passes through several rulers.
 
 
 func _init() -> void:
@@ -19,6 +21,7 @@ func _init() -> void:
 	var started := Time.get_ticks_msec()
 	var totals := {"born": 0, "died": 0, "left": 0, "married": 0}
 	var year_counts := totals.duplicate()
+	var generations := 0
 	print("%s, %d people, the heir %s (%d)" % [st.village_name, st.characters.size(), st.player().full_name(), st.player().age])
 	var days := years * Calendar.days_per_year()
 	for d in days:
@@ -43,6 +46,8 @@ func _init() -> void:
 					"gone":
 						var who := st.get_departed(int(e["gone"]))
 						year_counts["died" if who.departed_how == "died" else "left"] += 1
+						if e.has("succession"):
+							generations += 1
 						if not str(e.get("text", "")).is_empty() and who.departed_how == "died":
 							print("   day %4d  %s" % [day, e["text"]])
 							continue
@@ -57,6 +62,20 @@ func _init() -> void:
 				var suitor := st.get_character(int(e["visitor"]))
 				var r := MatchSystem.accept(st, suitor) if suitor.best_potential() >= 65 else MatchSystem.decline(st, suitor)
 				print("   day %4d  (best gift %d) %s" % [day, suitor.best_potential(), r["text"]])
+		for e: Dictionary in Succession.daily_update(st):
+			print("   day %4d  %s" % [day, e["text"]])
+		if st.house.ended:
+			print("   day %4d  the house is ended" % day)
+			break
+		# With "heirs", a player who looks with the Eye names the most
+		# gifted child heir (once a year).
+		if args.has("heirs") and day % Calendar.days_per_year() == 0:
+			var best: CharacterData = null
+			for k in Succession.children_of(st, st.player()):
+				if best == null or k.best_potential() > best.best_potential():
+					best = k
+			if best and Succession.heir(st) != best:
+				print("   day %4d  %s" % [day, Succession.name_heir(st, best)["text"]])
 		GrowthSystem.daily_update(st)
 		if steward:
 			_steward(st)
@@ -65,10 +84,16 @@ func _init() -> void:
 			for k: String in totals:
 				totals[k] += year_counts[k]
 				year_counts[k] = 0
-	print("\n%d years in %.1f s: born %d, died %d, left %d, weddings %d, departed on record %d" % [years, (Time.get_ticks_msec() - started) / 1000.0,
-		totals["born"], totals["died"], totals["left"], totals["married"], st.departed.size()])
+	print("\n%d years in %.1f s: born %d, died %d, left %d, weddings %d, departed on record %d, you have been %d people" % [years, (Time.get_ticks_msec() - started) / 1000.0,
+		totals["born"], totals["died"], totals["left"], totals["married"], st.departed.size(), generations + 1])
 	var p := st.player()
-	print("The heir: %s, %d, %s; head of the house: %s" % [p.full_name(), p.age, CourtSystem.role_name(st, p), st.get_character(st.ruling_family().head_id).full_name()])
+	if p == null:
+		print("The house is ended.")
+		quit()
+		return
+	var head := Succession.ruler(st)
+	print("You: %s, %d, %s; head of the house: %s; rulers in turn: %s" % [p.full_name(), p.age, CourtSystem.role_name(st, p), head.full_name() if head else "none",
+		", ".join(st.house.rulers.map(func(r: Dictionary) -> String: return st.get_person(int(r["id"])).first_name))])
 	quit()
 
 

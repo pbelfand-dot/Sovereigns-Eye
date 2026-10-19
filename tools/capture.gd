@@ -3,7 +3,7 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk|life|matches]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk|life|matches|succession]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
@@ -43,6 +43,7 @@ var eye_only := false
 var barks_only := false
 var life_only := false
 var matches_only := false
+var succession_only := false
 
 
 func _ready() -> void:
@@ -72,6 +73,7 @@ func _ready() -> void:
 	barks_only = args.has("barks")
 	life_only = args.has("life")
 	matches_only = args.has("matches")
+	succession_only = args.has("succession")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -162,6 +164,10 @@ func _run() -> void:
 		return
 	if matches_only:
 		await _match_shots()
+		get_tree().quit()
+		return
+	if succession_only:
+		await _succession_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1424,6 +1430,59 @@ func _match_shots() -> void:
 	await _shot("match_kin.png")
 
 
+## Succession (Phase 4.3): the family tree after some generations
+## (SUCC_YEARS, default 60, data only), the summary after letting a year
+## pass, then (seed 2, whose heir is 13) the lord dying young and the Court
+## panel with the child's regent.
+func _succession_shots() -> void:
+	var years := int(OS.get_environment("SUCC_YEARS")) if OS.get_environment("SUCC_YEARS").is_valid_int() else 60
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	simulate(st, years * Calendar.days_per_year(), {"matches": true})
+	print("succession: %d years, you are %s (%s), rulers %s" % [years, st.player().full_name(), CourtSystem.role_name(st, st.player()),
+		st.house.rulers.map(func(r: Dictionary) -> String: return st.get_person(int(r["id"])).first_name)])
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	world.set_speed(0)
+	world.paused = true
+	_clear_toasts(world)
+	world.ui.toggle_tree()
+	await _wait(10)
+	await _shot("succession_tree.png")
+	world.ui.toggle_tree()
+	await world.ui.pass_time(Calendar.days_per_year())
+	await _wait(6)
+	await _shot("succession_years.png")
+	world.queue_free()
+	await _wait(3)
+	# A lord who dies young: the 13-year-old heir rules through a regent.
+	Game.state = WorldGenerator.generate("2")
+	st = Game.state
+	st.minutes += 3.0 * 60.0
+	var lord := Succession.ruler(st)
+	var events: Array[Dictionary] = []
+	LifeSystem.die(st, lord, "a fever", events)
+	print("succession: %s" % events.map(func(e: Dictionary) -> String: return str(e["text"])).filter(func(t: String) -> bool: return not t.is_empty()))
+	world = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	world.set_speed(0)
+	_clear_toasts(world)
+	world.ui.toggle_court()
+	await _wait(10)
+	await _shot("succession_regency.png")
+
+
+func _clear_toasts(world: VillageWorld) -> void:
+	for n in world.ui.find_children("*", "", true, false):
+		if n is ToastStack:
+			for t in n.get_children():
+				t.queue_free()
+
+
 ## Villagers' remarks as the heir walks past (Barks): a few people at work
 ## and about the square, each spoken to through the real system.
 func _bark_shots() -> void:
@@ -1718,7 +1777,15 @@ static func simulate(st: WorldState, days: int, plan: Dictionary) -> void:
 		CourtSystem.daily_update(st, Seeds.rng(st.world_seed, "court_day_%d" % day))
 		TerritorySystem.daily_update(st)
 		LifeSystem.daily_update(st)
-		MatchSystem.daily_update(st)
+		for e: Dictionary in MatchSystem.daily_update(st):
+			# plan "matches": the house takes a suitor of B rank or better.
+			if e.has("visitor") and plan.get("matches", false):
+				var suitor := st.get_character(int(e["visitor"]))
+				if suitor.best_potential() >= 65:
+					MatchSystem.accept(st, suitor)
+				else:
+					MatchSystem.decline(st, suitor)
+		Succession.daily_update(st)
 		GrowthSystem.daily_update(st)
 
 

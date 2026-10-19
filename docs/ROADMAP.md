@@ -14,8 +14,33 @@ playable build. Numbers and content live in `data/*.json`.
 | 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done |
 | **4.1** | **The years turn: ageing, growing up, marriage, children who inherit gifts, gentle deaths, the lord's succession** (below) | Done |
 | **4.2** | **The house's matches: your own marriage, suitors from noble houses, matches for kin and retainers, your children's tutors** (below) | Done |
-| 4.3 | Succession: name your heir, play on as them, regency, a family tree, "let the years pass" | Next |
-| 5+ | Wider realm, military | Later |
+| **4.3** | **Succession: name your heir, play on as them, regency, a family tree, "let the years pass"** (below) | Done |
+| 5+ | Wider realm, military | Next |
+
+## Succession (Phase 4.3)
+
+Decided with the player: a child who inherits rules through a **regent**
+until 16; **any child** can be named heir; the years can be let pass a
+season or a year at a time **with a summary**; and you live on the **same
+gentle curve** as everyone, warned when your health fails.
+
+- `Succession` (static, data in `data/succession.json`): `heir` (named, else
+  the eldest child), `successor` (heir, grandchild, sibling, spouse, anyone
+  of the house), `name_heir` (older children passed over take it ill once),
+  `pass_on` (you go on as the successor: opinions blend, the Eye's records
+  stay), `crown` (the dowager, the lady, the house's list of rulers, a
+  regent for a minor), the regency's income and skim, the health warning and
+  the family tree. Only an empty house ends the game.
+- The world hands your body on (`VillageWorld.take_over`) and lets the years
+  pass (`pass_time`): a few days a frame, quietly, stopping early for what
+  needs you. Save v15 (heir, regent, rulers, warnings, an ended house).
+- Over 100 years with the steward bot, gifted suitors taken and the most
+  gifted child named heir (`tools/life_sim.gd -- <seed> 100 steward matches
+  heirs`): seeds 9, 4242 and 12345 each pass through 4 or 5 rulers and 3 or
+  4 player characters, each warned at 62 (or on inheriting, if older), and
+  no house ends. Children are usually grown by then, so a regency comes only
+  when a ruler dies young (`capture.tscn -- 9 <dir> succession` stages one:
+  seed 2's lord dies at 33 and his son of 13 rules through his mother).
 
 ## The house's matches (Phase 4.2)
 

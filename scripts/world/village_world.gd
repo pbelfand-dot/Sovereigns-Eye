@@ -29,6 +29,12 @@ signal conversation_ended
 signal mode_changed(mode: String)
 ## Who the heir is looking at changed (-1 = no one).
 signal focus_changed(character_id: int)
+## You died and go on as someone else (Phase 4.3): their body is yours now.
+signal player_changed(character_id: int)
+## No one of the house is left (Succession): the game is over.
+signal house_ended(text: String)
+## Letting the years pass: `done` of `total` days so far.
+signal time_passing(done: int, total: int)
 
 ## Beyond this distance from the camera (m), bodies animate every third
 ## frame (they are a few pixels tall by then).
@@ -50,6 +56,9 @@ var npcs: Dictionary = {}
 
 var paused := false
 var speed_index := 0
+## True while the years are let pass (pass_time): news is gathered, not shown.
+var passing := false
+var _passed: Dictionary = {}
 var selected: NPC
 var hovered: NPC
 
@@ -130,6 +139,8 @@ func _ready() -> void:
 	soundscape.setup(self)
 
 	Game.before_save.connect(sync_to_state)
+	if state.house and state.house.ended:
+		_end_house.call_deferred("The house is ended.")
 	sky.set_time(state.minutes)
 	print("World ready: %s (seed %s), %d villagers, %d buildings" % [state.village_name, state.seed_text, state.characters.size(), state.layout.buildings.size()])
 	PortraitPrompt.write_prompt_file(state)
@@ -147,8 +158,8 @@ func _spawn_npcs() -> void:
 	_npc_root.name = "NPCs"
 	add_child(_npc_root)
 	for c in state.characters:
-		if LifeSystem.is_unseen(c):
-			continue  # babies stay at home until they can walk about
+		if LifeSystem.is_unseen(c) and not state.is_player(c):
+			continue  # babies stay at home until they can walk about (unless you're one)
 		var npc := NPC.new()
 		_npc_root.add_child(npc)
 		npc.setup(c)
@@ -208,6 +219,8 @@ func toggle_pause() -> void:
 
 
 func _process(delta: float) -> void:
+	if passing:
+		return  # pass_time drives the days; no one moves meanwhile
 	var scale_now := time_scale()
 	var game_minutes := delta * GAME_MINUTES_PER_SECOND * scale_now
 	if game_minutes > 0.0:
@@ -300,6 +313,8 @@ func _check_new_day() -> void:
 		_on_life_event(e)
 	for e: Dictionary in MatchSystem.daily_update(state):
 		_on_life_event(e)
+	for e: Dictionary in Succession.daily_update(state):
+		_on_life_event(e)
 	for e: Dictionary in GrowthSystem.daily_update(state):
 		_on_growth_event(e)
 	_replan_crew_changes(crews_before)
@@ -310,6 +325,9 @@ func _check_new_day() -> void:
 ## Shows a court event as a notification in the right color.
 func _announce(e: Dictionary) -> void:
 	if str(e.get("text", "")).is_empty():
+		return
+	if passing:
+		(_passed["news"] as Array).append(str(e["text"]))
 		return
 	var color := Game.COLOR_INFO
 	match str(e.get("kind", "")):
@@ -379,6 +397,8 @@ func _finish_site(site: ConstructionSite) -> void:
 ## A growth event: settlers to spawn, or a home or upgrade site to show.
 func _on_growth_event(e: Dictionary) -> void:
 	_announce(e)
+	if passing and e.has("arrived"):
+		_passed["counts"]["arrived"] += (e["arrived"] as Array).size()
 	if e.has("arrived"):
 		for id: int in e["arrived"]:
 			spawn_character(id)
@@ -399,6 +419,8 @@ func _on_growth_event(e: Dictionary) -> void:
 ## departed leave the world.
 func _on_life_event(e: Dictionary) -> void:
 	_announce(e)
+	if passing:
+		_note_passing(e)
 	if e.has("aged"):
 		var npc := npc_of(int(e["aged"]))
 		if npc:
@@ -411,8 +433,75 @@ func _on_life_event(e: Dictionary) -> void:
 		_on_hired(int(e["job"]))
 	for id: int in e.get("moved", []):
 		court_changed(id)
+	if e.has("player") and int(e["player"]) >= 0:
+		take_over(int(e["player"]))
+	if e.has("ended"):
+		_end_house(str(e.get("text", "")))
 	if e.has("gone"):
 		remove_character_body(int(e["gone"]))
+
+
+# --- Letting the years pass (Phase 4.3) --------------------------------------------------------
+
+## Let `days` pass (a season, a year) a few days a frame, quietly: the news is
+## gathered for a summary instead of shown, and it stops early for what needs
+## you (data/succession.json "pass_time" stop_on). Returns Succession.summary.
+func pass_time(days: int) -> Dictionary:
+	if passing or (state.house and state.house.ended):
+		return {}
+	passing = true
+	end_conversation()
+	hush_remarks()
+	var before := Succession.snapshot(state)
+	_passed = {"news": [], "stop": "", "counts": {"born": 0, "died": 0, "left": 0, "wed": 0, "arrived": 0}}
+	var per_frame := maxi(1, int(Succession.section("pass_time").get("days_per_frame", 2)))
+	var done := 0
+	while done < days:
+		var crews_before := _crews()
+		for k in 48:
+			state.minutes += 30.0
+			for site in TerritorySystem.advance(state, 30.0):
+				_finish_site(site)
+		builder.update_sites()
+		_replan_crew_changes(crews_before)
+		_check_new_day()
+		done += 1
+		time_passing.emit(done, days)
+		if not str(_passed["stop"]).is_empty():
+			break
+		if done % per_frame == 0 and is_inside_tree():
+			await get_tree().process_frame
+	passing = false
+	var me := player_npc()
+	for npc: NPC in npcs.values():
+		if npc != me:
+			npc.brain.replan()
+	var summary := Succession.summary(state, before, _passed["news"], _passed["counts"], str(_passed["stop"]), done)
+	if ui:
+		ui.refresh()
+	return summary
+
+
+## What a day's event means while the years pass: the tallies, and whether
+## it should stop the skip.
+func _note_passing(e: Dictionary) -> void:
+	var counts: Dictionary = _passed["counts"]
+	if e.has("born"):
+		counts["born"] += 1
+	if e.has("moved") and str(e.get("kind", "")) == "good":
+		counts["wed"] += 1  # a wedding (LifeSystem.marry, MatchSystem.wed)
+	var stop := ""
+	if e.has("gone"):
+		var d := state.get_departed(int(e["gone"]))
+		if d:
+			counts["died" if d.departed_how == "died" else "left"] += 1
+			if d.departed_how == "died" and d.family_id == state.ruling_family_id:
+				stop = "kin_death"
+	for key: String in ["regency_end", "health", "visitor", "succession", "ended"]:
+		if e.has(key):
+			stop = key
+	if not stop.is_empty() and str(_passed["stop"]).is_empty() and (Succession.section("pass_time").get("stop_on", []) as Array).has(stop):
+		_passed["stop"] = stop
 
 
 ## Applies what a match, a wedding or a suitor's leaving changed (events
@@ -441,6 +530,9 @@ func remove_character_body(character_id: int) -> void:
 		hovered = null
 	if _preferred_focus == character_id:
 		_preferred_focus = -1
+	if heir_ctl and heir_ctl.npc == npc:
+		heir_ctl = null
+		set_view_mode("overview", true)
 	npcs.erase(character_id)
 	npc.queue_free()
 	_compute_worker_slots()
@@ -449,7 +541,7 @@ func remove_character_body(character_id: int) -> void:
 ## Gives a character who joined the village (a settler) a body and a brain.
 func spawn_character(character_id: int) -> NPC:
 	var c := state.get_character(character_id)
-	if c == null or npcs.has(character_id) or LifeSystem.is_unseen(c):
+	if c == null or npcs.has(character_id) or (LifeSystem.is_unseen(c) and not state.is_player(c)):
 		return npcs.get(character_id, null)
 	var npc := NPC.new()
 	_npc_root.add_child(npc)
@@ -920,6 +1012,40 @@ func _setup_heir() -> void:
 	heir.brain.set_errand({})
 	heir_ctl = HeirController.new(self, heir)
 	set_view_mode("walk", true)
+
+
+## You go on as `character_id` (Succession.pass_on): the old body is let
+## go (it leaves with the death's "gone"), the new one is yours, on foot.
+func take_over(character_id: int) -> void:
+	end_conversation()
+	if heir_ctl and is_instance_valid(heir_ctl.npc):
+		heir_ctl.npc.driven = false
+		heir_ctl.npc.set_player_marker(false)
+	heir_ctl = null
+	var npc := npc_of(character_id)
+	if npc == null:
+		npc = spawn_character(character_id)
+	if npc == null:
+		set_view_mode("overview", true)
+		return
+	npc.set_player_marker(true)
+	npc.brain.set_errand({})
+	heir_ctl = HeirController.new(self, npc)
+	if mode == "walk":
+		set_view_mode("walk", true)
+	player_changed.emit(character_id)
+	if ui:
+		ui.refresh()
+
+
+## The house is ended: time stops and the game says so.
+func _end_house(text: String) -> void:
+	end_conversation()
+	heir_ctl = null
+	set_view_mode("overview", true)
+	paused = true
+	speed_changed.emit(time_scale())
+	house_ended.emit(text)
 
 
 ## "walk" (as the heir) or "overview" (the map table). Leaving the map

@@ -378,7 +378,12 @@ func _build_court_kin() -> void:
 	var c := character
 	var st := world.state
 	_section(_court_box, "Of your house")
-	_court_box.add_child(_wrap_label("%s is %s of %s." % [c.first_name, CourtSystem.role_name(st, c).to_lower(), CourtSystem.house_name(st)], 14))
+	var role := CourtSystem.role_name(st, c)
+	if role == "Your heir" or role.begins_with("Regent"):
+		_court_box.add_child(_wrap_label("%s is %s, of %s." % [c.first_name, role.substr(0, 1).to_lower() + role.substr(1), CourtSystem.house_name(st)], 14))
+	else:
+		_court_box.add_child(_wrap_label("%s is %s of %s." % [c.first_name, role.to_lower(), CourtSystem.house_name(st)], 14))
+	_heir_section(c)
 	if CourtSystem.is_tutored(st, c):
 		_section(_court_box, "Lessons")
 		var focus_row := HBoxContainer.new()
@@ -391,6 +396,28 @@ func _build_court_kin() -> void:
 		_training_lines(c)
 		_court_box.add_child(_wrap_label("Tutors at the manor teach them for %d gold a day. Children learn fastest; the Eye shows where their gifts lie." % int(CourtSystem.section("tutors").get("fee", 1)), 13, UITheme.TEXT_DIM))
 	_marriage_section(c)
+
+
+## Your own children: name one your heir (Phase 4.3).
+func _heir_section(c: CharacterData) -> void:
+	var st := world.state
+	if not Succession.children_of(st, st.player()).has(c):
+		return
+	_section(_court_box, "Succession")
+	if Succession.heir(st) == c:
+		_court_box.add_child(_wrap_label("%s is your heir%s: they go on after you." % [c.first_name, "" if Succession.is_named(st, c) else " (your eldest)"], 14, UITheme.GOOD))
+		if Succession.is_named(st, c):
+			return
+	var older := Succession.children_of(st, st.player()).filter(func(k: CharacterData) -> bool: return k.age > c.age)
+	var b := UITheme.button("Name %s your heir" % c.first_name, func() -> void:
+		var r := Succession.name_heir(st, c)
+		Audio.play("court_good" if r["ok"] else "ui_error")
+		Game.notify.emit(str(r["text"]), Game.COLOR_GOOD if r["ok"] else Game.COLOR_BAD)
+		_build_court())
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_court_box.add_child(b)
+	if not older.is_empty():
+		_court_box.add_child(_wrap_label("Passing over an older child (%s) hurts them, once." % ", ".join(older.map(func(k: CharacterData) -> String: return k.first_name)), 13, UITheme.TEXT_DIM))
 
 
 ## Married, or (for the house's grown kin and retainers) a list of
