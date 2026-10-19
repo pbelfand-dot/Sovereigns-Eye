@@ -82,18 +82,27 @@ static func affinity_for(attr_id: String, background_id: String, trait_ids: Arra
 	return affinity
 
 
-## Talented parents raise the odds for their children (never a guarantee).
+## Talented parents raise the odds for their children (never a guarantee):
+## the more gifted parent in full, and a gifted second parent compounds it
+## (data/ranks.json "inheritance").
 static func inheritance_affinity(attr_id: String, parents: Array) -> float:
-	var best := 1.0
-	var tiers: Array = GameData.rank_config().get("inheritance", {}).get("tiers", [])
+	var cfg: Dictionary = GameData.rank_config().get("inheritance", {})
+	var tiers: Array = cfg.get("tiers", [])
+	var found: Array[float] = []
 	for p: CharacterData in parents:
 		if p == null:
 			continue
 		var potential := p.get_potential(attr_id)
 		for tier: Dictionary in tiers:
 			if potential >= int(tier["min_potential"]):
-				best = maxf(best, float(tier["affinity"]))
+				found.append(float(tier["affinity"]))
 				break
+	if found.is_empty():
+		return 1.0
+	found.sort()
+	var best := found[-1]
+	if found.size() > 1:
+		best *= pow(found[-2], float(cfg.get("both_parents", 0.5)))
 	return best
 
 

@@ -42,7 +42,7 @@ func test_no_remark_names_a_rank_or_a_number() -> void:
 	var giveaway := _giveaway()
 	var cfg := Barks.config()
 	var lines: Array[String] = []
-	for key: String in ["greet", "work", "leisure", "play", "home", "time", "season", "worry", "happy", "gift", "child_gift", "village", "eyed"]:
+	for key: String in ["greet", "work", "leisure", "play", "home", "time", "season", "worry", "happy", "gift", "child_gift", "village", "eyed", "family"]:
 		check(cfg.has(key), "barks.json has %s lines" % key)
 		_lines(cfg.get(key), lines)
 	check(lines.size() > 150, "plenty to say (%d lines)" % lines.size())

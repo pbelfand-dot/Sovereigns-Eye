@@ -2,6 +2,7 @@ extends SceneTree
 ## Plays a village for many days with a simple steward bot and reports when
 ## each charter could be earned. For tuning data/charters.json.
 ##   godot --headless --path . --script res://tools/charter_sim.gd -- <seed> [days]
+## (SIM_HOMES=1 also lists what holds Timber Houses back from becoming Townhouses.)
 ##
 ## The bot does what a sensible player would: recruits a chancellor (renown)
 ## and a steward, keeps food up with farmsteads, builds a stonecutter's yard,
@@ -28,6 +29,7 @@ func _init() -> void:
 			MoodSystem.daily_update(c, st, rng)
 		CourtSystem.daily_update(st, Seeds.rng(st.world_seed, "court_day_%d" % day))
 		TerritorySystem.daily_update(st)
+		LifeSystem.daily_update(st)
 		GrowthSystem.daily_update(st)
 		_build(st)
 		var r := CharterSystem.petition(st)
@@ -35,6 +37,14 @@ func _init() -> void:
 			print("day %3d  %s" % [d + 1, r["text"]])
 		if d % 20 == 19:
 			_report(st, d + 1)
+			if OS.get_environment("SIM_HOMES") == "1":
+				var why := {}
+				for b in GrowthSystem.homes(st):
+					if b.tier == 1:
+						for need in GrowthSystem.home_needs(st, b):
+							if not need["ok"]:
+								why[need["label"]] = int(why.get(need["label"], 0)) + 1
+				print("        Timber Houses held back by: %s" % why)
 	print("\n%d days in %.1f s" % [days, (Time.get_ticks_msec() - started) / 1000.0])
 	_report(st, days)
 	print("home spot: %s" % GrowthSystem.best_home_spot(st))
@@ -110,6 +120,9 @@ func _build(st: WorldState) -> void:
 	if GrowthSystem.food_days(st) < 8.0 and _try(st, "farmhouse"):
 		return
 	if st.territory.amount("stone") < 80.0 and TerritorySystem.count_built(st, "quarry") < 2 and _try(st, "quarry"):
+		return
+	# The granary is full but holds too few days for the homes: store more.
+	if st.territory.amount("food") >= TerritorySystem.capacity(st, "food") * 0.95 and GrowthSystem.food_days(st) < 12.0 and _try(st, "storehouse"):
 		return
 	for type: String in ["bakery", "storehouse", "tavern", "chapel", "market"]:
 		if TerritorySystem.count_built(st, type) == 0 and _try(st, type):

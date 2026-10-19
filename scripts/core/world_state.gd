@@ -3,7 +3,7 @@ extends RefCounted
 ## Everything that defines one playthrough: the seed, the clock, the village
 ## layout, families and characters. Saving the game = saving this object.
 
-const SAVE_VERSION := 12
+const SAVE_VERSION := 13
 
 var seed_text: String = ""
 var world_seed: int = 0
@@ -23,9 +23,13 @@ var last_daily_update: int = 0
 var layout: VillageLayout
 var families: Array[FamilyData] = []
 var characters: Array[CharacterData] = []
+## Everyone who has died or moved away (Phase 4), kept for family ties, the
+## chronicle and mourning. Never in `characters`.
+var departed: Array[CharacterData] = []
 
 var _characters_by_id: Dictionary = {}
 var _families_by_id: Dictionary = {}
+var _departed_by_id: Dictionary = {}
 
 
 # --- Lookup ------------------------------------------------------------------
@@ -42,6 +46,44 @@ func add_family(f: FamilyData) -> void:
 
 func get_character(character_id: int) -> CharacterData:
 	return _characters_by_id.get(character_id, null)
+
+
+## Someone who has died or moved away (null for the living or unknown).
+func get_departed(character_id: int) -> CharacterData:
+	return _departed_by_id.get(character_id, null)
+
+
+## The living, else the departed: for family ties and records.
+func get_person(character_id: int) -> CharacterData:
+	var c: CharacterData = _characters_by_id.get(character_id, null)
+	return c if c else _departed_by_id.get(character_id, null)
+
+
+## Moves someone from the living to the departed (LifeSystem does the rest).
+func remove_character(c: CharacterData) -> void:
+	characters.erase(c)
+	_characters_by_id.erase(c.id)
+	departed.append(c)
+	_departed_by_id[c.id] = c
+
+
+## Their relationships of these types whose other person is still alive.
+func living_ties(c: CharacterData, types: Array) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for r in c.relationships_of_type(types):
+		if _characters_by_id.has(int(r["target"])):
+			out.append(r)
+	return out
+
+
+## The highest character id ever used, living or departed.
+func last_character_id() -> int:
+	var n := 0
+	for c in characters:
+		n = maxi(n, c.id)
+	for c in departed:
+		n = maxi(n, c.id)
+	return n
 
 
 func get_family(family_id: int) -> FamilyData:
@@ -69,6 +111,11 @@ func is_player(c: CharacterData) -> bool:
 ## Whole days since the calendar began.
 func day() -> int:
 	return Calendar.day_index(whole_minutes())
+
+
+## Today's day of the year (for birthdays).
+func day_of_year() -> int:
+	return day() % Calendar.days_per_year()
 
 
 func retainers() -> Array[CharacterData]:
@@ -118,6 +165,9 @@ func to_dict() -> Dictionary:
 	var character_list: Array = []
 	for c in characters:
 		character_list.append(c.to_dict())
+	var departed_list: Array = []
+	for c in departed:
+		departed_list.append(c.to_dict())
 	return {
 		"save_version": SAVE_VERSION,
 		"seed_text": seed_text,
@@ -132,6 +182,7 @@ func to_dict() -> Dictionary:
 		"layout": layout.to_dict() if layout else {},
 		"families": family_list,
 		"characters": character_list,
+		"departed": departed_list,
 	}
 
 
@@ -153,6 +204,10 @@ static func from_dict(d: Dictionary) -> WorldState:
 		w.add_family(FamilyData.from_dict(f))
 	for c: Dictionary in d.get("characters", []):
 		w.add_character(CharacterData.from_dict(c))
+	for c: Dictionary in d.get("departed", []):
+		var gone := CharacterData.from_dict(c)
+		w.departed.append(gone)
+		w._departed_by_id[gone.id] = gone
 	# An upgrade site works on the home itself, not a copy.
 	if w.territory:
 		for s in w.territory.sites:

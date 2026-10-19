@@ -13,11 +13,13 @@
   "notable_threshold": 80,
   "exceptional_threshold": 100,
   "inheritance": {
-    "_comment": "A parent whose potential in an attribute reaches 'min_potential' multiplies the child's affinity for that attribute by 'affinity'. The best qualifying parent wins. This raises odds; it never guarantees.",
+    "_comment": "A parent whose potential in an attribute reaches 'min_potential' multiplies the child's affinity for that attribute by 'affinity'. The best qualifying parent counts in full; when the other parent qualifies too, their affinity counts to the power 'both_parents' (two gifted parents compound). This raises odds; it never guarantees. Phase 4: what makes a good match.",
+    "both_parents": 0.5,
     "tiers": [
-      { "min_potential": 120, "affinity": 1.35 },
-      { "min_potential": 100, "affinity": 1.25 },
-      { "min_potential": 80,  "affinity": 1.12 }
+      { "min_potential": 120, "affinity": 2.2 },
+      { "min_potential": 100, "affinity": 1.8 },
+      { "min_potential": 80, "affinity": 1.45 },
+      { "min_potential": 65, "affinity": 1.15 }
     ]
   }
 }

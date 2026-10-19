@@ -12,7 +12,37 @@ playable build. Numbers and content live in `data/*.json`.
 | 3.2 | Growth: settlers, homes that build and upgrade themselves | Done |
 | **Eye** | **On foot: scan first, then talk and persuade** (below) | Done (optional extras below) |
 | 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done |
-| 4+ | Dynasties (ageing, marriage, children, succession), wider realm, military | Later |
+| **4.1** | **The years turn: ageing, growing up, marriage, children who inherit gifts, gentle deaths, the lord's succession** (below) | Done |
+| 4.2 | The house's matches: your own marriage, matches for kin and retainers, your children's tutors | Next |
+| 4.3 | Succession: name your heir, play on as them, regency, a family tree, "let the years pass" | Later |
+| 5+ | Wider realm, military | Later |
+
+## The years turn (Phase 4.1)
+
+Decided with the player: **seasons of 10 days** (a year is 40 days, about 80
+minutes at 8x), people age on their birthday so ages always match the date,
+and a **gentle** tone: no child dies, and no one dies giving birth.
+
+- Everyone has a birthday. Children grow taller and their gifts begin to show;
+  at 13 they start on the family's work and at 16 take a grown trade (often a
+  parent's; the fields while food is short). Commoners retire at 65 and their
+  trade passes on.
+- Villagers outside the house court, marry and set up home; couples have
+  children whose looks, traits and gifts follow theirs often, never always:
+  two parents with S+ Combat have an A-rank-or-better fighter about a third of
+  the time (a 7% chance otherwise), and S+ eleven times as often.
+- Adults die in time (mostly old age, rarely illness); kin mourn for a season;
+  the departed stay on record (cards, chronicle). When the lord dies, the heir
+  inherits the title.
+- When a village holds more than its charter allows, young unmarried adults
+  leave to seek their fortune.
+- Tuning: `tools/life_sim.gd` lives a village for decades, data only. Left to
+  itself a Hamlet holds at about 70 people for 40 years with food in balance
+  (on one seed the elders outnumber the farmers in the fourth decade, and the
+  player has to build). With the steward bot (`tools/charter_sim.gd`, which
+  now also builds another granary when the one it has is full) every seed
+  tried reaches Town between day 72 and day 157.
+
 
 ## Charters (Phase 3.3)
 
@@ -36,7 +66,8 @@ days draw settlers, people living near it are happier, and it counts as
 the market Townhouses need.
 
 A steward bot (`tools/charter_sim.gd`) reaches Town on every seed tried,
-between day 73 and day 184, and grows to about 170 people; beyond that,
+between day 72 and day 157 (with Phase 4.1's ten-day seasons, births and a
+second granary when the first is full), and fills its 200 places; beyond that,
 growth comes from upgrading more homes (more taverns, chapels and markets
 in the outer streets).
 

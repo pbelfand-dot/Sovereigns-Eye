@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 3 in progress: your village builds, grows and attracts settlers** (internal codename "Project Appraisal").
+> **Status: Phase 4 in progress: the years turn. People grow up, marry, have children who inherit their gifts, and die; your house carries on** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -82,6 +82,8 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 19 | Homes build themselves | When every home is full, villagers build a new cottage beside a road. Cottages near the square gain floors (**Timber House**, then **Townhouse**) once their needs are met, and pay rent |
 | 20 | Inspect a building | Click any building: who lives and works there, what it makes, and for homes a checklist of what the next level needs |
 | 21 | Earn a charter | Build panel (**B**) → **Charter**: a checklist for the next charter (Hamlet → Village → Market Town → Town) and **Petition the Crown** when it's met. Each charter makes room for more people, unlocks buildings (another tavern and chapel, then the **Market Hall**) and brings in dues. In a Market Town, Townhouses take in lodgers |
+| 22 | Watch the years turn | A year is four ten-day seasons (about 80 minutes at 8x). Everyone ages on their birthday: children grow taller and take up work, the old retire, couples marry and have children. Look at a 3-year-old with the Eye: children of gifted parents are often gifted too |
+| 23 | Inherit | When the lord (your parent) dies, you become Lord or Lady of the village. Card → **Relationships** remembers the departed; the Court panel's chronicle keeps the house's births, weddings and deaths |
 
 The same seed always creates the same village and the same people.
 
@@ -155,6 +157,25 @@ new floors rise inside scaffolding.
 ![Placing a building: a good spot and a blocked one](docs/screenshots/build_placement.jpg)
 ![The Build panel (B)](docs/screenshots/build_panel.jpg)
 ![A new farmstead with its fields](docs/screenshots/new_farmstead.jpg)
+
+### The years turn (Phase 4, step 1)
+
+The village lives on through the years (`LifeSystem`, `data/life.json`). The
+tone is gentle: no child dies, and no one dies giving birth.
+
+| | What happens |
+|---|---|
+| **Birthdays** | Everyone turns a year older on their own day. Children grow taller, and their hidden gifts start to show in what they can do (always within their potential). Young men may grow a beard; hair greys with age |
+| **Growing up** | At 13 children start on the family's work (an apprentice, a farmhand); at 16 they take a grown trade, often their parent's, and work the fields when food runs short |
+| **Growing old** | Commoners retire at 65; a grown son or daughter takes up the trade, or one of the village's hands does |
+| **Love and marriage** | Unmarried villagers court someone of their age and temper, and in time marry. A young couple takes an empty home if there is one; a widowed parent's home takes in the newcomer |
+| **Children** | A married couple has children now and then: fewer in a crowded home or a full village. A baby's looks, traits and **gifts follow their parents' often, never always**: two gifted parents make a gifted child several times more likely (`data/ranks.json` "inheritance"). Babies stay at home, unseen, until they're 3 |
+| **Death** | Adults die in time, mostly of old age, now and then of an illness. Their kin mourn them for a season (a mood factor, and they'll say so as you pass), a widow or widower may marry again, and the departed are remembered on their family's cards |
+| **Inheritance** | When the lord (your parent) dies, you inherit: you become Lord or Lady of the village and the widowed lady becomes the dowager. You are spared yourself until succession comes (step 3) |
+| **A full village** | When more people live here than the charter allows, young unmarried adults may leave to seek their fortune |
+
+![A card after sixteen years: the heir is Lady of Stonestead; her father and grandfather are remembered](docs/screenshots/years_card.jpg)
+![The house chronicle: the old lord's death and the succession](docs/screenshots/years_chronicle.jpg)
 
 ### Controls
 
@@ -382,21 +403,24 @@ tools/run_tests.sh                       # Headless tests (generation, determini
                                          # court, territory, save/load, art pipeline, audio,
                                          # live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
-# Screenshots (needs a display): court | art | menus | build | barks | ...
+# Screenshots (needs a display): court | art | menus | build | barks | life | ...
 godot --path . res://tools/capture.tscn -- 12345 /tmp/shots build
+# A village through the years, data only (population, births, deaths, weddings)
+godot --headless --path . --script res://tools/life_sim.gd -- 12345 40
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 3, step 2)
+## 9. Known limitations (Phase 4, step 1)
 
-* The village stops growing at 110 people for now. The town charters in step 3
-  (Hamlet → Village → Market Town → Town) will raise that limit.
-* People don't age, have children, move away or die yet, so a village only ever
-  grows.
-* Only five building types can be ordered. Taverns, chapels and markets come with
-  the charters in step 3. Farms don't gain levels; only cottages do.
+* A Town holds 200 people; there is no charter beyond it yet.
+* Your own marriage, matches for your kin and retainers, and choosing your heir
+  come in Phase 4 steps 2 and 3. Until then the heir can't die, and the house's
+  own (kin and retainers) don't court on their own.
+* Babies have no body in the world until they're 3 (they're at home). There are
+  no weddings or funerals to watch yet, only the news and the chronicle.
+* Farms don't gain levels; only cottages do.
 * With 100+ villagers the overview reaches about 2,300 draw calls. That's fine on
   desktop; phones haven't been tested.
 * Placing or finishing a building rebuilds the ground, grass and props

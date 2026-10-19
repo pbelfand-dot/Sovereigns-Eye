@@ -20,7 +20,7 @@
   ],
   "calendar": {
     "start_year": 1187,
-    "days_per_season": 30,
+    "days_per_season": 10,
     "seasons": ["Spring", "Summer", "Autumn", "Winter"],
     "start_hour": 7
   }

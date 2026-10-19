@@ -14,7 +14,7 @@
   "recent": 12,
   "_recent": "A line isn't said again until this many others have been.",
 
-  "weights": { "greet": 3.0, "work": 3.0, "time": 1.2, "season": 1.0, "worry": 4.0, "happy": 1.5, "gift": 2.5, "village": 1.5, "eyed": 1.5 },
+  "weights": { "greet": 3.0, "work": 3.0, "time": 1.2, "season": 1.0, "worry": 4.0, "happy": 1.5, "gift": 2.5, "village": 1.5, "eyed": 1.5, "family": 3.0 },
   "fond_at": 30,
   "sour_at": -20,
   "lean_days": 3,
@@ -83,9 +83,15 @@
     "crowded":    ["Too many of us under one roof.", "We sleep three to a bed at home."],
     "lonely":     ["Nobody much to talk to, these days.", "Quiet, isn't it? Always quiet."],
     "restless":   ["There must be more to life than this.", "Same work, every day. I could do so much more.", "I wasn't made for this, {lord}. I know it."],
+    "mourning":   ["Forgive me, {lord}. We buried someone dear not long ago.", "The house is so quiet now.", "I keep thinking I hear them at the door."],
     "unhappy":    ["Hard times, {lord}. Hard times.", "Don't mind me. Just a bad day. A bad week."]
   },
   "happy": ["What a day, {lord}!", "Life's good in this village. I'll say that.", "Can't complain, {lord}. Truly."],
+  "family": {
+    "_comment": "Life at home, offered only when it's true (Barks.pools_for).",
+    "baby": ["We've a new babe at home, {lord}! Not a wink of sleep.", "Have you seen our little one? Strong lungs, that one.", "A new mouth to feed, and worth every crumb."],
+    "children": ["My little ones keep me on my toes.", "The children grow faster than the barley."]
+  },
   "_worries": "unhappy: happiness below 35; happy: above 78; restless: a gifted, ambitious person stuck in humble work (MoodSystem.wasted_talent_penalty).",
 
   "gift": {

@@ -60,6 +60,7 @@ func generate(world: WorldState) -> void:
 	_set_initial_mood()
 	_name_buildings()
 	_place_everyone_at_home()
+	_roll_birthdays(world)
 
 
 # --- 1. Households ---------------------------------------------------------------
@@ -137,12 +138,17 @@ func _new_person(fam: FamilyData, occupation_id: String, gender: String, age: in
 
 ## A person's station is their household's, unless their own job ranks higher.
 func _status_for(occupation_id: String, fam: FamilyData) -> String:
+	return status_for(occupation_id, fam)
+
+
+static func status_for(occupation_id: String, fam: FamilyData) -> String:
+	var fam_status := fam.social_status if fam else "commoner"
 	var occ_status := str(GameData.occupation(occupation_id).get("status", "inherit"))
 	if occ_status == "inherit" or occupation_id.is_empty():
-		return fam.social_status
+		return fam_status
 	var occ_tier := int(GameData.status_def(occ_status).get("tier", 0))
-	var fam_tier := int(GameData.status_def(fam.social_status).get("tier", 0))
-	return occ_status if occ_tier > fam_tier else fam.social_status
+	var fam_tier := int(GameData.status_def(fam_status).get("tier", 0))
+	return occ_status if occ_tier > fam_tier else fam_status
 
 
 func _random_gender() -> String:
@@ -389,8 +395,8 @@ func _roll_appearance(c: CharacterData, skin: String, hair: String) -> Dictionar
 	if c.gender == "female" or c.age < 25:
 		styles.erase("bald")
 	var height := rng_looks.randf_range(0.94, 1.08) if c.gender == "male" else rng_looks.randf_range(0.9, 1.02)
-	if c.age < 16:
-		height *= clampf(0.42 + c.age * 0.037, 0.42, 1.0)
+	var adult_height := height
+	height *= child_height(c.age)
 	return {
 		"skin": skin,
 		"hair_base": hair,
@@ -398,11 +404,17 @@ func _roll_appearance(c: CharacterData, skin: String, hair: String) -> Dictionar
 		"hair_style": str(Seeds.pick(rng_looks, styles)),
 		"eyes": str(Seeds.pick(rng_looks, ap["eye_colors"])),
 		"height": snappedf(height, 0.001),
+		"adult_height": snappedf(adult_height, 0.001),
 		"build": snappedf(rng_looks.randf_range(0.85, 1.2), 0.001),
 		"beard": c.gender == "male" and c.age >= 20 and rng_looks.randf() < 0.45,
 		"primary": str(Seeds.pick(rng_looks, palette["primary"])),
 		"secondary": str(Seeds.pick(rng_looks, palette["secondary"])),
 	}
+
+
+## How tall a child is next to the adult they'll become (1.0 from about 16).
+static func child_height(age: int) -> float:
+	return clampf(0.42 + age * 0.037, 0.42, 1.0)
 
 
 # --- 6. Talent ------------------------------------------------------------------------
@@ -806,6 +818,9 @@ static func settle_family(world: WorldState, tpl: Dictionary, home: BuildingData
 	gen._roll_talents()
 	gen._build_family_relationships()
 	gen._write_settler_histories(h)
+	var birthdays := Seeds.rng(world.world_seed, stream + "/birthdays")
+	for c in gen._members(h):
+		c.birthday = birthdays.randi_range(0, Calendar.days_per_year() - 1)
 	var court_rng := Seeds.rng(world.world_seed, stream + "/court")
 	for c in gen._members(h):
 		c.stress = gen.rng_social.randf_range(5.0, 30.0)
@@ -815,6 +830,71 @@ static func settle_family(world: WorldState, tpl: Dictionary, home: BuildingData
 		if world.house:
 			c.player_opinion = CourtSystem.roll_opinion(world, c, court_rng)
 	return fam
+
+
+## Everyone's birthday, a day of the year (its own stream, so nothing else
+## shifts).
+func _roll_birthdays(world: WorldState, stream: String = "birthdays") -> void:
+	var rng := Seeds.rng(world.world_seed, stream)
+	for c in world.characters:
+		c.birthday = rng.randi_range(0, Calendar.days_per_year() - 1)
+
+
+## A baby born today to `mother` and `father` (married, one household): a
+## name, looks and traits from their parents, hidden gifts that often (never
+## always) follow theirs (TalentRoller), and their family ties. Babies stay
+## at home, unseen, until they can walk about (data/life.json "unseen_below").
+static func newborn(world: WorldState, mother: CharacterData, father: CharacterData, stream: String) -> CharacterData:
+	var gen := CharacterGenerator.new()
+	gen._begin_settlers(world, stream)
+	var fam := world.get_family(mother.family_id)
+	var c := gen._new_person(fam, "", gen._random_gender(), 0)
+	var bg := GameData.background(fam.background)
+	c.occupation_id = str(bg.get("young_job", "child"))
+	c.social_status = status_for(c.occupation_id, fam)
+	c.home_building_id = mother.home_building_id
+	c.inside_building_id = mother.home_building_id
+	var home := world.get_building(mother.home_building_id)
+	c.position = home.door_position() if home else mother.position
+	c.birthday = world.day_of_year()
+	var parents: Array[CharacterData] = [mother, father]
+	gen._roll_traits(c, parents)
+	var ap := GameData.appearance()
+	var like: CharacterData = parents[gen.rng_looks.randi_range(0, 1)]
+	var skin := str(like.appearance.get("skin", Seeds.pick(gen.rng_looks, ap["skin_tones"])))
+	var hair := str(like.appearance.get("hair_base", Seeds.pick(gen.rng_looks, ap["hair_colors"])))
+	c.appearance = gen._roll_appearance(c, skin, hair)
+	c.appearance["face"] = FaceFeatures.roll_child(gen.rng_looks, c, parents)
+	c.appearance["figure"] = FaceFeatures.roll_figure(gen.rng_figure, c)
+	TalentRoller.roll_attributes(gen.rng_talent, c, fam.background, parents)
+	# Family ties: parents, brothers and sisters, grandparents.
+	var kin := {}
+	for p in parents:
+		gen._link(p, c, "child", "parent", gen.rng_social.randi_range(60, 95), gen.rng_social.randi_range(60, 95))
+		for r in world.living_ties(p, ["child"]):
+			kin[int(r["target"])] = "sibling"
+		for r in world.living_ties(p, ["parent"]):
+			kin[int(r["target"])] = "grandparent"
+	for id: int in kin:
+		var other := world.get_character(id)
+		if other == null or other == c:
+			continue
+		if kin[id] == "sibling":
+			gen._link(other, c, "sibling", "sibling", gen.rng_social.randi_range(30, 90), gen.rng_social.randi_range(40, 90))
+		else:
+			gen._link(other, c, "grandchild", "grandparent", gen.rng_social.randi_range(50, 95), gen.rng_social.randi_range(40, 90))
+	var year := world.current_year()
+	var season := world.current_season()
+	c.add_history(year, season, "life", "Born in %s to %s and %s" % [world.village_name, mother.full_name(), father.full_name()])
+	for p in parents:
+		p.add_history(year, season, "family", "Welcomed a %s, %s" % ["son" if c.gender == "male" else "daughter", c.first_name])
+	c.stress = 5.0
+	c.happiness = clampf(MoodSystem.happiness_target(c, world), 5.0, 98.0)
+	c.loyalty = clampf(MoodSystem.loyalty_target(c, world), 5.0, 98.0)
+	c.met = c.family_id == world.ruling_family_id
+	if world.house:
+		c.player_opinion = CourtSystem.roll_opinion(world, c, Seeds.rng(world.world_seed, stream + "/court"))
+	return c
 
 
 func _begin_settlers(world: WorldState, stream: String) -> void:
@@ -827,8 +907,9 @@ func _begin_settlers(world: WorldState, stream: String) -> void:
 	rng_social = Seeds.rng(s, stream + "/social")
 	rng_story = Seeds.rng(s, stream + "/story")
 	rng_figure = Seeds.rng(s, stream + "/figure")
+	# Ids are never reused, even for the departed (family ties point at them).
+	_next_character_id = maxi(_next_character_id, world.last_character_id() + 1)
 	for c in world.characters:
-		_next_character_id = maxi(_next_character_id, c.id + 1)
 		_used_full_names[c.full_name()] = true
 	for f in world.families:
 		_next_family_id = maxi(_next_family_id, f.id + 1)

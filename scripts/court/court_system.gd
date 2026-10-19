@@ -133,6 +133,9 @@ static func is_kin(state: WorldState, c: CharacterData) -> bool:
 ## "Page", "Retainer"... or their ordinary occupation.
 static func role_name(state: WorldState, c: CharacterData) -> String:
 	if state.is_player(c):
+		var fam := state.ruling_family()
+		if fam and fam.head_id == c.id:
+			return "%s of %s" % [c.occupation_name(), state.village_name]
 		return "Heir of %s" % house_name(state)
 	if not c.office.is_empty():
 		return office_name(c.office)

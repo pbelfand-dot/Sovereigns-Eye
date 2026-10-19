@@ -16,6 +16,8 @@ var gender: String = "male"  # "male" / "female"
 var age: int = 20
 var occupation_id: String = ""
 var social_status: String = "commoner"
+## Day of the year (0 .. Calendar.days_per_year() - 1) they turn a year older.
+var birthday: int = 0
 var family_id: int = -1
 var home_building_id: int = -1
 var work_building_id: int = -1
@@ -80,6 +82,18 @@ var facing: float = 0.0
 var inside_building_id: int = -1
 var activity: String = ""
 var activity_text: String = ""
+
+# --- The passing years (Phase 4) ------------------------------------------------
+## Day they started courting their sweetheart (-1 = not courting, or since
+## before the game began).
+var courting_since: int = -1
+## Day a mother last gave birth (-1 = never in the game).
+var last_birth_day: int = -1
+## For the departed (WorldState.departed): the day they died or left, "died"
+## or "left", and why ("old age", "a fever", "seeking their fortune").
+var departed_day: int = -1
+var departed_how: String = ""
+var departed_cause: String = ""
 
 
 # --- Identity ----------------------------------------------------------------
@@ -290,6 +304,12 @@ func to_dict() -> Dictionary:
 		"terms": terms.duplicate(true),
 		"agreed_wage": agreed_wage,
 		"title": title,
+		"birthday": birthday,
+		"courting_since": courting_since,
+		"last_birth_day": last_birth_day,
+		"departed_day": departed_day,
+		"departed_how": departed_how,
+		"departed_cause": departed_cause,
 	}
 
 
@@ -353,6 +373,12 @@ static func from_dict(d: Dictionary) -> CharacterData:
 	c.terms = _clean_terms(d.get("terms", {}))
 	c.agreed_wage = int(d.get("agreed_wage", -1))
 	c.title = str(d.get("title", ""))
+	c.birthday = int(d.get("birthday", 0))
+	c.courting_since = int(d.get("courting_since", -1))
+	c.last_birth_day = int(d.get("last_birth_day", -1))
+	c.departed_day = int(d.get("departed_day", -1))
+	c.departed_how = str(d.get("departed_how", ""))
+	c.departed_cause = str(d.get("departed_cause", ""))
 	return c
 
 

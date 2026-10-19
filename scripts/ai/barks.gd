@@ -131,6 +131,18 @@ static func pools_for(state: WorldState, c: CharacterData, r: RandomNumberGenera
 			out["village"] = news
 	if c.appraised and not child:
 		out["eyed"] = conf.get("eyed", [])
+	if not child:
+		var family: Dictionary = conf.get("family", {})
+		var baby := false
+		var young := false
+		for tie in state.living_ties(c, ["child"]):
+			var kid: CharacterData = state.get_character(int(tie["target"]))
+			baby = baby or (kid != null and kid.age <= 1)
+			young = young or (kid != null and kid.age < 10)
+		if baby:
+			out["family"] = family.get("baby", [])
+		elif young:
+			out["family"] = family.get("children", [])
 	for key: String in out.keys():
 		if (out[key] as Array).is_empty():
 			out.erase(key)
@@ -159,6 +171,8 @@ static func worries_of(state: WorldState, c: CharacterData, conf: Dictionary = c
 		out.append("hungry")
 	elif state.territory and state.territory.amount("food") < float(TerritorySystem.consumption(state).get("food", 0.0)) * float(conf.get("lean_days", 3)):
 		out.append("lean")
+	if not MoodSystem.mourning(c, state).is_empty():
+		out.append("mourning")
 	if c.stress > 60.0:
 		out.append("overworked")
 	for f: Dictionary in MoodSystem.happiness_factors(c, state):
