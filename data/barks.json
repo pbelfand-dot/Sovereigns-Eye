@@ -26,7 +26,8 @@
     "sour":  ["Hmph.", "Oh. It's you.", "Come to count our chickens, {lord}?", "Don't let me keep you, {lord}."],
     "sworn": ["At your command, {lord}.", "Anything you need, {lord}, just say.", "The house stands with you, {lord}."],
     "kin":   ["There you are! Off on your rounds?", "Don't be late for supper.", "Mind you're back before dark."],
-    "child": ["Hello!", "Are you really the {title}?", "Mam says I have to bow to you.", "Is that a real sword?"]
+    "child": ["Hello!", "Are you really the {title}?", "Mam says I have to bow to you.", "Is that a real sword?"],
+    "guest": ["{lord}. Your village is lovelier than I was told.", "My family speaks well of yours, {lord}.", "I hope my visit pleases you, {lord}."]
   },
 
   "work": {

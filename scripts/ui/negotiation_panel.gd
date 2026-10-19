@@ -40,6 +40,9 @@ var _make: Button
 var _blocked: Label
 var _gift: Button
 var _eye: Button
+var _hand: Button
+var _accept_match: Button
+var _decline_match: Button
 var _homes: Array[int] = []
 var _positions: Array[Dictionary] = []
 var _queue: Array[Dictionary] = []
@@ -103,6 +106,12 @@ func _ready() -> void:
 	row.add_child(_make)
 	_gift = UITheme.button("Gift", _on_gift)
 	row.add_child(_gift)
+	_hand = UITheme.button("Ask for their hand", _on_hand)
+	row.add_child(_hand)
+	_accept_match = UITheme.button("Accept the match", _on_accept_match)
+	row.add_child(_accept_match)
+	_decline_match = UITheme.button("Send them home", _on_decline_match)
+	row.add_child(_decline_match)
 	_eye = UITheme.button("Sovereign's Eye", func() -> void:
 		if character:
 			eye_requested.emit(character.id))
@@ -219,6 +228,26 @@ func refresh() -> void:
 	_make.tooltip_text = str(can["reason"]) if not can["ok"] else ("Change the terms they serve on: wage, home, place." if c.retainer else "Offer them a place in your house.")
 	_blocked.text = str(can["reason"])
 	_blocked.visible = not can["ok"]
+	# Marriage: the heir may ask for a hand; a suitor waits for an answer.
+	var heir := st.player()
+	var wooable := heir != null and LifeSystem.spouse_of(st, heir) == null and not c.is_visitor() and c.gender != heir.gender \
+		and c.age >= int(MatchSystem.section("ages").get("min", 16)) and not CourtSystem.is_kin(st, c)
+	_hand.visible = wooable
+	if wooable:
+		var wed := MatchSystem.can_wed(st, heir, c)
+		_hand.disabled = not wed["ok"]
+		_hand.tooltip_text = str(wed["reason"]) if not wed["ok"] else "Ask %s to marry you. They'll weigh it: what they think of you, the station it brings, their own heart." % c.first_name
+	_accept_match.visible = c.is_visitor()
+	_decline_match.visible = c.is_visitor()
+	# A suitor isn't for hire: their side of the panel shows the match.
+	_make.visible = not c.is_visitor()
+	_ask.visible = not c.is_visitor()
+	_blocked.visible = _blocked.visible and not c.is_visitor()
+	if c.is_visitor():
+		var target := st.get_character(c.suitor_for)
+		var whom := "you" if st.is_player(target) else (target.first_name if target else "?")
+		_accept_match.tooltip_text = "%s marries %s, with a dowry of %d gold from %s." % [c.first_name, whom, MatchSystem.dowry(st, c.house_id), st.realm.house_title(c.house_id)]
+		_decline_match.tooltip_text = "Decline the offer: %s goes home, and their house thinks less of yours." % c.first_name
 	if not can["ok"]:
 		_offer_box.visible = false
 	_refresh_known()
@@ -231,6 +260,9 @@ func _refresh_known() -> void:
 		_known.remove_child(child)
 		child.queue_free()
 	var st := world.state
+	if character.is_visitor():
+		_refresh_match()
+		return
 	var who := Recruitment.decider(st, character)
 	_known.add_child(UITheme.label("What you know they want", 15, UITheme.ACCENT, true))
 	if who != character:
@@ -247,6 +279,23 @@ func _refresh_known() -> void:
 	var more := Recruitment.ranked_motives(st, who).size() > character.known_motives.size()
 	_ask.disabled = not more
 	_ask.tooltip_text = "They tell you what matters to them, most important first." if more else "They've told you all there is."
+
+
+## A suitor's side: whose they are, for whom, the dowry and how long they
+## stay. Their gifts are for the Eye to see.
+func _refresh_match() -> void:
+	var st := world.state
+	var c := character
+	var house := st.realm.get_house(c.house_id)
+	var target := st.get_character(c.suitor_for)
+	_known.add_child(UITheme.label("The match", 15, UITheme.ACCENT, true))
+	_known.add_child(_wrap("%s, renown %d." % [st.realm.house_title(c.house_id), int(house.get("renown", 0))], 14, UITheme.TEXT))
+	_known.add_child(_wrap("For %s. Dowry %d gold." % ["you" if st.is_player(target) else (target.full_name() if target else "?"), MatchSystem.dowry(st, c.house_id)], 14, UITheme.TEXT))
+	_known.add_child(_wrap("Their house is %s toward yours." % MatchSystem.standing_word(int(house.get("standing", 0))), 14, UITheme.TEXT))
+	_known.add_child(_wrap("Their letter: \"%s\"" % MatchSystem.letter(st, c), 14, UITheme.TEXT))
+	_known.add_child(_wrap("Here until %s; answer before then, or they go home offended." % Calendar.format_date(c.visiting_until * Calendar.MINUTES_PER_DAY), 13, UITheme.TEXT_DIM))
+	var eye := "You've seen their gifts with the Eye." if c.appraised else "Their letter only praises: look with the Eye before you answer."
+	_known.add_child(_wrap(eye, 13, UITheme.ACCENT if not c.appraised else UITheme.TEXT_DIM))
 
 
 func _wrap(text: String, size: int, color: Color) -> Label:
@@ -332,6 +381,42 @@ func _on_ask() -> void:
 		_say("(%s: %s)" % [Recruitment.motive_name(str(r["motive"])), "holds them back " + Recruitment.strength_word(w) if str(r["motive"]) in ["ties", "risk"] else "matters " + Recruitment.strength_word(w)], "note")
 	Audio.play("ui_tick")
 	refresh()
+
+
+func _on_hand() -> void:
+	var events: Array[Dictionary] = []
+	var r := MatchSystem.propose(world.state, character, events)
+	flush()
+	_say("You ask %s for %s hand." % [character.first_name, "her" if character.gender == "female" else "his"], "you")
+	_say(str(r["text"]), "" if r["ok"] else "note")
+	for reason: Dictionary in (r["reasons"] as Array).slice(0, 4):
+		var good := bool(reason["good"])
+		_say(("+ " if good else "– ") + str(reason["text"]), "good" if good else "bad")
+	if r["accept"]:
+		Audio.play("court_good")
+		world.apply_life_events(events)
+	elif r["ok"]:
+		Audio.play("court_bad")
+		_say("(Win their heart, then ask again: talk with them, bring gifts.)", "note")
+	refresh()
+
+
+func _on_accept_match() -> void:
+	var events: Array[Dictionary] = []
+	var r := MatchSystem.accept(world.state, character, events)
+	Audio.play("court_good" if r["ok"] else "ui_error")
+	if not r["ok"]:
+		Game.notify.emit(str(r["text"]), Game.COLOR_BAD)
+	world.apply_life_events(events)
+	refresh()
+
+
+func _on_decline_match() -> void:
+	var events: Array[Dictionary] = []
+	var r := MatchSystem.decline(world.state, character, events)
+	Game.notify.emit(str(r["text"]), Game.COLOR_INFO)
+	world.end_conversation()
+	world.apply_life_events(events)
 
 
 func _on_make() -> void:

@@ -260,7 +260,7 @@ func test_children_inherit_gifts() -> void:
 		for i in n:
 			var kid := CharacterGenerator.newborn(st, mother, father, "test_gift_%d_%d" % [p, i])
 			high += int(kid.get_potential("combat") >= 80)
-			LifeSystem._depart(st, kid, "left", "test", [] as Array[Dictionary])
+			LifeSystem.depart(st, kid, "left", "test", [] as Array[Dictionary])
 		return float(high) / n
 	var strong: float = gifted.call(150)
 	var weak: float = gifted.call(15)

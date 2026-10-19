@@ -95,6 +95,14 @@ var departed_day: int = -1
 var departed_how: String = ""
 var departed_cause: String = ""
 
+# --- The house's matches (Phase 4.2) --------------------------------------------
+## The noble house they were born to (RealmData id), -1 for the village's own.
+var house_id: int = -1
+## A suitor visiting from another house: the day they leave (-1 = not a
+## visitor) and whom they were offered to.
+var visiting_until: int = -1
+var suitor_for: int = -1
+
 
 # --- Identity ----------------------------------------------------------------
 
@@ -104,6 +112,11 @@ func full_name() -> String:
 
 func is_adult() -> bool:
 	return age >= ADULT_AGE
+
+
+## A suitor visiting from another noble house (not one of the village).
+func is_visitor() -> bool:
+	return visiting_until >= 0
 
 
 func is_knight() -> bool:
@@ -310,6 +323,9 @@ func to_dict() -> Dictionary:
 		"departed_day": departed_day,
 		"departed_how": departed_how,
 		"departed_cause": departed_cause,
+		"house_id": house_id,
+		"visiting_until": visiting_until,
+		"suitor_for": suitor_for,
 	}
 
 
@@ -379,6 +395,9 @@ static func from_dict(d: Dictionary) -> CharacterData:
 	c.departed_day = int(d.get("departed_day", -1))
 	c.departed_how = str(d.get("departed_how", ""))
 	c.departed_cause = str(d.get("departed_cause", ""))
+	c.house_id = int(d.get("house_id", -1))
+	c.visiting_until = int(d.get("visiting_until", -1))
+	c.suitor_for = int(d.get("suitor_for", -1))
 	return c
 
 

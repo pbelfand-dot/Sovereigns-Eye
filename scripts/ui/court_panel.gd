@@ -51,6 +51,7 @@ func refresh() -> void:
 	if player:
 		var role := CourtSystem.role_name(st, player)
 		_body.add_child(_person_button(player, "%s: %s (you), %d" % ["Heir" if role.begins_with("Heir") else role, player.full_name(), player.age]))
+	_marriages(st)
 	var income := CourtSystem.daily_income(st)
 	var wages := CourtSystem.daily_wages(st)
 	_body.add_child(UITheme.label("Gold %d   (income %d, wages %d: %+d per day)" % [h.gold, income, wages, income - wages], 15, UITheme.ACCENT))
@@ -110,6 +111,54 @@ func refresh() -> void:
 		shown += 1
 		if shown >= 12:
 			break
+
+
+## Who is married, the suitor visiting now, who is still to be matched, and
+## the children at their lessons.
+func _marriages(st: WorldState) -> void:
+	var player := st.player()
+	_heading("Marriages")
+	var spouse := LifeSystem.spouse_of(st, player) if player else null
+	if spouse:
+		_body.add_child(_person_button(spouse, "Your %s: %s, %d" % ["wife" if spouse.gender == "female" else "husband", spouse.display_name(), spouse.age]))
+	elif player:
+		_body.add_child(_wrap("You are unmarried. Ask for someone's hand face to face, or wait for a suitor from a neighbouring house.", 14, UITheme.TEXT_DIM))
+	var v := MatchSystem.visitor(st)
+	if v:
+		var target := st.get_character(v.suitor_for)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		var b := _person_button(v, "Suitor: %s, %d, for %s" % [v.full_name(), v.age, "you" if st.is_player(target) else (target.first_name if target else "?")])
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(b)
+		row.add_child(UITheme.button("Accept", func() -> void: _answer_suitor(v, true)))
+		row.add_child(UITheme.button("Send home", func() -> void: _answer_suitor(v, false)))
+		_body.add_child(row)
+		_body.add_child(_wrap("%s. Dowry %d gold. Here until %s." % [st.realm.house_title(v.house_id), MatchSystem.dowry(st, v.house_id), Calendar.format_date(v.visiting_until * Calendar.MINUTES_PER_DAY)], 14, UITheme.TEXT))
+		_body.add_child(_wrap("Their letter only praises: walk up to %s and look with the Eye before you answer." % v.first_name, 13, UITheme.TEXT_DIM))
+	var fam := st.ruling_family()
+	for id in (fam.member_ids if fam else []):
+		var k := st.get_character(id)
+		if k and not st.is_player(k) and MatchSystem.seeks(st, k):
+			_body.add_child(_person_button(k, "%s, %d  -  unmarried (choose a match from their card)" % [k.display_name(), k.age]))
+	var pupils := CourtSystem.tutored(st)
+	if not pupils.is_empty():
+		var names: Array[String] = []
+		for p in pupils:
+			names.append("%s (%s)" % [p.first_name, CourtSystem.attr_name(CourtSystem.focus_of(p))])
+		_body.add_child(_wrap("At their lessons: %s  -  tutors %d gold a day." % [", ".join(names), pupils.size() * int(CourtSystem.section("tutors").get("fee", 1))], 14, UITheme.TEXT))
+
+
+func _answer_suitor(v: CharacterData, yes: bool) -> void:
+	var events: Array[Dictionary] = []
+	var r := MatchSystem.accept(world.state, v, events) if yes else MatchSystem.decline(world.state, v, events)
+	Audio.play("court_good" if yes and r["ok"] else "ui_tick")
+	if not (yes and r["ok"]):
+		Game.notify.emit(str(r["text"]), Game.COLOR_INFO)
+	if not yes and world.talking_to == v.id:
+		world.end_conversation()
+	world.apply_life_events(events)
+	refresh()
 
 
 func _office_effect(st: WorldState, o: Dictionary, holder: CharacterData) -> String:

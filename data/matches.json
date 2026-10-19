@@ -1,0 +1,105 @@
+{
+  "_comment": "Phase 4.2, the house's matches (MatchSystem). The heir asks for someone's hand face to face, or accepts a suitor sent by a neighbouring noble house; kin and retainers can be matched from their card. A proposal is weighed, never rolled: everyone answers yes or no and says why, like an offer of service (data/recruitment.json).",
+
+  "ages": {
+    "_comment": "Who can be matched: grown, of an age with each other.",
+    "min": 16,
+    "max": 50,
+    "gap": 15
+  },
+
+  "consent": {
+    "_comment": "score = base + the parts below; they say yes at threshold. opinion_* are per point of opinion (-100..100). station: marrying into a higher station (into the house, or into a retainer's family). duty: the house's own kin do as the house asks (unless they dislike the match or love another). loyalty (retainers) is per point above loyalty_from: the loyal accept a stranger, the rest must like them. A gap in age beyond gap_from costs gap_cost a year. Traits add their value.",
+    "threshold": 0.5,
+    "base": 0.1,
+    "opinion_of_heir": 0.006,
+    "opinion_of_partner": 0.005,
+    "station": 0.35,
+    "duty": 0.55,
+    "loyalty": 0.01,
+    "loyalty_from": 40,
+    "courting_other": -0.6,
+    "rival": -0.8,
+    "gap_from": 8,
+    "gap_cost": 0.04,
+    "traits": { "ambitious": 0.2, "loyal": 0.12, "gregarious": 0.05, "humble": -0.1, "shy": -0.12, "arrogant": -0.08, "fickle": -0.1, "content": -0.06 }
+  },
+
+  "answers": {
+    "_comment": "What they say. {lord} = my lord / my lady.",
+    "yes": ["Yes, {lord}. With all my heart.", "I'd hoped you would ask. Yes!", "Yes. Oh, yes."],
+    "yes_duty": ["If it pleases the house, then yes.", "I'll do my duty by the house. Yes."],
+    "no": ["Forgive me, {lord}. I cannot.", "I'm honoured, {lord}, but no.", "No. Please don't ask me again."],
+    "no_partner": ["I won't marry {name}. Not even for the house.", "Ask anything else of me, but not that."]
+  },
+
+  "wedding": {
+    "_comment": "What a wedding does for the house: renown (a noble match raises it, marrying beneath the house a little lowers it), the village's opinion of the heir when the heir marries one of their own, and the spouse's opinion and loyalty.",
+    "renown_noble": 6,
+    "renown_commoner": -2,
+    "village_opinion_local": 3,
+    "spouse_opinion": 25,
+    "spouse_loyalty": 15
+  },
+
+  "suitors": {
+    "_comment": "Neighbouring houses offer a son or daughter for the house's unmarried (the heir first). The suitor visits for visit_days, staying at the manor, so you can meet them and look at them with the Eye; accept or decline before they leave. One visit at a time. yearly_*: how many offers come a year, on average (the next is due 0.5 to 1.5 times the average gap after the last visit ends). The dowry (gold) grows with their house's renown.",
+    "yearly_heir": 1.4,
+    "yearly_kin": 0.6,
+    "kin_max_age": 40,
+    "visit_days": 10,
+    "age_spread": 5,
+    "dowry_base": 40,
+    "dowry_per_renown": 1.6,
+    "standing_accept": 25,
+    "standing_decline": -8,
+    "standing_lapse": -12,
+    "boast": 30
+  },
+
+  "meeting": {
+    "_comment": "What a suitor says when the heir first speaks with them: \"heir\" when they came for the heir, \"kin\" when for one of the house. {seat}: their home; {name}: whom they came for; {lord}: my lord / my lady.",
+    "heir": ["I've ridden from {seat} to meet you, {lord}. I hope I don't disappoint.", "So you're the one my family wrote of. Good day, {lord}.", "{seat} sends its greetings, {lord}. I bring my own as well."],
+    "kin": ["I've come from {seat} to meet {name}. Will you speak well of me, {lord}?", "My family hopes I'll marry {name}. I hope so too, {lord}."]
+  },
+
+  "houses": {
+    "_comment": "The noble houses around the village (RealmData): how many, and their renown.",
+    "count": 4,
+    "renown": [12, 70]
+  },
+
+  "praise": {
+    "_comment": "What a suitor's family writes of them: always glowing, a clue to their true gift at best (the family boasts; only the Eye tells the truth). By attribute, then how impressive it sounds (mild, keen, striking). {He}/{he}/{his} follow the suitor.",
+    "leadership": [
+      ["{He} is well liked by the whole household.", "The servants love {him}."],
+      ["{He} is already trusted with the steward's men.", "{He} sits naturally at the head of the table."],
+      ["{He} was born to command, all who know {him} say.", "Others follow {him} without being asked."]
+    ],
+    "combat": [
+      ["{He} is a fair rider and fond of the hunt.", "{He} keeps up with the huntsmen."],
+      ["{He} is the best hand with a sword among the young of our house.", "{He} unhorsed a knight at the spring tourney."],
+      ["{He} has never been beaten at arms.", "{He} is spoken of as a champion in the making."]
+    ],
+    "intelligence": [
+      ["{He} is fond of books.", "{He} is quick with {his} letters."],
+      ["{He} has a rare head for figures.", "{He} reads three tongues."],
+      ["The abbot himself admires {his} mind.", "{He} is wiser than {his} years by far."]
+    ],
+    "politics": [
+      ["{He} is gracious company.", "{He} has a gentle way with guests."],
+      ["{He} is at ease among the great of the land.", "{He} makes peace in every quarrel."],
+      ["{His} elders already seek {his} counsel.", "{He} could charm a bishop out of his ring."]
+    ],
+    "administration": [
+      ["{He} is orderly in all things.", "{He} is careful with the household's coin."],
+      ["{He} keeps our accounts better than our steward.", "{He} has a firm hand on the storerooms."],
+      ["{He} could run a duchy's treasury.", "Not a penny is ever lost in {his} keeping."]
+    ],
+    "ambition": [
+      ["{He} is eager to make {his} mark.", "{He} is full of plans."],
+      ["{He} means to rise high, and will.", "{He} is restless for great things."],
+      ["{He} will make your house greater than it was.", "{He} dreams of a seat at the king's own table."]
+    ]
+  }
+}

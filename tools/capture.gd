@@ -3,7 +3,7 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk|life|matches]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
@@ -42,6 +42,7 @@ var harbour_only := false
 var eye_only := false
 var barks_only := false
 var life_only := false
+var matches_only := false
 
 
 func _ready() -> void:
@@ -70,6 +71,7 @@ func _ready() -> void:
 	eye_only = args.has("eye")
 	barks_only = args.has("barks")
 	life_only = args.has("life")
+	matches_only = args.has("matches")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -156,6 +158,10 @@ func _run() -> void:
 		return
 	if life_only:
 		await _life_shots()
+		get_tree().quit()
+		return
+	if matches_only:
+		await _match_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1323,6 +1329,101 @@ func _life_shots() -> void:
 	await _shot("life_chronicle.png")
 
 
+## The house's matches (Phase 4.2): a suitor from a neighbouring house met
+## on foot with the answer to give, the court panel's Marriages, and grown
+## kin's card with the matches to choose from (one refused, with reasons).
+func _match_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	st.minutes += 3.0 * 60.0
+	var heir := st.player()
+	var spouse := LifeSystem.spouse_of(st, heir)
+	if spouse:
+		heir.remove_relationship(spouse.id)
+		spouse.remove_relationship(heir.id)
+	heir.age = clampi(heir.age, 18, 30)
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	world.set_speed(0)
+	var events: Array[Dictionary] = []
+	var suitor := MatchSystem.offer(st, heir, Seeds.rng(st.world_seed, "capture_suitor"), events)
+	for n in world.ui.find_children("*", "", true, false):
+		if n is ToastStack:
+			for t in n.get_children():
+				t.queue_free()
+	world.apply_life_events(events)
+	await _wait(3)
+	var me := world.player_npc()
+	# Out on the square, where there's room to see them.
+	me.teleport(st.layout.square_center + Vector3(4.0, 0, 6.0))
+	var npc := world.npc_of(suitor.id)
+	var spot := me.global_position + Vector3(0, 0, 2.2)
+	for i in 16:
+		var p := me.global_position + Vector3(cos(TAU * i / 16.0), 0, sin(TAU * i / 16.0)) * 2.2
+		if not WorldGeometry.inside_building(st, p, 0.6) and not WorldGeometry.line_blocked(st, p, me.global_position):
+			spot = p
+			break
+	npc.teleport(spot)
+	var to := spot - me.global_position
+	me.rotation.y = atan2(-to.x, -to.z)
+	world.camera_rig.set_yaw(me.rotation.y, true)
+	world._process(0.05)
+	print("matches: %s of %s for %s (%s)" % [suitor.full_name(), st.realm.house_title(suitor.house_id), heir.full_name(), MatchSystem.letter(st, suitor)])
+	world.try_talk(suitor.id)
+	var panel := world.ui.conversation_panel()
+	await _wait(3)
+	panel.flush()
+	for n in world.ui.find_children("*", "", true, false):
+		if n is ToastStack:
+			for t in n.get_children():
+				t.queue_free()
+	await _wait(6)
+	await _shot("match_suitor.png")
+	world.end_conversation()
+	for n in world.ui.find_children("*", "", true, false):
+		if n is ToastStack:
+			for t in n.get_children():
+				t.queue_free()
+	world.ui.toggle_court()
+	await _wait(10)
+	await _shot("match_court.png")
+	world.ui.toggle_court()
+	# Grown kin, matched from their card: one refusal with its reasons.
+	var fam := st.ruling_family()
+	var kin: CharacterData = null
+	for id in fam.member_ids:
+		var k := st.get_character(id)
+		if k and not st.is_player(k) and k.id != fam.head_id and LifeSystem.spouse_of(st, k) == null and k.age <= 50 and (kin == null or k.age > kin.age):
+			kin = k
+	if kin == null:
+		return
+	kin.age = maxi(kin.age, 18)
+	world.select_character(kin.id, true)
+	await _wait(10)
+	for n in world.ui.find_children("*", "", true, false):
+		if n is ToastStack:
+			for t in n.get_children():
+				t.queue_free()
+	world.ui._card.show_tab("Court")
+	world.ui._card._matching = true
+	var list := MatchSystem.candidates(st, kin, 6)
+	if not list.is_empty():
+		var cold: CharacterData = list[-1]
+		cold.add_relationship(kin.id, "rival", -50)
+		world.ui._card._on_arrange(cold.id)
+		world.ui._card._matching = true
+		world.ui._card._build_court()
+	await _wait(10)
+	for n in world.ui.find_children("*", "", true, false):
+		if n is ToastStack:
+			for t in n.get_children():
+				t.queue_free()
+	await _wait(2)
+	await _shot("match_kin.png")
+
+
 ## Villagers' remarks as the heir walks past (Barks): a few people at work
 ## and about the square, each spoken to through the real system.
 func _bark_shots() -> void:
@@ -1617,6 +1718,7 @@ static func simulate(st: WorldState, days: int, plan: Dictionary) -> void:
 		CourtSystem.daily_update(st, Seeds.rng(st.world_seed, "court_day_%d" % day))
 		TerritorySystem.daily_update(st)
 		LifeSystem.daily_update(st)
+		MatchSystem.daily_update(st)
 		GrowthSystem.daily_update(st)
 
 

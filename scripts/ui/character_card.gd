@@ -31,6 +31,9 @@ var _history_box: VBoxContainer
 var _court_box: VBoxContainer
 var _live_refresh := 0.0
 var _dismiss_armed := false
+## The match-making list on the Court tab is open, and the last answer.
+var _matching := false
+var _match_note: Array[Dictionary] = []
 
 
 func _init() -> void:
@@ -128,6 +131,8 @@ func _add_tab(title: String) -> VBoxContainer:
 func show_character(c: CharacterData) -> void:
 	if c != character:
 		_dismiss_armed = false
+		_matching = false
+		_match_note.clear()
 	character = c
 	visible = c != null
 	if c == null:
@@ -328,10 +333,122 @@ func _build_court() -> void:
 	gb.tooltip_text = str(gift["reason"]) if not gift["ok"] else "A gift raises their opinion of you (more for the greedy)."
 	row.add_child(gb)
 	_court_box.add_child(row)
-	if c.retainer:
+	if c.is_visitor():
+		_build_court_visitor()
+	elif CourtSystem.is_kin(st, c):
+		_build_court_kin()
+	elif c.retainer:
 		_build_court_retainer()
+		_marriage_section(c)
 	else:
 		_build_court_recruit()
+
+
+## A suitor from another house: who sent them, for whom, until when; the
+## answer is the player's.
+func _build_court_visitor() -> void:
+	var c := character
+	var st := world.state
+	var target := st.get_character(c.suitor_for)
+	_section(_court_box, "A suitor")
+	_court_box.add_child(_wrap_label("%s came from %s to court %s, and stays at the manor until %s. Their house offers a dowry of %d gold." % [
+		c.first_name, st.realm.house_title(c.house_id), "you" if st.is_player(target) else (target.full_name() if target else "?"),
+		Calendar.format_date(c.visiting_until * Calendar.MINUTES_PER_DAY), MatchSystem.dowry(st, c.house_id)], 14))
+	_court_box.add_child(_wrap_label("Their family's letter only praises them. Look with the Eye: their children may inherit their gifts.", 13, UITheme.TEXT_DIM))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.add_child(UITheme.button("Accept the match", func() -> void: _answer_suitor(true)))
+	row.add_child(UITheme.button("Send them home", func() -> void: _answer_suitor(false)))
+	_court_box.add_child(row)
+
+
+func _answer_suitor(yes: bool) -> void:
+	var events: Array[Dictionary] = []
+	var r := MatchSystem.accept(world.state, character, events) if yes else MatchSystem.decline(world.state, character, events)
+	Audio.play("court_good" if yes and r["ok"] else "ui_tick")
+	if not (yes and r["ok"]):
+		Game.notify.emit(str(r["text"]), Game.COLOR_INFO)
+	world.apply_life_events(events)
+	if character and world.state.get_character(character.id):
+		_build_court()
+
+
+## The house's own kin: their lessons and their marriage.
+func _build_court_kin() -> void:
+	var c := character
+	var st := world.state
+	_section(_court_box, "Of your house")
+	_court_box.add_child(_wrap_label("%s is %s of %s." % [c.first_name, CourtSystem.role_name(st, c).to_lower(), CourtSystem.house_name(st)], 14))
+	if CourtSystem.is_tutored(st, c):
+		_section(_court_box, "Lessons")
+		var focus_row := HBoxContainer.new()
+		focus_row.add_theme_constant_override("separation", 8)
+		var fl := UITheme.label("Learn", 15)
+		fl.custom_minimum_size.x = 80
+		focus_row.add_child(fl)
+		focus_row.add_child(_focus_picker(c))
+		_court_box.add_child(focus_row)
+		_training_lines(c)
+		_court_box.add_child(_wrap_label("Tutors at the manor teach them for %d gold a day. Children learn fastest; the Eye shows where their gifts lie." % int(CourtSystem.section("tutors").get("fee", 1)), 13, UITheme.TEXT_DIM))
+	_marriage_section(c)
+
+
+## Married, or (for the house's grown kin and retainers) a list of
+## matches to propose: both must agree.
+func _marriage_section(c: CharacterData) -> void:
+	var st := world.state
+	var spouse := LifeSystem.spouse_of(st, c)
+	if spouse == null and c.age < int(MatchSystem.section("ages").get("min", 16)):
+		return
+	_section(_court_box, "Marriage")
+	if spouse:
+		_court_box.add_child(_wrap_label("Married to %s." % spouse.display_name(), 14))
+		return
+	if st.is_player(c):
+		_court_box.add_child(_wrap_label("Ask for someone's hand face to face, or wait for a suitor from a neighbouring house. Children often inherit their parents' gifts.", 14, UITheme.TEXT_DIM))
+		return
+	_court_box.add_child(_wrap_label("Choose a match for %s. Both must agree. A gifted pair often has gifted children." % c.first_name, 14, UITheme.TEXT_DIM))
+	var toggle := UITheme.button("Hide matches" if _matching else "Find a match...", func() -> void:
+		_matching = not _matching
+		_build_court())
+	toggle.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_court_box.add_child(toggle)
+	for n: Dictionary in _match_note:
+		_court_box.add_child(_wrap_label(str(n["text"]), 14 if n.get("main", false) else 13, UITheme.GOOD if n["good"] else (UITheme.BAD if not n.get("main", false) else UITheme.TEXT)))
+	if _matching:
+		var list := MatchSystem.candidates(st, c, 6)
+		if list.is_empty():
+			_court_box.add_child(_wrap_label("No one suits just now.", 14, UITheme.TEXT_DIM))
+		for o in list:
+			var b := Button.new()
+			b.theme_type_variation = "RowButton"
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.clip_text = true
+			b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			b.add_theme_font_size_override("font_size", 14)
+			var seen := "  -  greatest gift %s" % Appraisal.rank_id(o.best_potential()) if o.appraised else ""
+			b.text = "Propose: %s, %d, %s%s" % [o.display_name(), o.age, CourtSystem.role_name(st, o).to_lower(), seen]
+			b.tooltip_text = "Ask %s and %s whether they'll marry." % [c.first_name, o.first_name]
+			b.pressed.connect(_on_arrange.bind(o.id))
+			_court_box.add_child(b)
+
+
+func _on_arrange(partner_id: int) -> void:
+	var st := world.state
+	var partner := st.get_character(partner_id)
+	if partner == null:
+		return
+	var events: Array[Dictionary] = []
+	var r := MatchSystem.arrange(st, character, partner, events)
+	_match_note.clear()
+	_match_note.append({"text": str(r["text"]), "good": bool(r["accept"]), "main": true})
+	for reason: Dictionary in (r["reasons"] as Array).slice(0, 4):
+		_match_note.append({"text": ("+ " if reason["good"] else "– ") + str(reason["text"]), "good": bool(reason["good"])})
+	Audio.play("court_good" if r["accept"] else "court_bad")
+	if r["accept"]:
+		_matching = false
+		world.apply_life_events(events)
+	_build_court()
 
 
 func _build_court_recruit() -> void:
@@ -438,11 +555,13 @@ func _build_court_player() -> void:
 	var st := world.state
 	var h := st.house
 	_section(_court_box, "You")
-	_court_box.add_child(_wrap_label("You are %s, heir of %s. Your Appraisal shows you what no one else can see: everyone's hidden potential. Find the gifted, bring them into your household, and raise them into the great servants of your house." % [c.full_name(), CourtSystem.house_name(st)], 15))
+	var role := CourtSystem.role_name(st, c)
+	_court_box.add_child(_wrap_label("You are %s, %s. Your Appraisal shows you what no one else can see: everyone's hidden potential. Find the gifted, bring them into your household, and raise them into the great servants of your house." % [c.full_name(), ("heir of %s" % CourtSystem.house_name(st)) if role.begins_with("Heir") else role], 15))
 	_section(_court_box, "Your house")
 	var net := CourtSystem.daily_income(st) - CourtSystem.daily_wages(st)
 	_court_box.add_child(UITheme.label("Gold: %d  (%+d per day)" % [h.gold, net], 15, UITheme.ACCENT))
 	_court_box.add_child(UITheme.label("Renown: %d  -  Household: %d / %d retainers" % [h.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)], 15))
+	_marriage_section(c)
 	_section(_court_box, "Your studies")
 	var focus_row := HBoxContainer.new()
 	focus_row.add_theme_constant_override("separation", 8)
