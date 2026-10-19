@@ -160,7 +160,8 @@ func refresh_markers() -> void:
 	if _label.visible:
 		var role := character.occupation_name()
 		if _is_player:
-			role = "Heir (You)"
+			var role_now := CourtSystem.role_name(brain.world.state, character) if brain and brain.world else "Heir"
+			role = "%s (You)" % ("Heir" if role_now.begins_with("Heir") else role_now)
 		elif character.retainer or not character.office.is_empty():
 			role = CourtSystem.office_name(character.office) if not character.office.is_empty() else ("Page" if character.age < 16 else "Retainer")
 		_label.text = "%s\n%s" % [character.display_name(), role]

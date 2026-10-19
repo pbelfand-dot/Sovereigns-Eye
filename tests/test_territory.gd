@@ -61,7 +61,7 @@ func test_villagers_produce_and_consume() -> void:
 	TerritorySystem.daily_update(state)
 	check(absf(state.territory.amount("food") - (before + float(net["food"]))) < 0.01, "a day's food is added to the stores")
 	# Winter: fields lie fallow.
-	state.minutes += 3 * 30 * Calendar.MINUTES_PER_DAY
+	state.minutes += 3 * Calendar.days_per_season() * Calendar.MINUTES_PER_DAY
 	check_eq(state.current_season(), "Winter", "three seasons later it is winter")
 	check(float(TerritorySystem.production(state)["food"]) < float(prod["food"]), "less food grows in winter")
 

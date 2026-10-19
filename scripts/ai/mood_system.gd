@@ -16,8 +16,8 @@ const HAPPINESS_PER_HOUR := {
 }
 
 
-static func _friends(c: CharacterData) -> int:
-	return c.relationships_of_type(["friend"]).size()
+static func _friends(c: CharacterData, world: WorldState = null) -> int:
+	return world.living_ties(c, ["friend"]).size() if world else c.relationships_of_type(["friend"]).size()
 
 
 ## [{ "label": String, "value": float }]
@@ -30,19 +30,19 @@ static func happiness_factors(c: CharacterData, world: WorldState) -> Array[Dict
 		var v := float(GameData.trait_def(t).get("happiness", 0))
 		if v != 0.0:
 			out.append({"label": str(GameData.trait_def(t).get("name", t)), "value": v})
-	var friends := _friends(c)
+	var friends := _friends(c, world)
 	if friends > 0:
 		out.append({"label": "Friends in the village (%d)" % friends, "value": minf(friends * 2.0, 8.0)})
 	elif c.age >= 8:
 		out.append({"label": "Lonely", "value": -4.0})
-	if not c.relationships_of_type(["lover"]).is_empty():
+	if not (world.living_ties(c, ["lover"]) if world else c.relationships_of_type(["lover"])).is_empty():
 		out.append({"label": "In love", "value": 5.0})
-	for r in c.relationships_of_type(["spouse"]):
+	for r in (world.living_ties(c, ["spouse"]) if world else c.relationships_of_type(["spouse"])):
 		if int(r["opinion"]) >= 50:
 			out.append({"label": "Happy marriage", "value": 4.0})
 		elif int(r["opinion"]) < 0:
 			out.append({"label": "Unhappy marriage", "value": -6.0})
-	var rivals := c.relationships_of_type(["rival"]).size()
+	var rivals := (world.living_ties(c, ["rival"]) if world else c.relationships_of_type(["rival"])).size()
 	if rivals > 0:
 		out.append({"label": "Rivals (%d)" % rivals, "value": -3.0 * rivals})
 	var wasted := wasted_talent_penalty(c)
@@ -63,10 +63,32 @@ static func happiness_factors(c: CharacterData, world: WorldState) -> Array[Dict
 		out.append({"label": "Fine home (%s)" % home.type_name(), "value": home_bonus})
 	if world != null and world.territory != null:
 		out.append_array(CharterSystem.mood_factors(world, c))
+	var grief := mourning(c, world)
+	if not grief.is_empty():
+		out.append(grief)
 	if TerritorySystem.is_hungry(world):
 		var hunger := TerritorySystem.section("hunger")
 		out.append({"label": str(hunger.get("label", "Hungry")), "value": float(hunger.get("happiness", -20))})
 	return out
+
+
+## Grief for someone close who died lately (data/life.json "mourning"): the
+## deepest one counts. {} when they grieve no one.
+static func mourning(c: CharacterData, world: WorldState) -> Dictionary:
+	if world == null or world.departed.is_empty():
+		return {}
+	var m := LifeSystem.section("mourning")
+	var days := int(m.get("days", 40))
+	var worst := {}
+	for r: Dictionary in c.relationships:
+		var gone := world.get_departed(int(r["target"]))
+		if gone == null or gone.departed_how != "died" or world.day() - gone.departed_day >= days:
+			continue
+		var type := str(r["type"])
+		var v := float(m.get("spouse", -16)) if type in ["spouse", "late_spouse"] else (float(m.get("friend", -4)) if type == "friend" else (float(m.get("kin", -10)) if type in LifeSystem.KIN else 0.0))
+		if v < float(worst.get("value", 0.0)):
+			worst = {"label": "Mourning %s" % gone.first_name, "value": v}
+	return worst
 
 
 ## Gifted, driven people stuck in humble work grow restless. This is the hook

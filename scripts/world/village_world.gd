@@ -147,6 +147,8 @@ func _spawn_npcs() -> void:
 	_npc_root.name = "NPCs"
 	add_child(_npc_root)
 	for c in state.characters:
+		if LifeSystem.is_unseen(c):
+			continue  # babies stay at home until they can walk about
 		var npc := NPC.new()
 		_npc_root.add_child(npc)
 		npc.setup(c)
@@ -294,6 +296,8 @@ func _check_new_day() -> void:
 		_announce(e)
 		if e.has("hired"):
 			_on_hired(int(e["hired"]))
+	for e: Dictionary in LifeSystem.daily_update(state):
+		_on_life_event(e)
 	for e: Dictionary in GrowthSystem.daily_update(state):
 		_on_growth_event(e)
 	_replan_crew_changes(crews_before)
@@ -388,10 +392,50 @@ func _on_growth_event(e: Dictionary) -> void:
 				builder.refresh_props()
 
 
+## The years turn (LifeSystem): birthdays redraw a body, new work or a new
+## home re-plans the day, a child old enough to walk about appears, and the
+## departed leave the world.
+func _on_life_event(e: Dictionary) -> void:
+	_announce(e)
+	if e.has("aged"):
+		var npc := npc_of(int(e["aged"]))
+		if npc:
+			npc.refresh_model()
+	if e.has("seen"):
+		spawn_character(int(e["seen"]))
+	if e.has("job"):
+		_on_hired(int(e["job"]))
+	for id: int in e.get("moved", []):
+		court_changed(id)
+	if e.has("gone"):
+		remove_character_body(int(e["gone"]))
+
+
+## Takes a departed villager's body out of the world (and out of any talk,
+## selection or focus).
+func remove_character_body(character_id: int) -> void:
+	if talking_to == character_id:
+		end_conversation()
+	var npc := npc_of(character_id)
+	if npc == null:
+		return
+	if selected == npc:
+		deselect()
+	if focus == npc:
+		_set_focus(null)
+	if hovered == npc:
+		hovered = null
+	if _preferred_focus == character_id:
+		_preferred_focus = -1
+	npcs.erase(character_id)
+	npc.queue_free()
+	_compute_worker_slots()
+
+
 ## Gives a character who joined the village (a settler) a body and a brain.
 func spawn_character(character_id: int) -> NPC:
 	var c := state.get_character(character_id)
-	if c == null or npcs.has(character_id):
+	if c == null or npcs.has(character_id) or LifeSystem.is_unseen(c):
 		return npcs.get(character_id, null)
 	var npc := NPC.new()
 	_npc_root.add_child(npc)

@@ -49,7 +49,8 @@ func refresh() -> void:
 
 	_heading(CourtSystem.house_name(st))
 	if player:
-		_body.add_child(_person_button(player, "Heir: %s (you), %d" % [player.full_name(), player.age]))
+		var role := CourtSystem.role_name(st, player)
+		_body.add_child(_person_button(player, "%s: %s (you), %d" % ["Heir" if role.begins_with("Heir") else role, player.full_name(), player.age]))
 	var income := CourtSystem.daily_income(st)
 	var wages := CourtSystem.daily_wages(st)
 	_body.add_child(UITheme.label("Gold %d   (income %d, wages %d: %+d per day)" % [h.gold, income, wages, income - wages], 15, UITheme.ACCENT))
@@ -160,8 +161,10 @@ func _wrap(text: String, size: int, color: Color) -> Label:
 
 static func _chronicle_color(kind: String) -> Color:
 	match kind:
-		"join", "office", "knight":
+		"join", "office", "knight", "birth", "marriage":
 			return UITheme.GOOD
+		"death":
+			return UITheme.TEXT
 		"rank":
 			return UITheme.ACCENT
 		"leave", "bad", "refusal":

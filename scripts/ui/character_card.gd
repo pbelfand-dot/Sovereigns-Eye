@@ -134,9 +134,14 @@ func show_character(c: CharacterData) -> void:
 		_portrait.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		return
 	# An AI portrait (user://portraits/<seed>/<id>.png) wins; otherwise the
-	# character's 3D model is rendered live as a placeholder.
+	# character's 3D model is rendered live as a placeholder. A baby has no
+	# portrait yet (they stay at home, unseen).
 	var ai_portrait := PortraitPrompt.image_for(c, world.state.world_seed)
-	if ai_portrait:
+	_portrait_rect.tooltip_text = "Too young to sit for a portrait: at home with their family." if LifeSystem.is_unseen(c) else ""
+	if LifeSystem.is_unseen(c):
+		_portrait_rect.texture = null
+		_portrait.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	elif ai_portrait:
 		_portrait_rect.texture = ai_portrait
 		_portrait.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	else:
@@ -164,7 +169,7 @@ func refresh() -> void:
 	var st := world.state
 	_name_label.text = c.display_name()
 	_sub_label.text = "%s  -  %s" % [CourtSystem.role_name(st, c) if st.house else c.occupation_name(), c.status_name()]
-	_age_label.text = "Age %d  -  %s" % [c.age, c.gender.capitalize()]
+	_age_label.text = "Age %d  -  %s  -  born %s" % [c.age, c.gender.capitalize(), LifeSystem.born_text(st, c)]
 	var fam := world.state.get_family(c.family_id)
 	_family_label.text = "%s (%s)" % [fam.display_name(), fam.background_name()] if fam else ""
 	var home := world.state.get_building(c.home_building_id)
@@ -671,7 +676,7 @@ func _build_relationships() -> void:
 	_clear(_relations_box)
 	var c := character
 	var groups := [
-		["Family", ["spouse", "parent", "child", "sibling", "grandparent", "grandchild"]],
+		["Family", ["spouse", "late_spouse", "parent", "child", "sibling", "grandparent", "grandchild"]],
 		["Friends", ["friend"]],
 		["Rivals", ["rival"]],
 	]
@@ -698,6 +703,7 @@ func _build_relationships() -> void:
 func _relation_row(r: Dictionary) -> void:
 	var other := world.state.get_character(int(r["target"]))
 	if other == null:
+		_departed_row(r)
 		return
 	var b := Button.new()
 	b.theme_type_variation = "RowButton"
@@ -722,11 +728,28 @@ func _relation_row(r: Dictionary) -> void:
 	_relations_box.add_child(row)
 
 
+## Kin who have died or moved away, remembered on the card (not a link).
+func _departed_row(r: Dictionary) -> void:
+	var gone := world.state.get_departed(int(r["target"]))
+	if gone == null or not (str(r["type"]) in LifeSystem.KIN or str(r["type"]) == "late_spouse"):
+		return
+	var when := Calendar.year(gone.departed_day * Calendar.MINUTES_PER_DAY)
+	var how := "died %d, aged %d" % [when, gone.age] if gone.departed_how == "died" else "moved away in %d" % when
+	var l := UITheme.label("%s%s  -  %s, %s" % ["\u2020 " if gone.departed_how == "died" else "", gone.full_name(), _relation_name(str(r["type"]), gone), how], 15, UITheme.TEXT_DIM)
+	l.clip_text = true
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.tooltip_text = "Died of %s" % gone.departed_cause if gone.departed_how == "died" else "Left %s to seek their fortune" % world.state.village_name
+	l.mouse_filter = Control.MOUSE_FILTER_PASS
+	_relations_box.add_child(l)
+
+
 static func _relation_name(type: String, other: CharacterData) -> String:
 	var male := other.gender == "male"
 	match type:
 		"spouse":
 			return "Husband" if male else "Wife"
+		"late_spouse":
+			return "Late husband" if male else "Late wife"
 		"parent":
 			return "Father" if male else "Mother"
 		"child":

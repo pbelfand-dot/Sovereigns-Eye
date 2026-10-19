@@ -151,7 +151,7 @@ static func motives(state: WorldState, c: CharacterData) -> Dictionary:
 	var ties := 0.0
 	if (cfg().get("business_heads", []) as Array).has(c.occupation_id) and _household_head(state, c):
 		ties += float(t.get("business_head", 0.45))
-	ties += mini(c.relationships_of_type(["friend"]).size(), int(t.get("max_friends", 3))) * float(t.get("per_friend", 0.08))
+	ties += mini(state.living_ties(c, ["friend"]).size(), int(t.get("max_friends", 3))) * float(t.get("per_friend", 0.08))
 	for r in c.relationships_of_type(["spouse"]):
 		var sp := state.get_character(int(r["target"]))
 		if sp and sp.work_building_id >= 0:

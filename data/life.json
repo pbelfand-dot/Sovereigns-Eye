@@ -1,0 +1,73 @@
+{
+  "_comment": "Phase 4.1, the years turn (LifeSystem). A year is the calendar's (four seasons, data/society.json); everyone ages on their birthday. The tone is gentle: children never die, and no one dies giving birth. Chances are per year and are spread over its days.",
+
+  "ages": {
+    "_comment": "teen: children take up their family's teen job (an apprentice, a farmhand). adult: CharacterData.ADULT_AGE, they take a grown trade. retire: commoners leave work for an elder's life (nobles and retainers keep their place).",
+    "teen": 13,
+    "retire": 65,
+    "unseen_below": 3
+  },
+
+  "trades": {
+    "_comment": "When someone with a trade retires, dies or leaves, a grown son or daughter carries it on, else one of the village's hands (territory.json \"hiring\"). At 16 an apprentice takes up the family trade this often; otherwise a trade of their background.",
+    "follow_family": 0.6,
+    "_food": "While the village grows less food than it eats plus this share of what it eats, young people coming of age work the fields (food_job) rather than a trade, and hands who grow food aren't taken from the fields for other trades.",
+    "food_margin": 0.15,
+    "food_job": "farmhand",
+    "not_passed_on": ["lord", "lady", "noble_scion", "dowager", "child", "elder", "king", "queen", "general"]
+  },
+
+  "death": {
+    "_comment": "Yearly chance of dying by age (straight lines between the points). Never below min_age. Old age names the cause from old_age_from; before that it's an illness, rarely.",
+    "min_age": 18,
+    "yearly": [[18, 0.002], [35, 0.003], [45, 0.006], [55, 0.012], [62, 0.025], [70, 0.05], [78, 0.1], [85, 0.18], [92, 0.32], [100, 0.6]],
+    "old_age_from": 68,
+    "illness": ["a fever", "a winter cough", "a wasting sickness", "a fall from a cart", "a sudden illness"],
+    "spare_player": true
+  },
+
+  "mourning": {
+    "_comment": "Happiness while they grieve someone close (MoodSystem), for this many days.",
+    "days": 40,
+    "spouse": -16,
+    "kin": -10,
+    "friend": -4
+  },
+
+  "courtship": {
+    "_comment": "Unmarried villagers (not the ruling family or retainers: the house's matches come in 4.2) may start courting someone of a compatible age; a courtship of at least min_days may turn into a marriage. Yearly chances.",
+    "min_age": 18,
+    "max_age": 48,
+    "max_gap": 10,
+    "start_yearly": 0.35,
+    "marry_after_days": 20,
+    "marry_yearly": 0.8,
+    "remarry_after_days": 80
+  },
+
+  "births": {
+    "_comment": "A married couple may have a child while the mother is between the ages; the yearly chance falls with each child they already have (by), never sooner than spacing_days after the last, and less in a crowded home or a full village.",
+    "mother_age": [18, 42],
+    "yearly": 0.38,
+    "by": 0.78,
+    "max_children": 7,
+    "spacing_days": 50,
+    "crowded": 0.35,
+    "village_full": 0.3
+  },
+
+  "leaving": {
+    "_comment": "When more people live here than the charter allows, young unmarried adults may move away to seek their fortune (yearly chance).",
+    "min_age": 17,
+    "max_age": 32,
+    "yearly": 0.5
+  },
+
+  "looks": {
+    "_comment": "Growing up and growing old: men may grow a beard at beard_age; from grey_from, hair may turn grey each birthday.",
+    "beard_age": 20,
+    "beard_chance": 0.45,
+    "grey_from": 50,
+    "grey_yearly": 0.12
+  }
+}

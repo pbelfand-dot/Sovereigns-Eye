@@ -233,6 +233,22 @@ static func migrate(data: Dictionary) -> Dictionary:
 					layout.props.append({"type": entry["type"], "pos": pos, "rot": float(yard["rot"])})  # a second chapel keeps clear of it
 			l["props"] = props
 		data["save_version"] = 12
+		version = 12
+	if version == 12:
+		# v13 (Phase 4.1, the years turn) gives everyone a birthday, drawn the
+		# way a new village draws them (in order of id), and starts the record
+		# of the departed empty. Seasons are 10 days now, so the calendar date
+		# of an older save moves on; ages and the clock don't change.
+		var rng := Seeds.rng(int(data.get("seed", 0)), "birthdays")
+		var people: Array = data.get("characters", [])
+		var ordered := people.duplicate()
+		ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.get("id", 0)) < int(b.get("id", 0)))
+		for c: Dictionary in ordered:
+			if not c.has("birthday"):
+				c["birthday"] = rng.randi_range(0, Calendar.days_per_year() - 1)
+		if not data.has("departed"):
+			data["departed"] = []
+		data["save_version"] = 13
 	return data
 
 

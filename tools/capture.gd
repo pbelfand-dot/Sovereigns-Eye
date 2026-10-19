@@ -41,6 +41,7 @@ var castle_only := false
 var harbour_only := false
 var eye_only := false
 var barks_only := false
+var life_only := false
 
 
 func _ready() -> void:
@@ -68,6 +69,7 @@ func _ready() -> void:
 	harbour_only = args.has("harbour")
 	eye_only = args.has("eye")
 	barks_only = args.has("barks")
+	life_only = args.has("life")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -150,6 +152,10 @@ func _run() -> void:
 		return
 	if barks_only:
 		await _bark_shots()
+		get_tree().quit()
+		return
+	if life_only:
+		await _life_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1265,6 +1271,58 @@ func _talk_shots() -> void:
 ## as the seal breaks, "burst" just after the card turns and the sparks fly,
 ## "final" at the end with the choices. EYE_TIERS=skilled,legendary limits
 ## the tiers; EYE_CALM=1 turns on reduced motion and reduced flashes.
+## The years turn (Phase 4.1): the village lives a few years (data only),
+## then a card with kin who have died and children born since, and the
+## house chronicle with its births, weddings, deaths and the succession.
+func _life_shots() -> void:
+	var years := int(OS.get_environment("LIFE_YEARS")) if OS.get_environment("LIFE_YEARS").is_valid_int() else 8
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	simulate(st, years * Calendar.days_per_year(), {})
+	print("life: %d years, %d living, %d departed, the heir %s (%s)" % [years, st.characters.size(), st.departed.size(), st.player().full_name(), CourtSystem.role_name(st, st.player())])
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	world.set_speed(0)
+	world.paused = true
+	for n in world.ui.find_children("*", "", true, false):
+		if n is ToastStack:
+			for t in n.get_children():
+				t.queue_free()
+	# Someone with kin both departed and newly born.
+	var best: CharacterData = null
+	var best_score := -1
+	for c in st.characters:
+		var gone := 0
+		var young := 0
+		for r in c.relationships:
+			var d := st.get_departed(int(r["target"]))
+			if d and d.departed_how == "died" and str(r["type"]) in LifeSystem.KIN + ["late_spouse"]:
+				gone += 1
+			var k := st.get_character(int(r["target"]))
+			if k and str(r["type"]) == "child" and k.age < 6:
+				young += 1
+		var score := mini(gone, 2) * 3 + mini(young, 2) * 2 + (2 if world.npc_of(c.id) else 0)
+		if score > best_score:
+			best_score = score
+			best = c
+	if best:
+		print("life: card of %s" % best.full_name())
+		world.select_character(best.id, true)
+		await _wait(10)
+		world.ui._card.show_tab("Relationships")
+		await _wait(10)
+		await _shot("life_card.png")
+	world.deselect()
+	world.ui.toggle_court()
+	await _wait(10)
+	for sc in world.ui._court.find_children("*", "ScrollContainer", true, false):
+		(sc as ScrollContainer).scroll_vertical = 100000
+	await _wait(5)
+	await _shot("life_chronicle.png")
+
+
 ## Villagers' remarks as the heir walks past (Barks): a few people at work
 ## and about the square, each spoken to through the real system.
 func _bark_shots() -> void:
@@ -1558,6 +1616,7 @@ static func simulate(st: WorldState, days: int, plan: Dictionary) -> void:
 			MoodSystem.daily_update(c, st, rng)
 		CourtSystem.daily_update(st, Seeds.rng(st.world_seed, "court_day_%d" % day))
 		TerritorySystem.daily_update(st)
+		LifeSystem.daily_update(st)
 		GrowthSystem.daily_update(st)
 
 
