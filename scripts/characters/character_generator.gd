@@ -897,6 +897,51 @@ static func newborn(world: WorldState, mother: CharacterData, father: CharacterD
 	return c
 
 
+## A son or daughter of a neighbouring noble house (RealmData), sent to
+## court `target`: of an age with them, made like everyone else (looks,
+## traits, hidden gifts with a noble upbringing), staying at the manor while
+## they visit. MatchSystem sets how long.
+static func suitor(world: WorldState, house: Dictionary, target: CharacterData, stream: String) -> CharacterData:
+	var gen := CharacterGenerator.new()
+	gen._begin_settlers(world, stream)
+	var fam := world.get_family(int(house.get("family", -1)))
+	if fam == null:
+		fam = FamilyData.new()
+		fam.id = 1
+		for f in world.families:
+			fam.id = maxi(fam.id, f.id + 1)
+		fam.name = str(house["name"])
+		fam.background = "noble"
+		fam.social_status = "noble"
+		world.add_family(fam)
+		house["family"] = fam.id
+	var spread := int(GameData.load_file("matches").get("suitors", {}).get("age_spread", 5))
+	var age := clampi(target.age + gen.rng_people.randi_range(-spread, spread), 17, 45)
+	var c := gen._new_person(fam, "noble_scion", "female" if target.gender == "male" else "male", age)
+	c.social_status = "noble"
+	c.house_id = int(house["id"])
+	var manor := CourtSystem._building_of_type(world, "manor")
+	c.home_building_id = manor
+	c.work_building_id = manor
+	gen._roll_traits(c, [])
+	var ap := GameData.appearance()
+	c.appearance = gen._roll_appearance(c, str(Seeds.pick(gen.rng_looks, ap["skin_tones"])), str(Seeds.pick(gen.rng_looks, ap["hair_colors"])))
+	c.appearance["face"] = FaceFeatures.roll(gen.rng_looks, c)
+	c.appearance["figure"] = FaceFeatures.roll_figure(gen.rng_figure, c)
+	TalentRoller.roll_attributes(gen.rng_talent, c, "noble", [])
+	c.birthday = gen.rng_people.randi_range(0, Calendar.days_per_year() - 1)
+	var year := world.current_year()
+	c.add_history(year - age, gen._season(), "life", "Born at %s, of House %s" % [house["seat"], house["name"]])
+	c.add_history(year, world.current_season(), "family", "Came to %s to court %s" % [world.village_name, target.full_name()])
+	c.stress = 10.0
+	c.happiness = clampf(MoodSystem.happiness_target(c, world), 5.0, 98.0)
+	c.loyalty = 40.0
+	if world.house:
+		c.player_opinion = clampf(CourtSystem.roll_opinion(world, c, Seeds.rng(world.world_seed, stream + "/court")) + 20.0, -100.0, 100.0)
+	c.activity_text = "Arriving from %s" % house["seat"]
+	return c
+
+
 func _begin_settlers(world: WorldState, stream: String) -> void:
 	state = world
 	_year_now = world.current_year()

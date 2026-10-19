@@ -137,6 +137,8 @@ static func role_name(state: WorldState, c: CharacterData) -> String:
 		if fam and fam.head_id == c.id:
 			return "%s of %s" % [c.occupation_name(), state.village_name]
 		return "Heir of %s" % house_name(state)
+	if c.is_visitor():
+		return "Suitor from House %s" % state.realm.get_house(c.house_id).get("name", "?") if state.realm else "A guest"
 	if not c.office.is_empty():
 		return office_name(c.office)
 	if c.retainer:
@@ -415,6 +417,15 @@ static func work_text(state: WorldState, c: CharacterData) -> String:
 	return "Training %s for %s" % [attr_name(focus_of(c)), house_name(state)]
 
 
+## What a scion of the house (or a suitor staying at the manor) is about.
+static func scion_text(state: WorldState, c: CharacterData) -> String:
+	if c.is_visitor():
+		return "A guest at the manor, come as a suitor"
+	if is_tutored(state, c):
+		return "Studying %s with tutors" % attr_name(focus_of(c))
+	return "Helping to run the estate"
+
+
 ## Schedule override: pages keep a scion's day of lessons; adult retainers use
 ## the noble household routine so even former children or elders attend work.
 static func schedule_for(c: CharacterData) -> String:
@@ -483,10 +494,15 @@ static func wage(c: CharacterData) -> int:
 ## Gold a day for the household: wages, plus upkeep for every retainer
 ## beyond what your renown supports.
 static func daily_wages(state: WorldState) -> int:
+	return retainer_wages(state) + tutored(state).size() * int(section("tutors").get("fee", 1)) + household_upkeep(state)
+
+
+## What the retainers are paid a day (without tutors or upkeep).
+static func retainer_wages(state: WorldState) -> int:
 	var total := 0
 	for c in state.retainers():
 		total += wage(c)
-	return total + household_upkeep(state)
+	return total
 
 
 ## Upkeep for a household larger than your renown supports (gold a day).
@@ -548,14 +564,33 @@ static func mentor_for(state: WorldState, c: CharacterData, attr_id: String) -> 
 	return {"mentor": best, "bonus": bonus}
 
 
+## The house's own children (kin, not the heir) are taught by tutors at the
+## manor in their focus, for a fee (court.json "tutors").
+static func is_tutored(state: WorldState, c: CharacterData) -> bool:
+	var t := section("tutors")
+	return is_kin(state, c) and not state.is_player(c) and not c.retainer \
+		and c.age >= int(t.get("min_age", 6)) and c.age <= int(t.get("max_age", 17))
+
+
+static func tutored(state: WorldState) -> Array[CharacterData]:
+	var out: Array[CharacterData] = []
+	for c in state.characters:
+		if is_tutored(state, c):
+			out.append(c)
+	return out
+
+
 ## Points per day each attribute gains, already scaled by how far from their
-## potential they are. Only retainers and the player train.
+## potential they are. Retainers, the player and the house's tutored
+## children train.
 static func training_rates(state: WorldState, c: CharacterData) -> Dictionary:
 	var cfg := section("training")
 	var raw := {}
 	var focus := focus_of(c)
 	if state.is_player(c):
 		raw[focus] = float(section("player").get("self_training_rate", 0.7))
+	elif is_tutored(state, c):
+		raw[focus] = float(section("tutors").get("rate", 1.0))
 	elif c.retainer:
 		raw[focus] = float(cfg.get("focus_rate", 1.2))
 		if not c.office.is_empty():
@@ -688,6 +723,8 @@ static func daily_update(state: WorldState, rng: RandomNumberGenerator) -> Array
 	var player := state.player()
 	if player:
 		events.append_array(train_day(state, player))
+	for child in tutored(state):
+		events.append_array(train_day(state, child))
 	var l_cfg := section("loyalty")
 	for c in state.retainers():
 		events.append_array(train_day(state, c))

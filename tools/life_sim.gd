@@ -2,10 +2,12 @@ extends SceneTree
 ## Lives a village through the years, data only, and reports how its people
 ## fare: population, births, deaths, marriages, those who left, the spread
 ## of ages, and the house. For tuning data/life.json.
-##   godot --headless --path . --script res://tools/life_sim.gd -- <seed> [years] [steward]
+##   godot --headless --path . --script res://tools/life_sim.gd -- <seed> [years] [steward] [matches]
 ## With "steward" a simple steward also orders farmsteads and homes and
 ## petitions for charters (as tools/charter_sim.gd does), so the village can
-## grow; without it, only what the village does by itself.
+## grow; without it, only what the village does by itself. With "matches"
+## the house accepts the first suitor (for the heir or kin) with a gift of
+## B rank or better and sends the rest home.
 
 
 func _init() -> void:
@@ -46,6 +48,15 @@ func _init() -> void:
 							continue
 					"moved":
 						year_counts["married"] += 1
+		for e: Dictionary in MatchSystem.daily_update(st):
+			if not str(e.get("text", "")).is_empty():
+				print("   day %4d  %s" % [day, e["text"]])
+			# With "matches", a player who looks with the Eye: take a suitor
+			# with a gift of B rank or better, send the rest home.
+			if e.has("visitor") and args.has("matches"):
+				var suitor := st.get_character(int(e["visitor"]))
+				var r := MatchSystem.accept(st, suitor) if suitor.best_potential() >= 65 else MatchSystem.decline(st, suitor)
+				print("   day %4d  (best gift %d) %s" % [day, suitor.best_potential(), r["text"]])
 		GrowthSystem.daily_update(st)
 		if steward:
 			_steward(st)

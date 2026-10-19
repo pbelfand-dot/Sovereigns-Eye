@@ -67,6 +67,8 @@ static func can_offer(state: WorldState, c: CharacterData) -> Dictionary:
 		return {"ok": false, "reason": "That's you."}
 	if CourtSystem.is_kin(state, c):
 		return {"ok": false, "reason": "%s is family: they already serve your house." % c.first_name}
+	if c.is_visitor():
+		return {"ok": false, "reason": "%s is a guest of your house, here as a suitor." % c.first_name}
 	if c.age < int(CourtSystem.section("recruit").get("min_age", 10)):
 		return {"ok": false, "reason": "%s is too young to serve (10+)." % c.first_name}
 	return {"ok": true, "reason": ""}
@@ -704,7 +706,7 @@ static func daily_update(state: WorldState, wages_paid: bool) -> Array[Dictionar
 	# Paying your people on time builds trust; failing to costs more.
 	if not wages_paid:
 		h.standing += float(sc.get("unpaid", -2.0))
-	elif CourtSystem.daily_wages(state) > 0:
+	elif CourtSystem.retainer_wages(state) > 0:
 		h.standing += float(sc.get("daily_paid", 0.3))
 	if TerritorySystem.is_hungry(state):
 		h.standing += float(sc.get("hungry", -1.0))

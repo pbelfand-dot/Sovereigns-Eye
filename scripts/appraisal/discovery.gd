@@ -148,6 +148,12 @@ static func conversation(state: WorldState, c: CharacterData) -> Array[String]:
 	if c.met:
 		var again: Array = d.get("again", ["\"Back again?\""])
 		lines.append(_fill(str(Seeds.pick(rng, again)), state))
+	elif c.is_visitor() and state.realm:
+		# A suitor introduces themselves (data/matches.json "meeting").
+		var target := state.get_character(c.suitor_for)
+		var hello: Array = MatchSystem.section("meeting").get("heir" if state.is_player(target) else "kin", ["Good day."])
+		var line := _fill(str(Seeds.pick(rng, hello)), state).replace("{seat}", str(state.realm.get_house(c.house_id).get("seat", "")))
+		lines.append("\"%s\"" % line.replace("{name}", target.first_name if target else ""))
 	else:
 		var key := c.social_status
 		if c.age < 13:

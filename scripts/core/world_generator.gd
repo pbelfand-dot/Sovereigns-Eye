@@ -14,7 +14,16 @@ static func generate(seed_text: String) -> WorldState:
 	CharacterGenerator.new().generate(state)
 	CourtSystem.initialize(state)
 	TerritorySystem.initialize(state)
+	state.realm = RealmData.generate(state.world_seed, surnames(state))
 	return state
+
+
+## Every family name in the village (the realm's houses take others).
+static func surnames(state: WorldState) -> Array:
+	var out := []
+	for f in state.families:
+		out.append(f.name)
+	return out
 
 
 static func village_name(world_seed: int) -> String:

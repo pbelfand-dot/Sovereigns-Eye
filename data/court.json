@@ -71,6 +71,14 @@
     "mentor_cap": 1.6
   },
 
+  "tutors": {
+    "_comment": "The house's own children (kin, not the heir) learn from tutors at the manor in their focus (the Eye shows what to teach them), for a fee a day each.",
+    "min_age": 6,
+    "max_age": 17,
+    "rate": 1.0,
+    "fee": 1
+  },
+
   "loyalty": {
     "sworn": 15,
     "opinion_factor": 0.2,

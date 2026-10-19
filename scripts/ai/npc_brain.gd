@@ -238,6 +238,8 @@ func _plan_work(style: String) -> void:
 	var text := str(occ.get("activity", "Working"))
 	if c.retainer:
 		text = CourtSystem.work_text(world.state, c)
+	elif c.occupation_id == "noble_scion":
+		text = CourtSystem.scion_text(world.state, c)
 	match style:
 		"stationary":
 			if wp == null:

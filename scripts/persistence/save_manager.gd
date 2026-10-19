@@ -249,6 +249,17 @@ static func migrate(data: Dictionary) -> Dictionary:
 		if not data.has("departed"):
 			data["departed"] = []
 		data["save_version"] = 13
+		version = 13
+	if version == 13:
+		# v14 (Phase 4.2, the house's matches) adds the noble houses around the
+		# village, generated from the seed as a new village's are, and who is
+		# visiting as a suitor (no one, in an older save).
+		if not data.has("realm") or (data["realm"] as Dictionary).is_empty():
+			var taken := []
+			for f: Dictionary in data.get("families", []):
+				taken.append(str(f.get("name", "")))
+			data["realm"] = RealmData.generate(int(data.get("seed", 0)), taken).to_dict()
+		data["save_version"] = 14
 	return data
 
 

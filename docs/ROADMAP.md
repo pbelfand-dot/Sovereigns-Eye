@@ -13,9 +13,40 @@ playable build. Numbers and content live in `data/*.json`.
 | **Eye** | **On foot: scan first, then talk and persuade** (below) | Done (optional extras below) |
 | 3.3 | Charters: Hamlet → Village → Market Town → Town (below) | Done |
 | **4.1** | **The years turn: ageing, growing up, marriage, children who inherit gifts, gentle deaths, the lord's succession** (below) | Done |
-| 4.2 | The house's matches: your own marriage, matches for kin and retainers, your children's tutors | Next |
-| 4.3 | Succession: name your heir, play on as them, regency, a family tree, "let the years pass" | Later |
+| **4.2** | **The house's matches: your own marriage, suitors from noble houses, matches for kin and retainers, your children's tutors** (below) | Done |
+| 4.3 | Succession: name your heir, play on as them, regency, a family tree, "let the years pass" | Next |
 | 5+ | Wider realm, military | Later |
+
+## The house's matches (Phase 4.2)
+
+Decided with the player: the heir can marry **both** a villager or retainer
+(asking face to face) and a noble from a neighbouring house (suitors who
+visit). Nobody is made to marry: every answer is weighed, not rolled, like
+an offer of service, and comes with its reasons.
+
+- `RealmData`: four noble houses round about (named for surnames the village
+  doesn't use, with seats, renown and their standing with yours), the seed's
+  own; saved (v14), and older saves get the houses their seed would have.
+- The heir asks for a hand in the talk. Consent (`MatchSystem.consider`):
+  opinion of the heir or the partner, the station it brings, duty (kin),
+  loyalty (retainers), a sweetheart, a rival, the years between them, traits.
+- Suitors come about once a year while the heir is unmarried (each visit is
+  set for 0.5 to 1.5 times the average gap after the last ends, so there are
+  no long droughts), then for unmarried kin. They stay at the manor for a
+  season with a dowry and a boastful letter; the Eye tells the truth.
+  Accepting brings the dowry, renown and standing; declining costs standing,
+  and letting the visit lapse costs more.
+- Matches for kin and retainers from their card; the newcomer joins the
+  house at the manor (or the retainer's home) and takes its name. The heir's
+  spouse becomes Lady (or Lord) on succession.
+- Tutors: the house's children from 6 to 17 train in a chosen gift at the
+  manor for 1 gold a day each.
+- Over 20 years with the steward bot and a house that accepts the first
+  suitor with a gift of B rank or better (`tools/life_sim.gd -- <seed> 20
+  steward matches`): on seed 9 the heir weds on day 21 and a sister weds a
+  suitor in year 7 (after one sent home); on seed 4242 the heir weds on day
+  38, and two daughters of the house later marry suitors, one of them with
+  an S+ gift. Charter pacing is unchanged (Town on day 72 for seed 12345).
 
 ## The years turn (Phase 4.1)
 

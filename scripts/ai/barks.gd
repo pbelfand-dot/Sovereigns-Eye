@@ -153,6 +153,8 @@ static func _greeting(state: WorldState, c: CharacterData, conf: Dictionary, chi
 	var greet: Dictionary = conf.get("greet", {})
 	if child:
 		return greet.get("child", [])
+	if c.is_visitor():
+		return greet.get("guest", [])
 	if CourtSystem.is_kin(state, c):
 		return greet.get("kin", [])
 	if c.retainer:

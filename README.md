@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 4 in progress: the years turn. People grow up, marry, have children who inherit their gifts, and die; your house carries on** (internal codename "Project Appraisal").
+> **Status: Phase 4 in progress: the years turn. People grow up, marry, have children who inherit their gifts, and die; you choose your own match, and your kin's, and your house carries on** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -84,6 +84,9 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 21 | Earn a charter | Build panel (**B**) → **Charter**: a checklist for the next charter (Hamlet → Village → Market Town → Town) and **Petition the Crown** when it's met. Each charter makes room for more people, unlocks buildings (another tavern and chapel, then the **Market Hall**) and brings in dues. In a Market Town, Townhouses take in lodgers |
 | 22 | Watch the years turn | A year is four ten-day seasons (about 80 minutes at 8x). Everyone ages on their birthday: children grow taller and take up work, the old retire, couples marry and have children. Look at a 3-year-old with the Eye: children of gifted parents are often gifted too |
 | 23 | Inherit | When the lord (your parent) dies, you become Lord or Lady of the village. Card → **Relationships** remembers the departed; the Court panel's chronicle keeps the house's births, weddings and deaths |
+| 24 | Marry | Talk to someone unmarried of an age with you and **Ask for their hand**. They weigh it and tell you why: what they think of you, the station it brings, a sweetheart already. Or wait for a suitor: a neighbouring noble house sends a son or daughter to stay at the manor for a season. Look at them with the Eye (their family's letter only praises), then **Accept the match** for the dowry, or **Send them home** |
+| 25 | Match your kin and retainers | Card → **Court** → **Find a match...**. Both must agree: kin do their duty unless they dislike the match or love someone else; retainers agree if they're loyal or fond. A gifted pair often has gifted children |
+| 26 | Children's lessons | The house's children (6 to 17) study with tutors at the manor, 1 gold a day each. Choose what they learn on their card's **Court** tab; the Eye shows where their gifts lie |
 
 The same seed always creates the same village and the same people.
 
@@ -176,6 +179,24 @@ tone is gentle: no child dies, and no one dies giving birth.
 
 ![A card after sixteen years: the heir is Lady of Stonestead; her father and grandfather are remembered](docs/screenshots/years_card.jpg)
 ![The house chronicle: the old lord's death and the succession](docs/screenshots/years_chronicle.jpg)
+
+### The house's matches (Phase 4, step 2)
+
+Who marries into the house decides what the next generation can be: children
+inherit their parents' gifts (`data/ranks.json` "inheritance"), and only the
+Eye shows who is truly gifted. `MatchSystem`, `data/matches.json`.
+
+| | What happens |
+|---|---|
+| **Your hand** | Talk to someone unmarried, of an age with you (16 to 50, no more than 15 years apart) and **Ask for their hand**. No dice: they weigh what they think of you, the step up it would be, a sweetheart already, a rival, the years between you and their temper, then say yes or no and why. Win their heart first (talk, gifts) and ask again. Marrying a villager pleases the village and costs the house a little renown |
+| **Suitors** | Four noble houses live round about, each with its seat, renown and regard for yours. While you're unmarried, one of them sends a son or daughter about once a year, with a dowry (more from a great house) and a letter that praises them. They stay at the manor for a season: meet them, look with the Eye, and answer from the talk or the Court panel. **Accept**: you marry, the dowry comes, renown rises and their house warms to yours. **Send them home**: their house cools. Keep them waiting until the visit ends and they're offended. Once you're married, suitors come for your unmarried kin |
+| **Kin and retainers** | Card → **Court** → **Find a match...** lists who could marry them, those with gifts you've seen first. Both must agree. Kin do their duty by the house, unless they dislike the match or love another; a retainer's loyalty counts the same way. A newcomer joins the house at the manor (or a retainer's home) and takes its name |
+| **Married into the house** | The heir's spouse lives at the manor and becomes Lady (or Lord) beside you when you inherit. Your marriage has children like anyone's |
+| **Tutors** | Children of the house from 6 to 17 study with tutors at the manor (1 gold a day each) in the gift you choose for them, as retainers train. Children learn fastest |
+
+![A suitor from a neighbouring house, met on the square: the match, their letter, and the answer to give](docs/screenshots/matches_suitor.jpg)
+![The Court panel's Marriages: the suitor visiting, unmarried kin, the children at their lessons](docs/screenshots/matches_court.jpg)
+![Matching a sister from her card: a rival refuses, and says why](docs/screenshots/matches_kin.jpg)
 
 ### Controls
 
@@ -403,21 +424,27 @@ tools/run_tests.sh                       # Headless tests (generation, determini
                                          # court, territory, save/load, art pipeline, audio,
                                          # live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
-# Screenshots (needs a display): court | art | menus | build | barks | life | ...
+# Screenshots (needs a display): court | art | menus | build | barks | life | matches | ...
 godot --path . res://tools/capture.tscn -- 12345 /tmp/shots build
 # A village through the years, data only (population, births, deaths, weddings)
 godot --headless --path . --script res://tools/life_sim.gd -- 12345 40
+# ...with a steward bot building, and the heir taking a gifted suitor
+godot --headless --path . --script res://tools/life_sim.gd -- 12345 20 steward matches
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 4, step 1)
+## 9. Known limitations (Phase 4, step 2)
 
 * A Town holds 200 people; there is no charter beyond it yet.
-* Your own marriage, matches for your kin and retainers, and choosing your heir
-  come in Phase 4 steps 2 and 3. Until then the heir can't die, and the house's
-  own (kin and retainers) don't court on their own.
+* Choosing your heir and playing on as them come in Phase 4 step 3. Until then
+  the heir can't die. The house's own (kin and retainers) don't court on their
+  own: match them from their card. Suitors come for the heir and kin, not for
+  retainers.
+* The noble houses round about are names, seats, renown and their regard for
+  yours; you can't visit them or send your kin to them yet (the wider realm is
+  Phase 5).
 * Babies have no body in the world until they're 3 (they're at home). There are
   no weddings or funerals to watch yet, only the news and the chronicle.
 * Farms don't gain levels; only cottages do.

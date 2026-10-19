@@ -32,6 +32,7 @@ static func daily(yearly: float) -> float:
 	return 1.0 - pow(1.0 - clampf(yearly, 0.0, 0.999999), 1.0 / Calendar.days_per_year())
 
 
+
 ## Yearly chance of dying at `age` (none below the minimum age).
 static func death_yearly(age: int) -> float:
 	var d := section("death")
@@ -98,6 +99,8 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 			_birthday(state, c, rng, events)
 	for c in state.characters.duplicate():
 		var p := death_yearly(c.age)
+		if c.is_visitor():
+			continue  # a guest's fate is their own house's
 		if p > 0.0 and not (state.is_player(c) and bool(section("death").get("spare_player", true))) and rng.randf() < daily(p):
 			var old_age: bool = c.age >= int(section("death").get("old_age_from", 68))
 			die(state, c, "old age" if old_age else str(Seeds.pick(rng, section("death").get("illness", ["an illness"]))), events)
@@ -270,7 +273,7 @@ static func die(state: WorldState, c: CharacterData, cause: String, events: Arra
 	c.add_history(state.current_year(), state.current_season(), "life", "Died of %s" % cause)
 	var notable := _notable(state, c)
 	var lord := state.ruling_family() and state.ruling_family().head_id == c.id
-	_depart(state, c, "died", cause, events)
+	depart(state, c, "died", cause, events)
 	if lord:
 		text = _succeed(state, c, cause, events)
 	elif not c.office.is_empty() or c.retainer:
@@ -284,7 +287,7 @@ static func die(state: WorldState, c: CharacterData, cause: String, events: Arra
 static func leave(state: WorldState, c: CharacterData, events: Array[Dictionary]) -> void:
 	c.add_history(state.current_year(), state.current_season(), "life", "Left %s to seek their fortune" % state.village_name)
 	var notable := _notable(state, c)
-	_depart(state, c, "left", "seeking their fortune", events)
+	depart(state, c, "left", "seeking their fortune", events)
 	var text := "%s has left %s to seek their fortune." % [c.full_name(), state.village_name]
 	if notable and state.house:
 		state.house.log_event(state.day(), text, "leave")
@@ -296,7 +299,10 @@ static func _notable(state: WorldState, c: CharacterData) -> bool:
 	return c.met or c.appraised or c.retainer or CourtSystem.is_kin(state, c) or c.remembered
 
 
-static func _depart(state: WorldState, c: CharacterData, how: String, cause: String, events: Array[Dictionary]) -> void:
+## Moves `c` from the living to the departed ("died" or "left"): their
+## office, promises and place on a crew are given up, a sweetheart is free,
+## a spouse is widowed, the family has a new head, a trade passes on.
+static func depart(state: WorldState, c: CharacterData, how: String, cause: String, events: Array[Dictionary]) -> void:
 	c.departed_day = state.day()
 	c.departed_how = how
 	c.departed_cause = cause
@@ -369,6 +375,11 @@ static func _succeed(state: WorldState, lord: CharacterData, cause: String, even
 		if widow and widow.occupation_id in ["lady", "lord"]:
 			widow.occupation_id = "dowager"
 			events.append({"text": "", "job": widow.id})
+	# The heir's own husband or wife is now the lady (or lord consort).
+	var consort := spouse_of(state, heir)
+	if consort:
+		consort.occupation_id = "lady"
+		events.append({"text": "", "job": consort.id})
 	heir.occupation_id = "lord"
 	heir.social_status = "noble"
 	heir.work_building_id = CourtSystem._building_of_type(state, "manor")
@@ -386,7 +397,7 @@ static func can_court(state: WorldState, c: CharacterData) -> bool:
 	var conf := section("courtship")
 	if c.age < int(conf.get("min_age", 18)) or c.age > int(conf.get("max_age", 48)):
 		return false
-	if state.is_player(c) or CourtSystem.is_kin(state, c) or c.retainer or spouse_of(state, c) != null:
+	if state.is_player(c) or CourtSystem.is_kin(state, c) or c.retainer or c.is_visitor() or spouse_of(state, c) != null:
 		return false
 	for r in c.relationships_of_type(["late_spouse"]):
 		var gone := state.get_departed(int(r["target"]))
@@ -462,38 +473,48 @@ static func _related(a: CharacterData, b: CharacterData) -> bool:
 	return not r.is_empty() and str(r["type"]) in KIN
 
 
-## They marry and make one household: a widowed parent's home takes in the
-## newcomer; otherwise a young couple takes an empty home if there is one,
-## or the younger moves in with the elder's family.
-static func marry(state: WorldState, a: CharacterData, b: CharacterData, events: Array[Dictionary]) -> void:
+## Makes two people husband and wife (from sweethearts, or a match).
+static func link_spouses(state: WorldState, a: CharacterData, b: CharacterData) -> void:
 	var fond_a := int(a.get_relationship(b.id).get("opinion", 60))
 	var fond_b := int(b.get_relationship(a.id).get("opinion", 60))
 	a.remove_relationship(b.id)
 	b.remove_relationship(a.id)
 	a.add_relationship(b.id, "spouse", mini(fond_a + 10, 100))
 	b.add_relationship(a.id, "spouse", mini(fond_b + 10, 100))
-	a.courting_since = -1
-	b.courting_since = -1
+	for p: CharacterData in [a, b]:
+		p.courting_since = -1
+		var old := lover_of(state, p)
+		if old:
+			old.remove_relationship(p.id)
+			p.remove_relationship(old.id)
+			old.courting_since = -1
+	var year := state.current_year()
+	var season := state.current_season()
+	a.add_history(year, season, "family", "Married %s" % b.full_name())
+	b.add_history(year, season, "family", "Married %s" % a.full_name())
+
+
+## They marry and make one household: a widowed parent's home takes in the
+## newcomer; otherwise a young couple takes an empty home if there is one,
+## or the younger moves in with the elder's family.
+static func marry(state: WorldState, a: CharacterData, b: CharacterData, events: Array[Dictionary]) -> void:
+	link_spouses(state, a, b)
 	var moved: Array[int] = []
 	var fa := state.get_family(a.family_id)
 	var fb := state.get_family(b.family_id)
 	var a_keeps := fa != null and fa.head_id == a.id and fa.member_ids.size() > 1
 	var b_keeps := fb != null and fb.head_id == b.id and fb.member_ids.size() > 1
 	if a_keeps and (not b_keeps or fa.member_ids.size() >= fb.member_ids.size()):
-		moved = _join(state, b, fa)
+		moved = join(state, b, fa)
 	elif b_keeps:
-		moved = _join(state, a, fb)
+		moved = join(state, a, fb)
 	else:
 		var home := _free_home(state, a)
 		if home:
 			moved = _found(state, a, b, home)
 		else:
 			var elder := a if a.age >= b.age else b
-			moved = _join(state, b if elder == a else a, state.get_family(elder.family_id))
-	var year := state.current_year()
-	var season := state.current_season()
-	a.add_history(year, season, "family", "Married %s" % b.full_name())
-	b.add_history(year, season, "family", "Married %s" % a.full_name())
+			moved = join(state, b if elder == a else a, state.get_family(elder.family_id))
 	var text := "%s and %s are married." % [a.full_name(), b.full_name()]
 	var notable := _notable(state, a) or _notable(state, b)
 	if notable and state.house:
@@ -502,7 +523,7 @@ static func marry(state: WorldState, a: CharacterData, b: CharacterData, events:
 
 
 ## `c` (and their young children) join `fam` in its home. Returns who moved.
-static func _join(state: WorldState, c: CharacterData, fam: FamilyData) -> Array[int]:
+static func join(state: WorldState, c: CharacterData, fam: FamilyData) -> Array[int]:
 	var moved: Array[int] = []
 	if fam == null:
 		return moved
@@ -582,7 +603,7 @@ static func birth_chance(state: WorldState, mother: CharacterData) -> float:
 	if mother.gender != "female" or mother.age < int(ages[0]) or mother.age > int(ages[1]):
 		return 0.0
 	var father := spouse_of(state, mother)
-	if father == null or state.is_player(mother) or state.is_player(father):
+	if father == null:
 		return 0.0
 	var n := children_count(mother)
 	if n >= int(conf.get("max_children", 7)):
@@ -625,7 +646,7 @@ static func _leaving(state: WorldState, rng: RandomNumberGenerator, events: Arra
 	for c in state.characters.duplicate():
 		if c.age < int(conf.get("min_age", 17)) or c.age > int(conf.get("max_age", 32)):
 			continue
-		if state.is_player(c) or CourtSystem.is_kin(state, c) or c.retainer or spouse_of(state, c) != null or lover_of(state, c) != null:
+		if state.is_player(c) or CourtSystem.is_kin(state, c) or c.retainer or c.is_visitor() or spouse_of(state, c) != null or lover_of(state, c) != null:
 			continue
 		if not state.living_ties(c, ["child"]).is_empty():
 			continue

@@ -298,6 +298,8 @@ func _check_new_day() -> void:
 			_on_hired(int(e["hired"]))
 	for e: Dictionary in LifeSystem.daily_update(state):
 		_on_life_event(e)
+	for e: Dictionary in MatchSystem.daily_update(state):
+		_on_life_event(e)
 	for e: Dictionary in GrowthSystem.daily_update(state):
 		_on_growth_event(e)
 	_replan_crew_changes(crews_before)
@@ -403,12 +405,24 @@ func _on_life_event(e: Dictionary) -> void:
 			npc.refresh_model()
 	if e.has("seen"):
 		spawn_character(int(e["seen"]))
+	if e.has("visitor"):
+		spawn_character(int(e["visitor"]))
 	if e.has("job"):
 		_on_hired(int(e["job"]))
 	for id: int in e.get("moved", []):
 		court_changed(id)
 	if e.has("gone"):
 		remove_character_body(int(e["gone"]))
+
+
+## Applies what a match, a wedding or a suitor's leaving changed (events
+## from MatchSystem or LifeSystem): new homes and clothes, bodies that come
+## or go. The UI calls this after an action.
+func apply_life_events(events: Array) -> void:
+	for e: Dictionary in events:
+		_on_life_event(e)
+	if ui:
+		ui.refresh()
 
 
 ## Takes a departed villager's body out of the world (and out of any talk,
