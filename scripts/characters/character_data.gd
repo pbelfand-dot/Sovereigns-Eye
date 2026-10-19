@@ -103,11 +103,15 @@ var house_id: int = -1
 var visiting_until: int = -1
 var suitor_for: int = -1
 
+# --- Arms (Phase 5.1) -------------------------------------------------------------
+## Wounded in a fight: resting until this day (-1 = hale).
+var wounded_until: int = -1
+
 
 # --- Identity ----------------------------------------------------------------
 
 func full_name() -> String:
-	return "%s %s" % [first_name, last_name]
+	return first_name if last_name.is_empty() else "%s %s" % [first_name, last_name]
 
 
 func is_adult() -> bool:
@@ -326,6 +330,7 @@ func to_dict() -> Dictionary:
 		"house_id": house_id,
 		"visiting_until": visiting_until,
 		"suitor_for": suitor_for,
+		"wounded_until": wounded_until,
 	}
 
 
@@ -398,6 +403,7 @@ static func from_dict(d: Dictionary) -> CharacterData:
 	c.house_id = int(d.get("house_id", -1))
 	c.visiting_until = int(d.get("visiting_until", -1))
 	c.suitor_for = int(d.get("suitor_for", -1))
+	c.wounded_until = int(d.get("wounded_until", -1))
 	return c
 
 

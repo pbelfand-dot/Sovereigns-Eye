@@ -1786,6 +1786,9 @@ static func simulate(st: WorldState, days: int, plan: Dictionary) -> void:
 				else:
 					MatchSystem.decline(st, suitor)
 		Succession.daily_update(st)
+		var war: Array[Dictionary] = Military.daily_update(st)
+		if Military.due(st):
+			Military.fight(st, war)
 		GrowthSystem.daily_update(st)
 
 

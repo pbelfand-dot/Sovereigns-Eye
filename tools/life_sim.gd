@@ -22,6 +22,8 @@ func _init() -> void:
 	var totals := {"born": 0, "died": 0, "left": 0, "married": 0}
 	var year_counts := totals.duplicate()
 	var generations := 0
+	var raids := 0
+	var raids_won := 0
 	print("%s, %d people, the heir %s (%d)" % [st.village_name, st.characters.size(), st.player().full_name(), st.player().age])
 	var days := years * Calendar.days_per_year()
 	for d in days:
@@ -64,6 +66,26 @@ func _init() -> void:
 				print("   day %4d  (best gift %d) %s" % [day, suitor.best_potential(), r["text"]])
 		for e: Dictionary in Succession.daily_update(st):
 			print("   day %4d  %s" % [day, e["text"]])
+		var war: Array[Dictionary] = Military.daily_update(st)
+		# A steward who listens to the captains: call the levy when the odds
+		# are poor, pay the band off when even that isn't enough.
+		if steward and war.any(func(e: Dictionary) -> bool: return e.has("raid_warning")):
+			if Military.odds(st) < 0.5:
+				Military.call_levy(st)
+			if Military.odds(st) < 0.35:
+				var paid := Military.pay_off(st)
+				if paid["ok"]:
+					print("   day %4d  %s" % [day, paid["text"]])
+		if Military.due(st):
+			Military.fight(st, war)
+		for e: Dictionary in war:
+			if e.has("battle") or e.has("raid_warning") or e.has("succession"):
+				print("   day %4d  %s" % [day, e["text"]])
+				if e.has("battle"):
+					raids += 1
+					raids_won += 1 if e["battle"]["won"] else 0
+			if e.has("gone"):
+				year_counts["died"] += 1
 		if st.house.ended:
 			print("   day %4d  the house is ended" % day)
 			break
@@ -84,8 +106,8 @@ func _init() -> void:
 			for k: String in totals:
 				totals[k] += year_counts[k]
 				year_counts[k] = 0
-	print("\n%d years in %.1f s: born %d, died %d, left %d, weddings %d, departed on record %d, you have been %d people" % [years, (Time.get_ticks_msec() - started) / 1000.0,
-		totals["born"], totals["died"], totals["left"], totals["married"], st.departed.size(), generations + 1])
+	print("\n%d years in %.1f s: born %d, died %d, left %d, weddings %d, departed on record %d, you have been %d people, raids %d (won %d)" % [years, (Time.get_ticks_msec() - started) / 1000.0,
+		totals["born"], totals["died"], totals["left"], totals["married"], st.departed.size(), generations + 1, raids, raids_won])
 	var p := st.player()
 	if p == null:
 		print("The house is ended.")

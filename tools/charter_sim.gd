@@ -32,6 +32,9 @@ func _init() -> void:
 		LifeSystem.daily_update(st)
 		MatchSystem.daily_update(st)
 		Succession.daily_update(st)
+		var war: Array[Dictionary] = Military.daily_update(st)
+		if Military.due(st):
+			Military.fight(st, war)
 		GrowthSystem.daily_update(st)
 		_build(st)
 		var r := CharterSystem.petition(st)

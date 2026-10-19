@@ -315,6 +315,8 @@ func _check_new_day() -> void:
 		_on_life_event(e)
 	for e: Dictionary in Succession.daily_update(state):
 		_on_life_event(e)
+	for e: Dictionary in Military.daily_update(state):
+		_on_life_event(e)
 	for e: Dictionary in GrowthSystem.daily_update(state):
 		_on_growth_event(e)
 	_replan_crew_changes(crews_before)
@@ -497,7 +499,7 @@ func _note_passing(e: Dictionary) -> void:
 			counts["died" if d.departed_how == "died" else "left"] += 1
 			if d.departed_how == "died" and d.family_id == state.ruling_family_id:
 				stop = "kin_death"
-	for key: String in ["regency_end", "health", "visitor", "succession", "ended"]:
+	for key: String in ["regency_end", "health", "visitor", "raid_warning", "raid", "succession", "ended"]:
 		if e.has(key):
 			stop = key
 	if not stop.is_empty() and str(_passed["stop"]).is_empty() and (Succession.section("pass_time").get("stop_on", []) as Array).has(stop):

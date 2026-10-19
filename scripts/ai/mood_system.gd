@@ -51,6 +51,8 @@ static func happiness_factors(c: CharacterData, world: WorldState) -> Array[Dict
 		out.append({"label": "Talents go unused" if c.appraised else "Restless in their work", "value": wasted})
 	if c.stress > 60.0:
 		out.append({"label": "Overworked", "value": -(c.stress - 60.0) / 3.0})
+	if world != null and c.wounded_until > world.day():
+		out.append({"label": "Wounded", "value": -8.0})
 	if world != null and c.home_building_id >= 0:
 		var residents := world.residents_of(c.home_building_id).size()
 		var home_b := world.get_building(c.home_building_id)

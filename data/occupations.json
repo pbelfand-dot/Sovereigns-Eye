@@ -14,6 +14,7 @@
                        "training": { "combat": 0.85, "leadership": 0.60 } },
     "guard_captain": { "name": "Captain of the Guard", "status": "retainer", "workplace": "barracks", "work_style": "patrol",     "schedule": "worker",    "activity": "Inspecting the watch",      "outfit": "armor", "headwear": "helmet",   "tool": "sword",     "age": [28, 55], "village": true,
                        "training": { "combat": 0.75, "leadership": 0.65 } },
+    "raider":        { "name": "Raider",             "status": "commoner", "workplace": "",           "work_style": "stroll",     "schedule": "worker",   "activity": "Raiding",                   "outfit": "tunic", "headwear": "hood",     "tool": "axe",       "age": [18, 46], "village": false },
     "soldier":       { "name": "Soldier",            "status": "commoner", "workplace": "barracks",   "work_style": "patrol",     "schedule": "soldier",   "activity": "Patrolling the roads",      "outfit": "armor", "headwear": "helmet",   "tool": "spear",     "age": [16, 40], "village": true,
                        "training": { "combat": 0.65, "leadership": 0.30 } },
     "farmer":        { "name": "Farmer",             "status": "peasant",  "workplace": "farmhouse",  "work_style": "fields",     "schedule": "farmer",    "activity": "Tending the fields",        "outfit": "tunic", "headwear": "straw_hat", "tool": "pitchfork", "age": [18, 65], "village": true },

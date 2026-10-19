@@ -27,8 +27,8 @@
   },
 
   "pass_time": {
-    "_comment": "Let the years pass (the Court panel): a season or a year (data/society.json calendar), a few days a frame, stopped early by what needs you: a suitor arriving, a death in the house, a new ruler, your health failing, a regency ending, the house ending.",
+    "_comment": "Let the years pass (the Court panel): a season or a year (data/society.json calendar), a few days a frame, stopped early by what needs you: a suitor arriving, a death in the house, a new ruler, your health failing, a regency ending, the house ending, raiders on the way or at the gate (Phase 5.1).",
     "days_per_frame": 2,
-    "stop_on": ["visitor", "kin_death", "succession", "health", "regency_end", "ended"]
+    "stop_on": ["visitor", "kin_death", "succession", "health", "regency_end", "ended", "raid_warning", "raid"]
   }
 }
