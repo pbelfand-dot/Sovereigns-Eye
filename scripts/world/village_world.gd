@@ -62,6 +62,7 @@ var passing := false
 var battle: Battle
 ## The house's castle, standing or rising (Phase 5.3).
 var castle_view: CastleView
+var cart_view: CartView
 ## Music that overrides the time of day ("battle", then "victory"/"defeat").
 var music_override := ""
 var _music_override_left := 0.0
@@ -127,6 +128,10 @@ func _ready() -> void:
 	castle_view = CastleView.new()
 	add_child(castle_view)
 	castle_view.setup(state)
+	cart_view = CartView.new()
+	cart_view.name = "Carts"
+	add_child(cart_view)
+	cart_view.setup(self)
 	graph = RoadGraph.new()
 	graph.build(state.layout)
 	_compute_worker_slots()

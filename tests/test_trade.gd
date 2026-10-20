@@ -44,6 +44,17 @@ func _cart_id(st: WorldState, h: Dictionary, leg: String, waylaid: bool) -> int:
 	return -1
 
 
+## A cart id the road treats as wanted on both legs.
+func _cart_id_both(st: WorldState, h: Dictionary, waylaid_out: bool, waylaid_back: bool) -> int:
+	var chance := float(Trade.danger(st, int(h["id"]))["chance"])
+	for id in range(1, 500):
+		var out := Seeds.counted_rng(st.world_seed, "cart_%d_out" % id).randf() < chance
+		var back := Seeds.counted_rng(st.world_seed, "cart_%d_back" % id).randf() < chance
+		if out == waylaid_out and back == waylaid_back:
+			return id
+	return -1
+
+
 func test_what_the_houses_want() -> void:
 	var st := _village("trade-wants")
 	var by: Dictionary = Trade.section("wants")["by_known_for"]
@@ -164,6 +175,49 @@ func test_an_escort_on_the_road() -> void:
 	check(int(camp["men"]) < 3 or not st.military.camps.has(camp), "and the band is the smaller (%d)" % int(camp["men"]))
 
 
+func test_the_road_home_is_decided_on_its_last_day() -> void:
+	var st := _village("trade-road-home")
+	var h := st.realm.houses[0]
+	_camp_on_the_road(st, h, 12, true)
+	st.market.next_cart_id = _cart_id_both(st, h, false, true)
+	var r := Trade.send(st, int(h["id"]), {"cloth": 40}, 0)
+	var cart: Dictionary = r["cart"]
+	var gold := st.house.gold
+	_days(st, int(cart["arrive"]) - st.day())
+	check(int(cart["gold"]) > 0 and not bool(cart["road_home"]), "sold at the seat (%d gold), on the road home" % int(cart["gold"]))
+	var events := _days(st, int(cart["back"]) - 1 - st.day())
+	var word := events.filter(func(e: Dictionary) -> bool: return str(e["text"]).begins_with("Word from the road home"))
+	check(bool(cart["road_home"]) and int(cart["gold"]) == 0 and word.size() == 1, "its last day on the road decides it: %s" % (word[0]["text"] if not word.is_empty() else "no word"))
+	check(Trade.on_road(st).has(cart), "the cart isn't home yet")
+	events = _days(st, 1)
+	check(Trade.on_road(st).is_empty() and st.house.gold == gold, "home the next day with nothing to show for it")
+	check(events.filter(func(e: Dictionary) -> bool: return str(e["text"]).begins_with("Word from the road")).is_empty(), "(and the road isn't travelled twice)")
+
+
+func test_the_village_sees_its_carts() -> void:
+	var st := _village("trade-seen")
+	var h := st.realm.houses[1]
+	st.minutes = float(st.day() * Calendar.MINUTES_PER_DAY + 9 * 60)
+	var cart: Dictionary = Trade.send(st, int(h["id"]), {"ironware": 30}, 2)["cart"]
+	var pts := CartView.route(st, cart)
+	var length := CartView.length_of(pts)
+	var way := Realm.pos_of(h) - Realm.center()
+	var out := pts[pts.size() - 1] - st.layout.square_center
+	check(pts[0].distance_to(st.layout.square_center) < st.layout.square_radius and Vector2(out.x, out.z).dot(way) > 0.0,
+		"it's loaded in the square and leaves by the road toward %s (%.0f m)" % [h["seat"], length])
+	var speed := float(CartView.cfg()["speed"])
+	var w := CartView.where(st, cart, st.minutes + 10.0)
+	check(w["shown"] and int(w["heading"]) == 1 and is_equal_approx(float(w["at"]), 10.0 * speed), "it rolls out at a walk")
+	check(not CartView.where(st, cart, st.minutes + length / speed + 1.0)["shown"], "and is gone past the village's edge")
+	_days(st, int(cart["back"]) - 1 - st.day())
+	var dusk := float((int(cart["back"]) - 1) * Calendar.MINUTES_PER_DAY + int(CartView.cfg()["home_hour"]) * 60)
+	check(not CartView.where(st, cart, dusk - 30.0)["shown"], "on its last day it's still on the road in the afternoon")
+	w = CartView.where(st, cart, dusk + 5.0)
+	check(w["shown"] and int(w["heading"]) == -1 and float(w["at"]) > length - 10.0, "it comes in from the edge at dusk")
+	w = CartView.where(st, cart, dusk + length / speed + 30.0)
+	check(w["shown"] and not w["moving"] and float(w["at"]) == 0.0, "and stands in the square till the day is done")
+
+
 func test_carts_are_saved() -> void:
 	var st := _village("trade-save")
 	Trade.send(st, int(st.realm.houses[0]["id"]), {"cloth": 30, "ale": 10}, 1)
@@ -177,6 +231,15 @@ func test_carts_are_saved() -> void:
 	var migrated := WorldState.from_dict(SaveManager.migrate(old))
 	check(migrated.market.carts.is_empty() and migrated.market.next_cart_id == 1, "an older save has no carts on the road")
 	check_eq(int(SaveManager.migrate(old)["save_version"]), WorldState.SAVE_VERSION, "and is brought up to date")
+	var v20 := st.to_dict()
+	v20["save_version"] = 20
+	for c: Dictionary in v20["market"]["carts"]:
+		c.erase("set_out_min")
+		c.erase("road_home")
+	var then := WorldState.from_dict(SaveManager.migrate(v20))
+	var c0: Dictionary = then.market.carts[0]
+	check(not bool(c0["road_home"]) and float(c0["set_out_min"]) == float(int(c0["set_out"]) * Calendar.MINUTES_PER_DAY + 8 * 60),
+		"a cart from before keeps going: it set out that morning, its road home still ahead")
 
 
 func test_a_cart_from_the_realm_map() -> void:
@@ -205,6 +268,17 @@ func test_a_cart_from_the_realm_map() -> void:
 	check(Trade.on_road(st).size() == 1 and is_equal_approx(TerritorySystem.amount(st, want), stock - 20.0), "the cart sets out with 20 %s" % want)
 	var carter := st.get_character(int(Trade.on_road(st)[0]["carter"]))
 	check(world.npc_of(carter.id) == null, "%s has left the village" % carter.first_name)
+	await frames(2)
+	var seen := world.cart_view.shown_node(int(Trade.on_road(st)[0]["id"]))
+	check(seen != null and world.cart_view.shown_count() == 1, "the cart is seen setting out")
+	if seen:
+		var rig := seen.get_child(0) as Node3D
+		var from := rig.global_position
+		st.minutes += 30.0
+		await frames(2)
+		check(rig.global_position.distance_to(st.layout.square_center) > from.distance_to(st.layout.square_center) + 10.0,
+			"rolling out of the village (%.0f m from the square)" % rig.global_position.distance_to(st.layout.square_center))
+		check(seen.get_child_count() >= 2, "the carter walks with it")
 	var labels := panel.find_children("*", "Label", true, false).map(func(l: Label) -> String: return l.text)
 	check(labels.any(func(t: String) -> bool: return t.begins_with("Your cart is on the road to")), "the panel shows it on the road")
 	var back := int(Trade.on_road(st)[0]["back"])
@@ -214,6 +288,8 @@ func test_a_cart_from_the_realm_map() -> void:
 		world._check_new_day()
 	await frames(1)
 	check(Trade.on_road(st).is_empty() and st.house.gold > gold, "home with the gold (+%d)" % (st.house.gold - gold))
+	await frames(2)
+	check(world.cart_view.shown_count() == 0, "and the cart is put away")
 	check(world.npc_of(carter.id) != null, "and %s is back in the village" % carter.first_name)
 	world.queue_free()
 	await frames(2)

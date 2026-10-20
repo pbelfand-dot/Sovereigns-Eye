@@ -32,6 +32,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `props/training-yard/` | **Original:** the barracks' training yard by charter: pells, straw dummies, a quintain, turf archery butts, racks of staves and of weapons, sparring rings | 8 |
 | `props/harbour/` | **Original:** a harbour and its craft, made ahead of the coast phase: timber and stone quays, water stairs, a jetty and its head, a slipway, mooring posts, a hoist; a rowing boat, a fishing boat, a keel under sail, a cog; nets drying, a boat turned over | 14 |
 | `buildings/lords-castle/` | **Original:** a lord's castle in timber and in stone, made ahead of the castle phase: a motte with its tower and bridge, palisade lengths, corner and gate tower; curtain walls, a stair, corners, square towers, a gatehouse and a keep | 13 |
+| `props/carts-transport/` | **Original:** a two-wheeled cart in its shafts with a small bay cart horse in collar and hames, built as rigid parts the game turns (wheels, legs, neck, head, tail), a trader's load for its bed, and the cart unhitched | 3 |
 | `alternatives/option-01-kaykit-adventurers/` | Rounded fantasy heroes | 5 |
 | `alternatives/option-02-kaykit-skeletons/` | Stylized undead characters | 4 |
 | `alternatives/option-03-kaykit-dungeon/` | Modular dungeon architecture, furnishings, and props | 203 |
@@ -46,7 +47,7 @@ shared PNG files to avoid duplicating large texture maps into every module.
 | `animations/quaternius-universal-animation-library-1/` | In-place and root-motion versions of the first Standard animation set | 2 |
 | `animations/quaternius-universal-animation-library-2/` | In-place/root-motion Standard set plus a retargeting mannequin | 3 |
 
-Total: **1,547 glTF 2.0 model files** (1,185 GLB + 362 JSON glTF).
+Total: **1,550 glTF 2.0 model files** (1,188 GLB + 362 JSON glTF).
 
 Original asset families made for the game, and what comes next, are tracked in
 [`BACKLOG.md`](BACKLOG.md). Each has its own README with budgets, contact sheets

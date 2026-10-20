@@ -174,8 +174,8 @@ static func send(state: WorldState, house_id: int, load: Dictionary, escort_coun
 	for g: String in clean:
 		TerritorySystem.add(state, g, -float(clean[g]))
 	var cart := {"id": m.next_cart_id, "house": house_id, "load": clean, "carter": carter.id, "escort": escort,
-		"set_out": state.day(), "arrive": state.day() + days, "back": state.day() + days * 2, "stage": "out",
-		"gold": 0, "unsold": {}, "sold": {}, "waylaid": ""}
+		"set_out": state.day(), "set_out_min": state.minutes, "arrive": state.day() + days, "back": state.day() + days * 2,
+		"stage": "out", "road_home": false, "gold": 0, "unsold": {}, "sold": {}, "waylaid": ""}
 	m.next_cart_id += 1
 	m.carts.append(cart)
 	var away: Array[int] = [carter.id]
@@ -193,8 +193,9 @@ static func send(state: WorldState, house_id: int, load: Dictionary, escort_coun
 
 # --- The days -----------------------------------------------------------------------------------
 
-## Once a day: carts reach their seats and sell, or come home. Events:
-## {text, kind, back?: [ids], cart?}.
+## Once a day: carts reach their seats and sell, travel their last day on
+## the road home (the village sees them come in that evening), or are home.
+## Events: {text, kind, back?: [ids], cart?}.
 static func daily_update(state: WorldState) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	if state.market == null or state.realm == null:
@@ -202,9 +203,27 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 	for cart: Dictionary in state.market.carts.duplicate():
 		if str(cart["stage"]) == "out" and state.day() >= int(cart["arrive"]):
 			_arrive(state, cart, events)
+		if str(cart["stage"]) == "home" and not bool(cart.get("road_home", false)) and state.day() >= int(cart["back"]) - 1:
+			_road_home(state, cart, events)
 		if str(cart["stage"]) == "home" and state.day() >= int(cart["back"]):
 			_home(state, cart, events)
 	return events
+
+
+## The road home: a band near it may waylay the cart (an empty one, robbed
+## on the way there, isn't worth it); word comes of it.
+static func _road_home(state: WorldState, cart: Dictionary, events: Array[Dictionary]) -> void:
+	cart["road_home"] = true
+	var worth := int(cart["gold"]) > 0 or not (cart["unsold"] as Dictionary).is_empty()
+	var before := str(cart["waylaid"])
+	if worth and _waylay(state, cart, "back", events):
+		cart["gold"] = 0
+		cart["unsold"] = {}
+	if str(cart["waylaid"]) != before:
+		var seat := str(state.realm.get_house(int(cart["house"])).get("seat", "the seat"))
+		var lost := int(cart["gold"]) == 0 and worth
+		events.append({"text": "Word from the road home from %s: %s" % [seat, str(cart["waylaid"]).substr(before.length()).strip_edges()],
+			"kind": "bad" if lost else "good", "waylaid": int(cart["id"])})
 
 
 ## At the seat (if the road let it pass): what the house takes is sold.
@@ -232,11 +251,8 @@ static func _arrive(state: WorldState, cart: Dictionary, events: Array[Dictionar
 static func _home(state: WorldState, cart: Dictionary, events: Array[Dictionary]) -> void:
 	var h := state.realm.get_house(int(cart["house"]))
 	var seat := str(h.get("seat", "the seat"))
-	# An empty cart (robbed on the way there) isn't worth waylaying.
-	var worth := int(cart["gold"]) > 0 or not (cart["unsold"] as Dictionary).is_empty()
-	if worth and _waylay(state, cart, "back", events):
-		cart["gold"] = 0
-		cart["unsold"] = {}
+	if not bool(cart.get("road_home", false)):
+		_road_home(state, cart, events)
 	state.house.gold += int(cart["gold"])
 	var unsold: Dictionary = cart["unsold"]
 	for g: String in unsold:

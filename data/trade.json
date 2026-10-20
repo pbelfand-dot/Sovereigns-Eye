@@ -24,6 +24,13 @@
     "regard": 3
   },
 
+  "in_village": {
+    "_comment": "How the village sees its carts (CartView): a cart sets out from the square along the road toward its seat's side of the realm at 'speed' metres a game minute (a walk, as the villagers walk), and leaves at the village's edge; on its last day on the road home it comes in from the edge at home_hour and stands in the square till the day is done. start: how far into the square it's loaded (a share of the square's radius).",
+    "speed": 0.9,
+    "home_hour": 16,
+    "start": 0.45
+  },
+
   "ambush": {
     "_comment": "A camp within reach_days of the road (on the realm map) may waylay a cart on each leg: chance_per_man for each of its men, at most max_chance. Its share of the band attack, on their own ground (Military's camp band).",
     "reach_days": 1.0,

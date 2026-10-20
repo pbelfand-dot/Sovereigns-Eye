@@ -19,9 +19,10 @@ var ledger: Array = []
 ## The harvest year last announced (so it's told once).
 var harvest_told: int = -999
 ## Carts on the road to the noble houses' seats (Phase 6.2): [{id, house,
-## load: {good: units}, carter, escort: [ids], set_out, arrive, back,
-## stage ("out" or "home"), gold, unsold: {good: units}, sold: {good:
-## units}, waylaid: "" or what happened}].
+## load: {good: units}, carter, escort: [ids], set_out, set_out_min (the
+## minute it left), arrive, back, stage ("out" or "home"), road_home (its
+## road home travelled, the day before it's in), gold, unsold: {good:
+## units}, sold: {good: units}, waylaid: "" or what happened}].
 var carts: Array = []
 var next_cart_id: int = 1
 ## The last cart home's report ({} before any).
@@ -78,6 +79,8 @@ static func _cart_from(c: Dictionary) -> Dictionary:
 		escort.append(int(id))
 	return {"id": int(c.get("id", 0)), "house": int(c.get("house", -1)), "load": _ints(c.get("load", {})),
 		"carter": int(c.get("carter", -1)), "escort": escort, "set_out": int(c.get("set_out", 0)),
+		"set_out_min": float(c.get("set_out_min", int(c.get("set_out", 0)) * Calendar.MINUTES_PER_DAY + 8 * Calendar.MINUTES_PER_HOUR)),
 		"arrive": int(c.get("arrive", 0)), "back": int(c.get("back", 0)), "stage": str(c.get("stage", "out")),
+		"road_home": bool(c.get("road_home", false)),
 		"gold": int(c.get("gold", 0)), "unsold": _ints(c.get("unsold", {})), "sold": _ints(c.get("sold", {})),
 		"waylaid": str(c.get("waylaid", ""))}

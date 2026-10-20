@@ -158,6 +158,11 @@ COLLECTIONS = {
         "license": "buildings/lords-castle/LICENSE.txt",
         "preview_root": "buildings/lords-castle/previews",
     },
+    "carts-transport": {
+        "source": "original (Sovereign's Eye): props/carts-transport/source/build_carts.py",
+        "license": "props/carts-transport/LICENSE.txt",
+        "preview_root": "props/carts-transport/previews",
+    },
 }
 
 
@@ -330,6 +335,8 @@ def collection_for(path: Path) -> tuple[str, str]:
         if path.stem.startswith(("SE_Net_", "SE_Boat_Ashore")):
             return "harbour", "shore"
         return "harbour", "waterfront"
+    if relative.parts[:2] == ("props", "carts-transport"):
+        return "carts-transport", "loads" if path.stem.endswith("_Load") else "carts"
     if relative.parts[:2] == ("buildings", "lords-castle"):
         timber = ("SE_Motte", "SE_Palisade", "SE_Timber_")
         return "lords-castle", "timber" if path.stem.startswith(timber) else "stone"

@@ -85,6 +85,19 @@ bandit camps watch.
   day 400 is 36,000, 63,000 and 58,000 (31,000, 62,000 and 48,000
   without): it still piles up, for Phase 6.3's Crown and works to take.
 - Save v20 (carts).
+- Seen in the village (after the merge, same step): a cart loads in the
+  square and rolls out along the road toward its seat's side of the realm,
+  its carter at the horse's head and its escort behind, and leaves at the
+  village's edge; on its last day on the road home it comes in at dusk and
+  stands in the square till its people are home at midnight (`CartView`,
+  presentation only, from the cart's times). The road home is now
+  travelled (and any ambush on it decided) that last day, so what comes in
+  is what came home. The cart and its horse are the game's own models
+  (`3D/props/carts-transport/`, backlog family 12): a plank-sided cart on
+  two spoked wheels in shafts, and a bay cart horse of about 13 hands in a
+  collar, its legs, neck, head and tail turned by the game as it walks
+  (horses drew England's carts more and more from the 12th century: John
+  Langdon, "Horse Hauling", Past & Present 103, 1984). Save v21.
 
 ## The market (Phase 6.1)
 
