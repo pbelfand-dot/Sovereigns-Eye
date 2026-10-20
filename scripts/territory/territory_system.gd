@@ -166,7 +166,10 @@ static func productivity(c: CharacterData) -> float:
 
 static func season_factor(state: WorldState, resource: String) -> float:
 	var s: Dictionary = section("seasons").get(state.current_season(), {})
-	return float(s.get(resource, 1.0))
+	var f := float(s.get(resource, 1.0))
+	if resource == "food":
+		f *= Market.harvest_yield(state)  # the realm's harvest, in autumn (Phase 6.1)
+	return f
 
 
 ## What one person adds to the stores in a day: {resource: amount}.

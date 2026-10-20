@@ -9,7 +9,10 @@ extends SceneTree
 ## a bakery and a granary, raises taverns, chapels and a Market Hall once a
 ## charter allows them, and petitions as soon as it can. It raises the
 ## house's castle as soon as the charter and the purse allow (Phase 5.3):
-## when the works begin and end, and how long they wait for stores.
+## when the works begin and end, and how long they wait for stores. Its
+## steward keeps standing orders at the market (Phase 6.1): ten days of food
+## and some wood and stone kept, more stone while the castle goes up, the
+## rest sold above four fifths of the stores; MARKET=0 turns that off.
 
 
 func _init() -> void:
@@ -21,6 +24,7 @@ func _init() -> void:
 	_court(st)
 	var started := Time.get_ticks_msec()
 	var stalls := 0
+	var trade := OS.get_environment("MARKET") != "0"
 	for d in days:
 		for k in 48:
 			st.minutes += 30.0
@@ -35,6 +39,11 @@ func _init() -> void:
 			MoodSystem.daily_update(c, st, rng)
 		CourtSystem.daily_update(st, Seeds.rng(st.world_seed, "court_day_%d" % day))
 		TerritorySystem.daily_update(st)
+		if trade:
+			_orders(st)
+		for e: Dictionary in Market.daily_update(st):
+			if e.has("harvest"):
+				print("day %3d  %s" % [d + 1, e["text"]])
 		LifeSystem.daily_update(st)
 		MatchSystem.daily_update(st)
 		Succession.daily_update(st)
@@ -63,6 +72,8 @@ func _init() -> void:
 								why[need["label"]] = int(why.get(need["label"], 0)) + 1
 				print("        Timber Houses held back by: %s" % why)
 	print("\n%d days in %.1f s" % [days, (Time.get_ticks_msec() - started) / 1000.0])
+	var sum := Market.steward_summary(st, days)
+	print("market: the steward's last %d trades: %s" % [st.market.ledger.size(), sum])
 	print("castle: %s%s, %d days the works waited for stores" % [CastleSystem.name_of(st.castle.kind) if not st.castle.kind.is_empty() else "none",
 		(", works on the %s %d%%" % [CastleSystem.name_of(st.castle.works), roundi(st.castle.progress() * 100.0)]) if not st.castle.works.is_empty() else "", stalls])
 	_report(st, days)
@@ -109,6 +120,19 @@ func _report(st: WorldState, day: int) -> void:
 		roundi(st.territory.amount("wood")), roundi(st.territory.amount("stone")), st.house.gold,
 		st.house.renown, roundi(h / st.characters.size()), CourtSystem.daily_income(st) - CourtSystem.daily_wages(st),
 		roundi(GrowthSystem.appeal(st)), roundi(st.territory.settler_progress), st.territory.sites.size()])
+
+
+## The steward's standing orders, set each day from what the village eats
+## and what the castle needs.
+func _orders(st: WorldState) -> void:
+	var cap := roundi(TerritorySystem.capacity(st, "food") * 0.8)
+	var eat := float(TerritorySystem.consumption(st)["food"])
+	Market.set_order(st, "food", roundi(eat * 10.0), cap)
+	# A hamlet saves its gold for the charter; a chartered village buys
+	# what its works need.
+	var buy := CharterSystem.current(st) >= 1
+	Market.set_order(st, "wood", 150 if buy else -1, cap)
+	Market.set_order(st, "stone", (400 if st.castle.works == "stone" else 150) if buy else -1, cap)
 
 
 ## A chancellor (renown) and a steward (income), chosen for their gifts.

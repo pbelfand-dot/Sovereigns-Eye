@@ -18,7 +18,48 @@ playable build. Numbers and content live in `data/*.json`.
 | **5.1** | **Military: raids on the village, the warband, live battles with real risk** (below) | Done |
 | **5.2** | **The wider realm: a map of the noble houses' seats, visits, regard, fostering kin; bandit camps to clear; battle orders, gentle fights** (below) | Done |
 | **5.3** | **Your castle: a motte and bailey, then a stone castle, raised by your builders; houses that send men-at-arms in aid, rivals, and houses that come against you** (below) | Done |
-| 6 | To decide with the player. Recommended: the economy (trade with the houses' seats, a use for the gold that piles up in a grown town) | Next |
+| **6.1** | **The economy, step 1: the market: prices that move with the season, the harvest and your own trade; buying and selling food, wood and stone; the steward's standing orders; the treasury** (below) | Done |
+| 6.2 | The economy, step 2: crafts that make goods (cloth, ironware, ale) and carts to the noble houses' seats, along the realm's roads | Next |
+| 6.3 | The economy, step 3: the lord's mill, an annual fair by charter, and the Crown's tax on movable wealth (the sink for a rich town's gold) | Later |
+
+## The market (Phase 6.1)
+
+Decided (the player chose the economy for Phase 6; going ahead on the
+recommendations): the economy in three steps, the market first. Before it,
+nothing could be bought or sold: gold only came in (rents, dues) and went
+out on one-off costs, about 4,100 gold in a whole game against a Town's
+150 a day, and a stone castle waiting for stone couldn't buy any.
+
+- `MarketData` (`WorldState.market`: the day's price pressure from your own
+  trade, what's traded today, the steward's standing orders, a ledger of
+  recent trades) and `Market` (static, `data/market.json`).
+- Prices (gold per unit): food 0.3, wood 0.35, stone 0.9 in an even year,
+  by season (food: Spring 1.25, Summer 1.15, Autumn 0.75, Winter 1.0; wood
+  dearest in winter) and, for food, by the realm's harvest, drawn from the
+  seed each autumn: plenty (x0.8, fields +10% that autumn), fair, poor
+  (x1.3, -10%), dearth (x1.8, -20%), told when it comes in. Your own trade
+  moves the price (0.4% a unit, at most 60%), recovering 30% a day, so a
+  flood of sales fetches less and a rush of buying costs more.
+- Where: the merchant's stall in the square from the start (25 units of
+  each good a day, 30% on each side); each Market Hall adds 60 a day and
+  narrows the spread by 5 points; the village's merchant best at haggling
+  narrows it by up to 10 more (Politics: the Eye finds the gifted one).
+- The steward's standing orders (needs a steward appointed): each morning
+  buy up to a keep mark and sell above a sell mark, never spending below
+  ten days' wages. Build panel: Market (prices, Sell/Buy in lots of 10 and
+  50, the marks, the latest trades). Court panel: the treasury part by part
+  (lands, rent, dues, Market Halls, the steward's hand; wages, tutors,
+  upkeep) and the steward's trade this season.
+- Calibration (`charter_sim.gd`, whose steward now keeps orders: ten days
+  of food, wood and stone once chartered, more stone while the castle
+  rises, the rest sold above four fifths of the stores; `MARKET=0` without):
+  trading speeds a growing village, the Market Town and Town charters on
+  seed 9 at days 68 and 127 (111 and 165 without), on 4242 at 81 and 93
+  (103 and 130); 12345 about the same. A grown town's gold still piles up
+  (53,000 by day 400 with trade, 45,000 without): trade turns gold into
+  goods but doesn't take it away. That's Phase 6.3's Crown and works.
+- Save v19 (the market).
+
 
 ## Your castle, and the houses at war (Phase 5.3)
 

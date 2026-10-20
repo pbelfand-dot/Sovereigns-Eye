@@ -521,6 +521,19 @@ static func household_upkeep(state: WorldState, extra: int = 0) -> int:
 	return over * int(section("house").get("over_cap_upkeep", 2))
 
 
+## The day's income part by part (the treasury, Phase 6.1): {base, rent,
+## dues, market (the Market Halls' trade), factor (the steward's and a
+## regent's hand), total}.
+static func income_parts(state: WorldState) -> Dictionary:
+	var market := CharterSystem.market_income(state)
+	var base := float(section("house").get("base_income", 18))
+	var rent := GrowthSystem.rent(state)
+	var dues := float(CharterSystem.dues(state) - market)
+	var sum := base + rent + dues + market
+	return {"base": base, "rent": rent, "dues": dues, "market": float(market),
+		"factor": float(daily_income(state)) / sum if sum > 0.0 else 1.0, "total": daily_income(state)}
+
+
 static func daily_income(state: WorldState) -> int:
 	var base := float(section("house").get("base_income", 18)) + GrowthSystem.rent(state) + CharterSystem.dues(state)
 	var steward := state.get_character(state.house.holder_of("steward"))

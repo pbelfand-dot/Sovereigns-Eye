@@ -301,6 +301,12 @@ static func migrate(data: Dictionary) -> Dictionary:
 			realm.place(int(data.get("seed", 0)))
 			data["realm"] = realm.to_dict()
 		data["save_version"] = 18
+		version = 18
+	if version == 18:
+		# v19 (Phase 6.1): the market, with no trade yet and no standing orders.
+		if not data.has("market"):
+			data["market"] = {}
+		data["save_version"] = 19
 	return data
 
 

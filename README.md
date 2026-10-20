@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 5 done: your own castle (a motte and bailey, then stone), noble houses that send men to your aid or march against you, the wider realm (visit the houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
+> **Status: Phase 6 in progress: the market (prices that move with the season, the harvest and your trade; buy and sell, or leave it to your steward). Phase 5 done: your own castle (a motte and bailey, then stone), noble houses that send men to your aid or march against you, the wider realm (visit the houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -282,6 +282,20 @@ The house builds its seat, and the noble houses take sides. `CastleSystem`, `Cas
 ![The fight against the host](docs/screenshots/keep_melee.jpg)
 ![The host beaten back before the gate: renown, a truce, and how the allies' men fared](docs/screenshots/keep_report.jpg)
 
+### The market (Phase 6, step 1)
+
+Gold becomes goods, and goods gold. `Market`, `MarketData`, `data/market.json`.
+
+| | What happens |
+|---|---|
+| **Prices** | Food, wood and stone have a price in gold that moves: bread is dearest in spring before the harvest and cheapest after it, firewood in winter. Each autumn the realm's harvest comes in (plenty, fair, poor or a dearth): it sets what food costs until the next one, and your own fields yield a little more or less that autumn |
+| **Buying and selling** | **Build (B) → Market**: sell or buy in lots of 10 or 50. The merchant's stall in the square trades a little each day; each Market Hall trades more on better terms, and a merchant gifted at haggling (look with the Eye) gets you better terms still. Sell a lot at once and the price falls; it recovers over the following days |
+| **Standing orders** | With a steward appointed, set a mark to keep and a mark to sell above for each good: each morning your steward buys what's short (keeping ten days' wages in hand) and sells the surplus. A stone castle short of stone, a famine year, a granary overflowing: gold now answers them |
+| **The treasury** | The Court panel shows where the gold comes from (the lands, rent, charter dues, the Market Halls, your steward's hand) and where it goes (wages, tutors, upkeep), and what your steward traded this season |
+
+![The Build panel's Market: prices, the harvest, buying and selling, the steward's standing orders, the latest trades](docs/screenshots/market_panel.jpg)
+![The Court panel's treasury, part by part](docs/screenshots/market_treasury.jpg)
+
 ### Controls
 
 Every key below can be changed: **Esc → Keys...** (or **Settings → Keys...**
@@ -522,6 +536,8 @@ godot --headless --path . res://tools/capture.tscn -- 1 /tmp/stats battle_stats
 godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots realm
 # The house's castle rising and standing, a host's demand and its fight at the gate
 godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots keep
+# The market and the treasury
+godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots market
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
@@ -535,7 +551,9 @@ as readable JSON.
   use the ground; there are no bows. The castle is fought before, not
   from: no one mans its walls or is besieged in it, and its rooms aren't
   furnished or lived in yet.
-* A grown town piles up gold with little to spend it on beyond the castle.
+* A grown town piles up gold: the market turns it into goods, but nothing
+  yet takes it away (the Crown's tax and the lord's works come in Phase 6.3).
+* Craftsmen (the smith, the tavern) make nothing to sell yet (Phase 6.2).
 * The noble houses don't yet act on their own: no wars between them, no
   help sent to you when you're raided, no wards sent to you to foster. Their
   young you meet are the only ones of their people the game keeps.

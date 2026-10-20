@@ -59,6 +59,35 @@ func refresh() -> void:
 	var income := CourtSystem.daily_income(st)
 	var wages := CourtSystem.daily_wages(st)
 	_body.add_child(UITheme.label("Gold %d   (income %d, wages %d: %+d per day)" % [h.gold, income, wages, income - wages], 15, UITheme.ACCENT))
+	# The treasury, part by part (Phase 6.1).
+	var parts := CourtSystem.income_parts(st)
+	var ins: Array[String] = ["%d from the house's lands" % roundi(parts["base"])]
+	if float(parts["rent"]) > 0.0:
+		ins.append("%d in rent" % roundi(parts["rent"]))
+	if float(parts["dues"]) > 0.0:
+		ins.append("%d in charter dues" % roundi(parts["dues"]))
+	if float(parts["market"]) > 0.0:
+		ins.append("%d from the Market Halls" % roundi(parts["market"]))
+	var factor := float(parts["factor"])
+	var outs: Array[String] = ["wages %d" % CourtSystem.retainer_wages(st)]
+	if not CourtSystem.tutored(st).is_empty():
+		outs.append("tutors %d" % (CourtSystem.tutored(st).size() * int(CourtSystem.section("tutors").get("fee", 1))))
+	if CourtSystem.household_upkeep(st) > 0:
+		outs.append("upkeep %d" % CourtSystem.household_upkeep(st))
+	_body.add_child(_wrap("In: %s%s. Out: %s." % [", ".join(ins), (", %+d%% by your steward's hand" % roundi((factor - 1.0) * 100.0)) if absf(factor - 1.0) >= 0.01 else "", ", ".join(outs)], 13, UITheme.TEXT_DIM))
+	if st.market:
+		var trade := Market.steward_summary(st, Calendar.days_per_season())
+		var deals: Array[String] = []
+		for which: String in ["sold", "bought"]:
+			var goods: Dictionary = trade[which]
+			if goods.is_empty():
+				continue
+			var what: Array[String] = []
+			for g: String in goods:
+				what.append("%d %s" % [int(goods[g]), TerritorySystem.resource_name(g).to_lower()])
+			deals.append("%s %s for %d gold" % [which, " and ".join(what), int(trade["got"] if which == "sold" else trade["paid"])])
+		if not deals.is_empty():
+			_body.add_child(_wrap("At market these ten days your steward %s (Build panel: Market)." % "; ".join(deals), 13, UITheme.TEXT_DIM))
 	if h.in_debt:
 		_body.add_child(_wrap("Your coffers are empty and wages go unpaid. Loyalty is falling every day.", 14, UITheme.BAD))
 	_body.add_child(UITheme.label("Renown %d   -   Household %d / %d (more renown, more retainers)" % [h.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)], 15))
