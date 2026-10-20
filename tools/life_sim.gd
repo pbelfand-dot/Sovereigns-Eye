@@ -54,6 +54,11 @@ func _init() -> void:
 			if e.has("harvest") and str(e["harvest"]) in ["dearth", "plenty"]:
 				print("   day %4d  %s" % [day, e["text"]])
 		Trade.daily_update(st)
+		for e: Dictionary in ManorSystem.daily_update(st):
+			if e.has("levy"):
+				print("   day %4d  %s" % [day, e["text"]])
+		if steward and ManorSystem.can_grant_fair(st)["ok"] and st.house.gold >= int(ManorSystem.section("fair")["fee"]) + 300:
+			print("   day %4d  %s" % [day, ManorSystem.grant_fair(st)["text"]])
 		for e: Dictionary in LifeSystem.daily_update(st):
 			for key: String in ["born", "gone", "moved"]:
 				if not e.has(key):

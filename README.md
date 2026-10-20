@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 6 in progress: the market (prices that move with the season, the harvest and your trade; buy and sell, or leave it to your steward), and crafts and carts (weavers, the smith and the alewives make wares; carts take them to the noble houses' seats, past the bandits). Phase 5 done: your own castle (a motte and bailey, then stone), noble houses that send men to your aid or march against you, the wider realm (visit the houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
+> **Status: Phase 6 done: the economy. The market (prices that move with the season, the harvest and your trade; buy and sell, or leave it to your steward), crafts and carts (weavers, the smith and the alewives make wares; carts take them to the noble houses' seats, past the bandits), and the manor's dues and the Crown's levies (the mill's toll, a fair bought from the Crown, the Saladin tithe and the King's levies after it). Phase 5 done: your own castle (a motte and bailey, then stone), noble houses that send men to your aid or march against you, the wider realm (visit the houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -314,6 +314,19 @@ The village makes things to sell, and sends them out. `Trade`, `data/trade.json`
 ![Rolling out along the road toward the seat](docs/screenshots/carts_road.jpg)
 ![Coming home at dusk on its last day on the road](docs/screenshots/carts_home.jpg)
 
+### The manor's dues and the Crown's levies (Phase 6, step 3)
+
+What the lord takes, and what the King takes from the lord. `ManorSystem`, `ManorData`, `data/manor.json`.
+
+| | What happens |
+|---|---|
+| **The lord's mill** | **Court (K) → The Manor**: the village must grind its grain at your windmill, and the miller takes a toll for the house each day. Set it at a twenty-fourth (liked), a sixteenth (customary) or a thirteenth (resented). An unhappy village grinds at home on hand-querns and pays nothing; you can have the querns seized, and the village will resent that too. No miller, no toll |
+| **The fair** | A Market Town with a Market Hall may buy a fair from the Crown (400 gold): three days a year from its saint's feast. Merchants come from afar (the market trades four times as much on finer terms, and pays more for your wares), the stallage is yours, the house's renown grows, the village makes merry, and stalls fill the square |
+| **The Crown's levies** | The King taxes your movables (your gold and your stores, not what you've built): the Saladin tithe of 1188, King Richard's ransom in 1193 (a quarter of everything), and levies every few years after. You hear ten days ahead. Declare it all, or hide a third and hope your sworn neighbours hold their tongues: if they don't, you pay it all and a fine. Gold spent on buildings is gold the King can't count |
+
+![The Court panel's Manor: the mill's toll, the fair, the Saladin tithe coming](docs/screenshots/manor_court.jpg)
+![The fair: merchants' stalls in a ring round the square](docs/screenshots/manor_fair.jpg)
+
 ### Controls
 
 Every key below can be changed: **Esc → Keys...** (or **Settings → Keys...**
@@ -558,6 +571,10 @@ godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shot
 godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots market
 # The weavers' workshop, the wares, a seat's Trade section and a cart on the map
 godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots trade
+# A cart setting out, on the road and home at dusk
+godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots carts
+# The Court panel's Manor and the fair in the square
+godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots manor
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
@@ -571,8 +588,9 @@ as readable JSON.
   use the ground; there are no bows. The castle is fought before, not
   from: no one mans its walls or is besieged in it, and its rooms aren't
   furnished or lived in yet.
-* A grown town piles up gold: the market turns it into goods, but nothing
-  yet takes it away (the Crown's tax and the lord's works come in Phase 6.3).
+* A grown town still gathers gold: the Crown's levies take a share every
+  few years, but there's little yet to spend a fortune on beyond the
+  castle and the fair.
 * A cart is seen setting out and coming home in the village, but not on
   the realm's roads, and a fight on the road is told, not shown.
 * The noble houses don't yet act on their own: no wars between them, no

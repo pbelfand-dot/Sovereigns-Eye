@@ -15,7 +15,11 @@ extends SceneTree
 ## rest sold above four fifths of the stores; MARKET=0 turns that off. It
 ## raises a Weavers' Workshop and a smithy, and sends carts of wares to the
 ## seats that want them (Phase 6.2), escorted on a road past a camp it
-## knows of; CARTS=0 turns that off.
+## knows of; CARTS=0 turns that off. Phase 6.3: the mill takes its
+## customary toll (TOLL=light or hard for another), the steward buys a fair
+## as soon as the town may (keeping 300 gold), and the Crown's levies are
+## declared in full (HIDE=1 hides a third each time); MANOR=0 runs without
+## the levies and the fair.
 
 
 func _init() -> void:
@@ -30,6 +34,10 @@ func _init() -> void:
 	var trade := OS.get_environment("MARKET") != "0"
 	var carting := OS.get_environment("CARTS") != "0"
 	var carts := {"sent": 0, "home": 0, "gold": 0, "waylaid": 0}
+	var manor_on := OS.get_environment("MANOR") != "0"
+	var manor := {"levies": 0, "fair_days": 0, "mill": 0.0, "fair": 0.0}
+	if OS.get_environment("TOLL") != "":
+		ManorSystem.set_toll(st, OS.get_environment("TOLL"))
 	for d in days:
 		for k in 48:
 			st.minutes += 30.0
@@ -57,6 +65,21 @@ func _init() -> void:
 					carts["waylaid"] += 1
 			if not str(e["text"]).is_empty() and (e.has("cart") or e.has("waylaid")):
 				print("day %3d  %s" % [d + 1, e["text"]])
+		manor["mill"] += ManorSystem.mill_income(st)
+		manor["fair"] += ManorSystem.fair_income(st)
+		if ManorSystem.fair_on(st):
+			manor["fair_days"] += 1
+		if manor_on:
+			if OS.get_environment("HIDE") == "1" and not ManorSystem.next_levy(st).is_empty():
+				ManorSystem.set_hiding(st, true)
+			for e: Dictionary in ManorSystem.daily_update(st):
+				if e.has("levy"):
+					manor["levies"] += int(e["levy"]["paid"])
+					print("day %3d  %s" % [d + 1, e["text"]])
+				elif e.has("fair") and int(st.manor.fair_held_year) == st.current_year() and manor["fair_days"] < 2:
+					print("day %3d  %s" % [d + 1, e["text"]])
+			if ManorSystem.can_grant_fair(st)["ok"] and st.house.gold >= int(ManorSystem.section("fair")["fee"]) + 300:
+				print("day %3d  %s" % [d + 1, ManorSystem.grant_fair(st)["text"]])
 		if carting:
 			var sent := _carts(st)
 			if not sent.is_empty():
@@ -90,6 +113,8 @@ func _init() -> void:
 								why[need["label"]] = int(why.get(need["label"], 0)) + 1
 				print("        Timber Houses held back by: %s" % why)
 	print("\n%d days in %.1f s" % [days, (Time.get_ticks_msec() - started) / 1000.0])
+	print("manor: mill toll %d gold (%s), fair %d days, %d gold in stallage; levies paid %d gold" % [roundi(manor["mill"]), st.manor.toll, manor["fair_days"],
+		roundi(manor["fair"]), manor["levies"]])
 	print("carts: %d sent, %d home with %d gold, %d waylaid; wares in store: %s" % [carts["sent"], carts["home"], carts["gold"], carts["waylaid"],
 		", ".join(TerritorySystem.WARES.map(func(g: String) -> String: return "%d %s" % [roundi(TerritorySystem.amount(st, g)), g]))])
 	var sum := Market.steward_summary(st, days)

@@ -529,13 +529,17 @@ static func income_parts(state: WorldState) -> Dictionary:
 	var base := float(section("house").get("base_income", 18))
 	var rent := GrowthSystem.rent(state)
 	var dues := float(CharterSystem.dues(state) - market)
-	var sum := base + rent + dues + market
-	return {"base": base, "rent": rent, "dues": dues, "market": float(market),
+	var mill := ManorSystem.mill_income(state)
+	var fair := ManorSystem.fair_income(state)
+	var sum := base + rent + dues + market + mill + fair
+	return {"base": base, "rent": rent, "dues": dues, "market": float(market), "mill": mill, "fair": fair,
 		"factor": float(daily_income(state)) / sum if sum > 0.0 else 1.0, "total": daily_income(state)}
 
 
 static func daily_income(state: WorldState) -> int:
 	var base := float(section("house").get("base_income", 18)) + GrowthSystem.rent(state) + CharterSystem.dues(state)
+	# The mill's toll and, three days a year, the fair's stallage (Phase 6.3).
+	base += ManorSystem.mill_income(state) + ManorSystem.fair_income(state)
 	var steward := state.get_character(state.house.holder_of("steward"))
 	if steward:
 		base *= 1.0 + steward.get_current("administration") / float(office_def("steward").get("effect_divisor", 200.0))

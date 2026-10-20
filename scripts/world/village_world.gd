@@ -63,6 +63,7 @@ var battle: Battle
 ## The house's castle, standing or rising (Phase 5.3).
 var castle_view: CastleView
 var cart_view: CartView
+var fair_view: FairView
 ## Music that overrides the time of day ("battle", then "victory"/"defeat").
 var music_override := ""
 var _music_override_left := 0.0
@@ -132,6 +133,10 @@ func _ready() -> void:
 	cart_view.name = "Carts"
 	add_child(cart_view)
 	cart_view.setup(self)
+	fair_view = FairView.new()
+	fair_view.name = "Fair"
+	add_child(fair_view)
+	fair_view.setup(self)
 	graph = RoadGraph.new()
 	graph.build(state.layout)
 	_compute_worker_slots()
@@ -342,6 +347,8 @@ func _check_new_day() -> void:
 		_announce(e)
 	for e: Dictionary in Trade.daily_update(state):
 		_on_life_event(e)
+	for e: Dictionary in ManorSystem.daily_update(state):
+		_announce(e)
 	for e: Dictionary in LifeSystem.daily_update(state):
 		_on_life_event(e)
 	for e: Dictionary in MatchSystem.daily_update(state):
