@@ -396,6 +396,57 @@ const SOLID := {
 static var _solid_key := ""
 static var _solid: Array = []
 
+## What hides the view, piece by piece: half its width and depth and its
+## height from its foot (the kit's sizes, 3D/buildings/lords-castle), for
+## the follow camera to rise over (VillageWorld.view_blocked_at).
+const VIEW := {
+	"SE_Curtain_Wall": Vector3(2.0, 8.3, 1.375),
+	"SE_Curtain_Stair": Vector3(4.0, 8.3, 2.0),
+	"SE_Curtain_Corner": Vector3(2.3, 8.3, 2.3),
+	"SE_Tower_Square": Vector3(3.35, 12.3, 3.35),
+	"SE_Tower_Corner": Vector3(3.35, 12.3, 3.35),
+	"SE_Gatehouse": Vector3(4.35, 13.3, 4.35),
+	"SE_Keep": Vector3(7.6, 23.3, 9.75),
+	"SE_Palisade": Vector3(2.0, 5.0, 0.7),
+	"SE_Palisade_Corner": Vector3(1.1, 5.2, 1.1),
+	"SE_Palisade_Gate": Vector3(2.65, 8.5, 2.65),
+	"SE_Motte": Vector3(14.0, 7.8, 14.0),
+	"SE_Timber_Tower": Vector3(4.4, 15.4, 4.4),
+}
+
+static var _view_key := ""
+static var _view: Array = []
+
+
+## How far along from-to (0..1) a piece of the castle first stands in the
+## way, 1.0 when nothing does.
+static func view_blocked_at(state: WorldState, from: Vector3, to: Vector3) -> float:
+	var c := state.castle
+	if c == null or not c.has_site():
+		return 1.0
+	var length := from.distance_to(to)
+	if length < 0.01:
+		return 1.0
+	var key := "%s|%s|%d|%s" % [c.kind, c.works, pieces(state).size(), str(c.site)]
+	if key != _view_key:
+		_view_key = key
+		_view.clear()
+		var xf := c.transform()
+		for p: Array in pieces(state):
+			var size: Vector3 = VIEW.get(str(p[0]), Vector3.ZERO)
+			if size != Vector3.ZERO:
+				_view.append([xf * Transform3D(Basis(Vector3.UP, float(p[2])), p[1] as Vector3), AABB(Vector3(-size.x, 0.0, -size.z), Vector3(size.x * 2.0, size.y, size.z * 2.0))])
+	var best := 1.0
+	for v: Array in _view:
+		var piece: Transform3D = v[0]
+		if Vector2(piece.origin.x - (from.x + to.x) * 0.5, piece.origin.z - (from.z + to.z) * 0.5).length() > length * 0.5 + 20.0:
+			continue
+		var inv := piece.affine_inverse()
+		var hit: Variant = (v[1] as AABB).intersects_segment(inv * from, inv * to)
+		if hit != null:
+			best = minf(best, from.distance_to(piece * (hit as Vector3)) / length)
+	return best
+
 
 ## The castle's solid shapes in the world: [{center, basis, half}] boxes and
 ## [{center, r}] rounds (cached while the castle doesn't change).

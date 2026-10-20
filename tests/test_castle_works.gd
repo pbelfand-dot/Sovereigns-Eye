@@ -154,6 +154,8 @@ func test_the_castle_in_the_world() -> void:
 	world.castle_view.refresh()
 	check(st.castle.kind == "timber" and world.castle_view.piece_count() == CastleLayout.layout("timber").size(), "the motte and bailey stands")
 	var motte := xf.origin
+	check(world.view_blocked_at(xf * Vector3(0, 3, 40), xf * Vector3(0, 3, -40)) < 1.0, "it stands in the way of the view (the follow camera rises over it)")
+	check_eq(world.view_blocked_at(xf * Vector3(0, 40, 40), xf * Vector3(0, 40, -40)), 1.0, "(but not of the sky)")
 	var pushed := WorldGeometry.resolve(st, motte + Vector3(1, 0, 1), 0.35)
 	check(Vector2(pushed.x - motte.x, pushed.z - motte.z).length() >= 13.0, "no one walks through the motte")
 	Military.plan_raid(st, Seeds.rng(4, "castle"))

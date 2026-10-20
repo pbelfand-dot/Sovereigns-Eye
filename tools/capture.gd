@@ -1736,6 +1736,7 @@ func _keep_shots() -> void:
 	world.castle_view.refresh()
 	await view.call("keep_4_stone.png", Vector3(46, 34, 84), Vector3(0, 4, 4))
 	world.camera_rig.camera.make_current()
+	world.camera_rig.look_at_point(st.layout.square_center, 40.0, true)
 	# A house that holds yours in contempt; one that would help, one that might if asked.
 	var foe := st.realm.houses[0]
 	foe["standing"] = -60
@@ -1802,7 +1803,7 @@ func _keep_shots() -> void:
 		if not taken.has("line") and t >= 2.0:
 			taken["line"] = true
 			await frame_on.call("keep_7_gate.png", 34.0)
-		elif charge >= 0.0 and not taken.has("melee") and t >= charge + 6.0:
+		elif charge >= 0.0 and not taken.has("melee") and t >= charge + 20.0:
 			taken["melee"] = true
 			await frame_on.call("keep_8_melee.png", 18.0)
 	print("keep: fight over in %.0f s (charge at %.0f)" % [t, charge])

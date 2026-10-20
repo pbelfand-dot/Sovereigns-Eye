@@ -1070,7 +1070,7 @@ func _segment_hits_building(b: BuildingData, from: Vector3, to: Vector3) -> floa
 ## How far along the line from `from` to `to` (0..1) the first building
 ## stands in the way, or 1.0 when the view is clear (the follow camera).
 func view_blocked_at(from: Vector3, to: Vector3) -> float:
-	var best := 1.0
+	var best := CastleSystem.view_blocked_at(state, from, to)
 	for b in WorldGeometry.solid_buildings(state):
 		best = minf(best, _segment_hits_building(b, from, to))
 	return best
