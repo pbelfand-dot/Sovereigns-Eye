@@ -12,7 +12,10 @@ extends SceneTree
 ## when the works begin and end, and how long they wait for stores. Its
 ## steward keeps standing orders at the market (Phase 6.1): ten days of food
 ## and some wood and stone kept, more stone while the castle goes up, the
-## rest sold above four fifths of the stores; MARKET=0 turns that off.
+## rest sold above four fifths of the stores; MARKET=0 turns that off. It
+## raises a Weavers' Workshop and a smithy, and sends carts of wares to the
+## seats that want them (Phase 6.2), escorted on a road past a camp it
+## knows of; CARTS=0 turns that off.
 
 
 func _init() -> void:
@@ -25,6 +28,8 @@ func _init() -> void:
 	var started := Time.get_ticks_msec()
 	var stalls := 0
 	var trade := OS.get_environment("MARKET") != "0"
+	var carting := OS.get_environment("CARTS") != "0"
+	var carts := {"sent": 0, "home": 0, "gold": 0, "waylaid": 0}
 	for d in days:
 		for k in 48:
 			st.minutes += 30.0
@@ -44,6 +49,19 @@ func _init() -> void:
 		for e: Dictionary in Market.daily_update(st):
 			if e.has("harvest"):
 				print("day %3d  %s" % [d + 1, e["text"]])
+		for e: Dictionary in Trade.daily_update(st):
+			if e.has("cart"):
+				carts["home"] += 1
+				carts["gold"] += int(e["cart"]["gold"])
+				if not str(e["cart"]["waylaid"]).is_empty():
+					carts["waylaid"] += 1
+			if not str(e["text"]).is_empty() and (e.has("cart") or e.has("waylaid")):
+				print("day %3d  %s" % [d + 1, e["text"]])
+		if carting:
+			var sent := _carts(st)
+			if not sent.is_empty():
+				carts["sent"] += 1
+				print("day %3d  %s" % [d + 1, sent])
 		LifeSystem.daily_update(st)
 		MatchSystem.daily_update(st)
 		Succession.daily_update(st)
@@ -72,12 +90,24 @@ func _init() -> void:
 								why[need["label"]] = int(why.get(need["label"], 0)) + 1
 				print("        Timber Houses held back by: %s" % why)
 	print("\n%d days in %.1f s" % [days, (Time.get_ticks_msec() - started) / 1000.0])
+	print("carts: %d sent, %d home with %d gold, %d waylaid; wares in store: %s" % [carts["sent"], carts["home"], carts["gold"], carts["waylaid"],
+		", ".join(TerritorySystem.WARES.map(func(g: String) -> String: return "%d %s" % [roundi(TerritorySystem.amount(st, g)), g]))])
 	var sum := Market.steward_summary(st, days)
 	print("market: the steward's last %d trades: %s" % [st.market.ledger.size(), sum])
 	print("castle: %s%s, %d days the works waited for stores" % [CastleSystem.name_of(st.castle.kind) if not st.castle.kind.is_empty() else "none",
 		(", works on the %s %d%%" % [CastleSystem.name_of(st.castle.works), roundi(st.castle.progress() * 100.0)]) if not st.castle.works.is_empty() else "", stalls])
 	_report(st, days)
 	print("home spot: %s" % GrowthSystem.best_home_spot(st))
+	if OS.get_environment("SIM_MOOD") == "1":
+		# What moves the village's happiness, on average over everyone.
+		var sums := {}
+		for c in st.characters:
+			for f: Dictionary in MoodSystem.happiness_factors(c, st):
+				var key := str(f["label"]).get_slice(" (", 0)
+				sums[key] = float(sums.get(key, 0.0)) + float(f["value"]) / st.characters.size()
+		var keys := sums.keys()
+		keys.sort_custom(func(a: String, b: String) -> bool: return absf(sums[a]) > absf(sums[b]))
+		print("happiness: %s" % ", ".join(keys.slice(0, 12).map(func(k: String) -> String: return "%s %+.1f" % [k, sums[k]])))
 	var reasons := {}
 	for road in st.layout.roads:
 		var pts: PackedVector3Array = road["points"]
@@ -133,6 +163,44 @@ func _orders(st: WorldState) -> void:
 	var buy := CharterSystem.current(st) >= 1
 	Market.set_order(st, "wood", 150 if buy else -1, cap)
 	Market.set_order(st, "stone", (400 if st.castle.works == "stone" else 150) if buy else -1, cap)
+	# Wares the carts don't take go to market before the stores are full.
+	for g: String in TerritorySystem.WARES:
+		Market.set_order(st, g, -1, roundi(TerritorySystem.capacity(st, g) * 0.9))
+
+
+## The steward's carts: the seat that would pay most for a cartload of the
+## wares in store (at least 10 of a ware, up to what it takes), if worth
+## 120 gold and the road isn't known to be dangerous (1 in 3); two of the
+## warband ride with it past a camp. The news, or "".
+func _carts(st: WorldState) -> String:
+	var best := -1
+	var best_load := {}
+	var best_value := 0
+	for h in st.realm.houses:
+		var id := int(h["id"])
+		if not Trade.can_send(st, id)["ok"] or float(Trade.danger(st, id, true)["chance"]) > 0.33:
+			continue
+		var load := {}
+		var room := int(Trade.section("cart").get("load", 60))
+		var order: Array[String] = []
+		for g: String in Trade.wants(st, id) + TerritorySystem.WARES:
+			if TerritorySystem.WARES.has(g) and not order.has(g):
+				order.append(g)
+		for g in order:
+			var n := mini(mini(Trade.take(st), floori(TerritorySystem.amount(st, g))), room)
+			if n >= 10:
+				load[g] = n
+				room -= n
+		var value := Trade.estimate(st, id, load)
+		if value > best_value:
+			best = id
+			best_load = load
+			best_value = value
+	if best < 0 or best_value < 120:
+		return ""
+	var escort := 0 if (Trade.danger(st, best, true)["camps"] as Array).is_empty() else 2
+	var r := Trade.send(st, best, best_load, escort)
+	return str(r["text"]) + " (~%d gold)" % best_value if r["ok"] else ""
 
 
 ## A chancellor (renown) and a steward (income), chosen for their gifts.
@@ -167,7 +235,7 @@ func _build(st: WorldState) -> void:
 	# The granary is full but holds too few days for the homes: store more.
 	if st.territory.amount("food") >= TerritorySystem.capacity(st, "food") * 0.95 and GrowthSystem.food_days(st) < 12.0 and _try(st, "storehouse"):
 		return
-	for type: String in ["bakery", "storehouse", "tavern", "chapel", "market"]:
+	for type: String in ["bakery", "storehouse", "tavern", "weavery", "chapel", "smithy", "market"]:
 		if TerritorySystem.count_built(st, type) == 0 and _try(st, type):
 			return
 		if type == "market" and CharterSystem.current(st) >= 2 and TerritorySystem.count_built(st, "market") == 0 and st.minutes / 1440.0 > 120.0 and int(st.minutes / 1440.0) % 50 == 0:

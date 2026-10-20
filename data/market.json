@@ -5,7 +5,11 @@
     "_comment": "price: gold per unit in a fair year at an even market. season: a factor by season. Food is the cheapest to make and the dearest to want; stone is hauled and dressed by hand.",
     "food": {"price": 0.3, "season": {"Spring": 1.25, "Summer": 1.15, "Autumn": 0.75, "Winter": 1.0}},
     "wood": {"price": 0.35, "season": {"Spring": 0.95, "Summer": 0.9, "Autumn": 1.0, "Winter": 1.2}},
-    "stone": {"price": 0.9, "season": {"Spring": 1.0, "Summer": 0.95, "Autumn": 1.0, "Winter": 1.15}}
+    "stone": {"price": 0.9, "season": {"Spring": 1.0, "Summer": 0.95, "Autumn": 1.0, "Winter": 1.15}},
+    "_wares": "Phase 6.2, the craftsmen's wares. volume: the share of the day's trade the market takes of them (wares sell in smaller lots). follows: the good whose price sets this one's (ale follows grain, as the Assize of Bread and Ale had it). A weaver's day of cloth (1) is worth more than a smith's ironware (1.5 from 2 wood) or a brewer's ale (4 from 2 food), as England's cloth was the realm's richest trade.",
+    "cloth": {"price": 3.0, "volume": 0.4},
+    "ironware": {"price": 2.2, "volume": 0.4},
+    "ale": {"price": 0.4, "volume": 0.8, "follows": "food"}
   },
 
   "harvest": {

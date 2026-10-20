@@ -157,7 +157,10 @@ func test_building_rises_in_the_live_world() -> void:
 	check(world.builder.building_nodes.has(site.id()), "the finished building is drawn")
 	check(not world.builder.site_nodes.has(site.id()), "the site is cleared away")
 	var path := world.graph.find_path(st.layout.square_center, site.building.door_position())
-	check(path.size() >= 2, "the new door is on the road network")
+	var longest := 0.0
+	for i in range(1, path.size()):
+		longest = maxf(longest, path[i - 1].distance_to(path[i]))
+	check(path.size() > 2 and longest < 16.0, "the new door is on the road network (%d steps, longest %.1f m)" % [path.size(), longest])
 	world.queue_free()
 	await frames(2)
 

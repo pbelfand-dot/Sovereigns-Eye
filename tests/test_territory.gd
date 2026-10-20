@@ -304,11 +304,8 @@ func test_rectangle_overlap() -> void:
 	check(not TerritorySystem.point_in_rect(Vector3(0, 0, 1.6), Vector3.ZERO, 0.0, Vector2(2, 1), 0.5), "point outside the margin")
 
 
-func test_buildings_away_from_roads_get_a_lane() -> void:
-	var state := WorldGenerator.generate("territory-lane")
-	state.house.gold = 500
-	# Walk out from a road until a spot needs a lane but is still allowed.
-	var placed: Dictionary = {}
+## A spot back from the road where a quarry needs a lane to its door: {pos, rot} or {}.
+func _lane_spot(state: WorldState) -> Dictionary:
 	for road in state.layout.roads:
 		var pts: PackedVector3Array = road["points"]
 		for i in range(1, pts.size()):
@@ -322,12 +319,15 @@ func test_buildings_away_from_roads_get_a_lane() -> void:
 				var rot := atan2(-normal.x * side, -normal.z * side)
 				var chk := TerritorySystem.check_placement(state, "quarry", pos, rot)
 				if chk["ok"] and not (chk["lane"] as PackedVector3Array).is_empty():
-					placed = {"pos": pos, "rot": rot}
-					break
-			if not placed.is_empty():
-				break
-		if not placed.is_empty():
-			break
+					return {"pos": pos, "rot": rot}
+	return {}
+
+
+func test_buildings_away_from_roads_get_a_lane() -> void:
+	var state := WorldGenerator.generate("territory-lane")
+	state.house.gold = 500
+	# Walk out from a road until a spot needs a lane but is still allowed.
+	var placed := _lane_spot(state)
 	check(not placed.is_empty(), "found a spot back from the road")
 	if placed.is_empty():
 		return
@@ -346,6 +346,75 @@ func test_buildings_away_from_roads_get_a_lane() -> void:
 		var t := state.layout.trees[i]
 		if TerritorySystem.point_in_rect(Vector3(t.x, 0, t.y), site.building.position, site.building.rotation, site.building.footprint * 0.5, 0.5):
 			check(state.territory.cleared_trees.has(i), "trees under the building are felled")
+
+
+func test_a_lane_another_branches_from_stays() -> void:
+	var state := WorldGenerator.generate("territory-lane")
+	state.house.gold = 500
+	var placed := _lane_spot(state)
+	if placed.is_empty():
+		check(false, "found a spot back from the road")
+		return
+	var site: ConstructionSite = TerritorySystem.place(state, "quarry", placed["pos"], placed["rot"])["site"]
+	var lane: Dictionary = state.layout.roads.filter(func(r: Dictionary) -> bool: return str(r["name"]) == site.lane)[0]
+	var pts: PackedVector3Array = lane["points"]
+	var mid := pts[0].lerp(pts[pts.size() - 1], 0.5)
+	# A later building's lane laid from the middle of this one.
+	state.layout.roads.append({"name": "lane_9999", "points": PackedVector3Array([mid + Vector3(9, 0, 0), mid]), "width": 3.0})
+	TerritorySystem.cancel(state, site)
+	check(state.layout.roads.has(lane), "cancelling the first order keeps the lane the second one hangs from")
+
+
+func test_the_walking_network_is_rebuilt_whole() -> void:
+	var state := WorldGenerator.generate("territory-graph")
+	var graph := RoadGraph.new()
+	graph.build(state.layout)
+	var first := graph.astar.get_point_count()
+	# The layout changes (a lane laid) and the network is rebuilt, twice.
+	var pts: PackedVector3Array = state.layout.roads[0]["points"]
+	var at := pts[pts.size() / 2]
+	state.layout.roads.append({"name": "lane_9998", "points": PackedVector3Array([at + Vector3(14, 0, 3), at]), "width": 3.0})
+	graph.build(state.layout)
+	graph.build(state.layout)
+	check(graph.astar.get_point_count() > first and graph.square_nodes.size() == 12, "%d nodes, a ring of %d round the square" % [graph.astar.get_point_count(), graph.square_nodes.size()])
+	check(graph.road_nodes.all(func(id: int) -> bool: return graph.astar.has_point(id)), "every road node is in the network")
+	for id in graph.square_nodes:
+		check(graph.astar.get_point_position(id).distance_to(state.layout.square_center) < state.layout.square_radius, "the ring is round the square, not out on the roads")
+	var doors := graph.door_nodes.values()
+	var longest := 0.0
+	for id in graph.astar.get_point_ids():
+		if doors.has(id):
+			continue
+		for other in graph.astar.get_point_connections(id):
+			if not doors.has(other):
+				longest = maxf(longest, graph.astar.get_point_position(id).distance_to(graph.astar.get_point_position(other)))
+	check(longest < 16.0, "no shortcuts across the village between far-off road nodes (longest link %.1f m)" % longest)
+
+
+## How far a point is from the nearest road's edge or the square.
+func _off_the_way(layout: VillageLayout, p: Vector3) -> float:
+	var flat := Vector3(p.x, 0, p.z)
+	var best := maxf(0.0, flat.distance_to(Vector3(layout.square_center.x, 0, layout.square_center.z)) - layout.square_radius)
+	for road in layout.roads:
+		var pts: PackedVector3Array = road["points"]
+		for i in range(1, pts.size()):
+			var a := Vector3(pts[i - 1].x, 0, pts[i - 1].z)
+			var b := Vector3(pts[i].x, 0, pts[i].z)
+			best = minf(best, maxf(0.0, Geometry3D.get_closest_point_to_segment(flat, a, b).distance_to(flat) - float(road.get("width", 4.0)) * 0.5))
+	return best
+
+
+func test_every_door_opens_on_a_way() -> void:
+	var worst := 0.0
+	var where := ""
+	for i in 10:
+		var st := WorldGenerator.generate("doors-%d" % i)
+		for b in st.layout.buildings:
+			var d := _off_the_way(st.layout, b.door_position())
+			if d > worst:
+				worst = d
+				where = "%s in doors-%d" % [b.name, i]
+	check(worst <= 3.0, "every door of ten villages is within 3 m of a road, a lane or the square (furthest %.1f m: %s)" % [worst, where])
 
 
 func test_freed_builders_join_other_sites() -> void:

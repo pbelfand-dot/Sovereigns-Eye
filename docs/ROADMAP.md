@@ -19,8 +19,72 @@ playable build. Numbers and content live in `data/*.json`.
 | **5.2** | **The wider realm: a map of the noble houses' seats, visits, regard, fostering kin; bandit camps to clear; battle orders, gentle fights** (below) | Done |
 | **5.3** | **Your castle: a motte and bailey, then a stone castle, raised by your builders; houses that send men-at-arms in aid, rivals, and houses that come against you** (below) | Done |
 | **6.1** | **The economy, step 1: the market: prices that move with the season, the harvest and your own trade; buying and selling food, wood and stone; the steward's standing orders; the treasury** (below) | Done |
-| 6.2 | The economy, step 2: crafts that make goods (cloth, ironware, ale) and carts to the noble houses' seats, along the realm's roads | Next |
-| 6.3 | The economy, step 3: the lord's mill, an annual fair by charter, and the Crown's tax on movable wealth (the sink for a rich town's gold) | Later |
+| **6.2** | **The economy, step 2: crafts that make wares (cloth, ironware, ale) and carts to the noble houses' seats along the realm's roads, waylaid by the bands near them** (below) | Done |
+| 6.3 | The economy, step 3: the lord's mill, an annual fair by charter, and the Crown's tax on movable wealth (the sink for a rich town's gold) | Next |
+
+## Crafts and carts (Phase 6.2)
+
+Decided (going ahead on the plan after 6.1): the village's craftsmen make
+wares to sell, and carts take them to the noble houses' seats, which pay
+more than the market's merchants for what they want, along roads the
+bandit camps watch.
+
+- Wares (`TerritorySystem.WARES`, their own room in the stores: 120, +80 a
+  granary): **cloth** (a weaver, 1 a day, from nothing bought: the village's
+  wool), **ironware** (the smith, 1.5 a day from 2 wood), **ale** (the
+  innkeeper 4 a day, a tavern hand 3, from half as much grain). Prices at
+  market: cloth 3.0, ironware 2.2, ale 0.4 following grain's (the Assize of
+  Bread and Ale tied them). A craft works only a store's surplus: never
+  below 12 days of what the village eats and burns, nor below half the
+  store's room (kept for building), so the brewers don't eat the bread that
+  draws settlers nor the smith burn the timber for their homes.
+- The **Weavers' Workshop** (a hamlet may raise one; 40 wood, 10 stone, 30
+  gold; two weavers) and a **smithy** to build from a Village charter.
+- `Trade` (static, `data/trade.json`; carts in `MarketData.carts`): each
+  house **wants** two goods (one for what it's known for: arms and command
+  ironware, learning and statecraft cloth, stewardship ale; one more from
+  the seed) and pays 1.6 times the going price for them, the going price
+  for anything else, both with no merchant's cut and more by its regard
+  (+0.2% a point), taking up to 40 of each a visit. A **cart** carries 60,
+  driven by a labourer, farmhand, apprentice, woodcutter or farmer (the one
+  missed least goes, away from work), with up to four of the warband for
+  escort (the fighting men: the house's officers stay home); one cart to a seat, two on the road at once; 1.5 times the
+  riding days each way. A sale warms the house (+3), and (trade, not a
+  favour) doesn't cool its rival. A house in contempt won't deal.
+- **The road:** a camp within a day's ride of it may waylay the cart on
+  each leg (4% a man, at most 60%): the escort and carter fight half the
+  band on its own ground; beaten, the goods (going) or the gold (coming
+  home) are lost to the band's hoard; the fight is told when it happens
+  ("Word from the road...") and in the cart's report home. Its dead die of
+  it; enough of the band falls and the camp scatters. The panel shows the
+  risk from the camps you know of; a hidden camp can still strike.
+- UI: the realm map's seat section, **Trade**: what they want, each good's
+  price there against the market's, a cart to load (+/- 10), the escort,
+  the risk, what it's worth, **Send the cart**; carts on the map's roads and
+  in the village's section; the Court panel's treasury lists the carts. The
+  Build panel's stores show the wares and their makers (or why they idle).
+- The realm map's names were redone so they read: each on the side of its
+  place away from the village (and off the roads), road lengths beside
+  their middles, nothing over anything else.
+- Found on the way, fixed: the walking network rebuilt on every lane laid
+  kept its old node lists, so the square's ring was wired between road
+  nodes (shortcuts of up to 78 m through the village); cancelling an order
+  lifted its lane even when a later building's lane hung from it.
+  `test_territory` checks both; across 40 seeds every generated door is
+  within 3 m of a road or the square, and so is every building placed in
+  play (168 on 12 seeds).
+- Calibration (`charter_sim.gd`, whose steward now raises a Weavers'
+  Workshop and a smithy and sends carts of wares worth 120 gold or more to
+  the seat that pays most, escorted past a known camp, not down a road
+  with a 1-in-3 risk; `CARTS=0` without): the Town charter on seed 9 at
+  day 91 (132 without carts), on 4242 at 93 (94), on 12345 at 77 (81).
+  Over 400 days the carts brought home 6,900 gold on seed 9 (44 carts, 2
+  waylaid), 2,800 on 4242 (24 carts, 3 waylaid: its roads pass big camps
+  the steward won't risk) and 10,500 on 12345 (61 carts, 1 waylaid),
+  about a fifth of a grown town's income where the roads are safe. Gold at
+  day 400 is 36,000, 63,000 and 58,000 (31,000, 62,000 and 48,000
+  without): it still piles up, for Phase 6.3's Crown and works to take.
+- Save v20 (carts).
 
 ## The market (Phase 6.1)
 

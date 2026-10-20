@@ -23,6 +23,9 @@ var state: WorldState
 var selected: Dictionary = {"kind": "village", "id": 0}
 var _hover: Dictionary = {}
 var _art: Dictionary = {}
+## Where names and icons already are this drawing (screen rects), and the page.
+var _taken: Array[Rect2] = []
+var _page := Rect2()
 
 
 func _init() -> void:
@@ -173,6 +176,84 @@ func _text(text: String, at: Vector2, size_px: int, color: Color, heading: bool 
 	draw_string(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, color)
 
 
+## The sides of a place facing away from the village, nearest first.
+func _away(p: Vector2, heart: Vector2) -> Array[Vector2]:
+	var out := (p - heart).normalized()
+	var sides: Array[Vector2] = [Vector2.DOWN, Vector2.UP, Vector2.RIGHT, Vector2.LEFT]
+	sides.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.dot(out) > b.dot(out))
+	return sides
+
+
+## A block of lines ([text, size, color, heading]) beside a place (an icon of
+## radius r at p): on the first of `sides` where it covers no other name,
+## icon or road and stays on the page (else on the first).
+func _label(p: Vector2, r: float, lines: Array, sides: Array[Vector2], roads: Array) -> void:
+	var size_of := _block_size(lines)
+	var best := Rect2()
+	for i in sides.size():
+		var d := sides[i]
+		var c := p + d * (r + 5.0) + Vector2(d.x * size_of.x, d.y * size_of.y) * 0.5
+		var rect := Rect2(c - size_of * 0.5, size_of)
+		if i == 0 or _free(rect, roads):
+			best = rect
+		if _free(rect, roads):
+			break
+	_draw_block(best, lines)
+
+
+## A road's length beside it, near its middle, where there's room.
+func _road_label(pts: PackedVector2Array, text: String, size_px: int, roads: Array) -> void:
+	var lines := [[text, size_px, Color(INK, 0.75), false]]
+	var size_of := _block_size(lines)
+	var first := Rect2()
+	for t: float in [0.5, 0.42, 0.58, 0.34, 0.66]:
+		var i := roundi(t * (pts.size() - 1))
+		var normal := (pts[mini(i + 1, pts.size() - 1)] - pts[maxi(i - 1, 0)]).orthogonal().normalized()
+		for side: float in [-1.0, 1.0]:
+			var c := pts[i] + normal * side * (8.0 + size_of.length() * 0.5)
+			var rect := Rect2(c - size_of * 0.5, size_of)
+			if first.size == Vector2.ZERO:
+				first = rect
+			if _free(rect, roads):
+				_draw_block(rect, lines)
+				return
+	_draw_block(first, lines)
+
+
+func _block_size(lines: Array) -> Vector2:
+	var out := Vector2.ZERO
+	for l: Array in lines:
+		var font := UITheme.heading_font() if l[3] else UITheme.body_font()
+		out.x = maxf(out.x, font.get_string_size(str(l[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(l[1])).x)
+		out.y += font.get_height(int(l[1]))
+	return out + Vector2(4.0, 0.0)
+
+
+func _draw_block(rect: Rect2, lines: Array) -> void:
+	_taken.append(rect.grow(2.0))
+	var y := rect.position.y
+	for l: Array in lines:
+		var font := UITheme.heading_font() if l[3] else UITheme.body_font()
+		y += font.get_ascent(int(l[1]))
+		_text(str(l[0]), Vector2(rect.get_center().x, y), int(l[1]), l[2], l[3])
+		y += font.get_descent(int(l[1]))
+
+
+## Clear of the names and icons already placed and of every road, on the page.
+func _free(rect: Rect2, roads: Array) -> bool:
+	if not _page.encloses(rect):
+		return false
+	for t in _taken:
+		if t.intersects(rect):
+			return false
+	for pts: PackedVector2Array in roads:
+		for i in range(1, pts.size()):
+			for k in 4:
+				if rect.has_point(pts[i - 1].lerp(pts[i], k / 4.0)):
+					return false
+	return true
+
+
 func _draw() -> void:
 	if state == null:
 		return
@@ -203,6 +284,7 @@ func _draw() -> void:
 		draw_line(p + Vector2(0, k * 0.4), p + Vector2(0, k * 0.9), Color(INK, 0.6), 1.0)
 	var heart := to_screen(Realm.center())
 	# Roads to the seats, tracks to the camps.
+	var roads := {}
 	for h in state.realm.houses:
 		if not h.has("pos"):
 			continue
@@ -210,17 +292,47 @@ func _draw() -> void:
 		var pts := PackedVector2Array()
 		for p in road:
 			pts.append(to_screen(p))
+		roads[int(h["id"])] = pts
 		_dashed(pts, ROAD, maxf(1.5, 3.0 * s), 10.0 * s, 6.0 * s)
-		# How far, beside the road a little past halfway.
-		var along := pts[15]
-		var side := (pts[16] - pts[14]).orthogonal().normalized()
-		if side.y > 0.0:
-			side = -side
-		_text(Realm.days_text(int(h["days"])).replace("'s ride", "").replace("' ride", ""), along + side * 12.0 + Vector2(0, 4), maxi(11, roundi(13 * s)), Color(INK, 0.75))
+	var lines: Array = roads.values()
 	for c in Military.known_camps(state):
 		var pts := PackedVector2Array([heart, to_screen(Realm.pos_of(c))])
 		_dashed(pts, Color(CAMP, 0.55), maxf(1.0, 2.0 * s), 3.0 * s, 5.0 * s)
-	# The warband on the march.
+		lines.append(pts)
+	# The places, and room kept round them for the names.
+	_page = page.grow(-8.0)
+	_taken.clear()
+	var village_r := 26.0 * maxf(s, 0.8)
+	var seat_r := 22.0 * maxf(s, 0.8)
+	var camp_r := 15.0 * maxf(s, 0.8)
+	_taken.append(Rect2(heart - Vector2.ONE * village_r, Vector2.ONE * village_r * 2.0))
+	_village(heart)
+	for h in state.realm.houses:
+		if h.has("pos"):
+			var p := to_screen(Realm.pos_of(h))
+			_taken.append(Rect2(p - Vector2.ONE * seat_r, Vector2.ONE * seat_r * 2.0))
+			_seat(p, HOUSE_COLORS[(int(h["id"]) - 1) % HOUSE_COLORS.size()], int(h["standing"]))
+	for c in Military.known_camps(state):
+		var p := to_screen(Realm.pos_of(c))
+		_taken.append(Rect2(p - Vector2.ONE * camp_r, Vector2.ONE * camp_r * 2.0))
+		_tent(p, s)
+	# The names: each on the side away from the village if it's clear of
+	# the others, the icons and the roads; the road's length beside its middle.
+	var big := maxi(14, roundi(17 * s))
+	var name_px := maxi(13, roundi(16 * s))
+	var small := maxi(11, roundi(13 * s))
+	_label(heart, village_r, [[state.village_name, big, INK, true]], [Vector2.DOWN, Vector2.UP, Vector2.RIGHT, Vector2.LEFT], lines)
+	for h in state.realm.houses:
+		if h.has("pos"):
+			var p := to_screen(Realm.pos_of(h))
+			_label(p, seat_r, [[str(h["seat"]), name_px, INK, true], ["House %s" % h["name"], small, Color(INK, 0.8), false]], _away(p, heart), lines)
+	for c in Military.known_camps(state):
+		var p := to_screen(Realm.pos_of(c))
+		_label(p, camp_r, [[Military._cap(str(c["band"])), small, CAMP, false]], [Vector2.UP, Vector2.DOWN, Vector2.RIGHT, Vector2.LEFT], lines)
+	for h in state.realm.houses:
+		if roads.has(int(h["id"])):
+			_road_label(roads[int(h["id"])], Realm.days_text(int(h["days"])).replace("'s ride", "").replace("' ride", ""), small, lines)
+	# On the roads: the warband on the march, a noble house's host, your carts.
 	var x := state.military.expedition
 	if not x.is_empty():
 		var camp := state.military.get_camp(int(x["camp"]))
@@ -229,30 +341,23 @@ func _draw() -> void:
 			var t := clampf((day - float(x["depart"])) / maxf(1.0, float(x["fight"]) - float(x["depart"])), 0.0, 1.0)
 			if day > float(x["fight"]):
 				t = clampf(1.0 - (day - float(x["fight"])) / maxf(1.0, float(x["back"]) - float(x["fight"])), 0.0, 1.0)
-			var at := heart.lerp(to_screen(Realm.pos_of(camp)), maxf(0.15, t))
-			_banner(at, UITheme.GOLD)
-	# A noble house's host on the road to the village (Phase 5.3).
+			_banner(heart.lerp(to_screen(Realm.pos_of(camp)), clampf(t, 0.2, 0.8)), UITheme.GOLD)
 	var raid := state.military.raid
 	var host := state.realm.get_house(int(raid.get("host", -1))) if not raid.is_empty() else {}
-	if not host.is_empty() and host.has("pos"):
-		var road := _road(Realm.center(), Realm.pos_of(host), float((_art["bends"] as Dictionary).get(int(host["id"]), 0.0)))
+	if not host.is_empty() and roads.has(int(host["id"])):
 		var span := float(Realm.section("hosts").get("days_to_pay", 4))
-		var t := clampf((float(raid["day"]) - float(state.day())) / maxf(1.0, span), 0.0, 1.0) * 0.6 + 0.15
-		_banner(to_screen(road[roundi(t * (road.size() - 1))]), UITheme.BAD)
-	# The places.
-	_village(heart)
-	_text(state.village_name, heart + Vector2(0, 26 * s + 8), maxi(14, roundi(17 * s)), INK, true)
-	for h in state.realm.houses:
-		if not h.has("pos"):
+		var t := clampf((float(raid["day"]) - float(state.day())) / maxf(1.0, span), 0.0, 1.0) * 0.6 + 0.2
+		var pts: PackedVector2Array = roads[int(host["id"])]
+		_banner(pts[roundi(t * (pts.size() - 1))], UITheme.BAD)
+	for cart: Dictionary in Trade.on_road(state):
+		if not roads.has(int(cart["house"])):
 			continue
-		var p := to_screen(Realm.pos_of(h))
-		_seat(p, HOUSE_COLORS[(int(h["id"]) - 1) % HOUSE_COLORS.size()], int(h["standing"]))
-		_text(str(h["seat"]), p + Vector2(0, 30 * s + 6), maxi(13, roundi(16 * s)), INK, true)
-		_text("House %s" % h["name"], p + Vector2(0, 30 * s + 6 + maxi(13, roundi(16 * s))), maxi(11, roundi(13 * s)), Color(INK, 0.8))
-	for c in Military.known_camps(state):
-		var p := to_screen(Realm.pos_of(c))
-		_tent(p, s)
-		_text(Military._cap(str(c["band"])), p + Vector2(0, -16 * s - 6), maxi(11, roundi(13 * s)), CAMP)
+		var day := float(state.day())
+		var t := clampf((day - float(cart["set_out"])) / maxf(1.0, float(cart["arrive"]) - float(cart["set_out"])), 0.0, 1.0)
+		if str(cart["stage"]) == "home":
+			t = clampf((float(cart["back"]) - day) / maxf(1.0, float(cart["back"]) - float(cart["arrive"])), 0.0, 1.0)
+		var pts: PackedVector2Array = roads[int(cart["house"])]
+		_cart(pts[roundi(clampf(t, 0.25, 0.75) * (pts.size() - 1))], s)
 	_compass(page.position + Vector2(page.size.x - 42, 46), s)
 	for sel: Dictionary in [_hover, selected]:
 		if sel.is_empty():
@@ -295,6 +400,19 @@ func _tent(p: Vector2, s: float) -> void:
 func _banner(p: Vector2, color: Color) -> void:
 	draw_line(p + Vector2(0, 10), p + Vector2(0, -16), INK, 2.0)
 	draw_colored_polygon(PackedVector2Array([p + Vector2(0, -16), p + Vector2(16, -12), p + Vector2(0, -6)]), color)
+
+
+## A cart: its bed, the load under a cloth, two wheels and the shafts.
+func _cart(p: Vector2, s: float) -> void:
+	var k := 9.0 * maxf(s, 0.8)
+	draw_rect(Rect2(p + Vector2(-k * 0.8, -k * 1.5), Vector2(k * 1.6, k * 0.7)), Color("#e6d8bd"))
+	var bed := Rect2(p + Vector2(-k, -k * 0.9), Vector2(k * 2.0, k * 0.8))
+	draw_rect(bed, Color("#9c6b43"))
+	draw_rect(bed, INK, false, 1.2)
+	draw_line(p + Vector2(k, -k * 0.5), p + Vector2(k * 1.8, -k * 0.2), INK, 1.5)
+	for wx: float in [-k * 0.55, k * 0.55]:
+		draw_circle(p + Vector2(wx, 0), k * 0.4, INK)
+		draw_circle(p + Vector2(wx, 0), k * 0.18, PAPER)
 
 
 func _compass(p: Vector2, s: float) -> void:
