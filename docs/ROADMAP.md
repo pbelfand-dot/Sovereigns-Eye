@@ -75,6 +75,15 @@ the noble houses take sides: **rivals**, **men-at-arms in aid**, and
   courting anyone (`steward`, `steward matches` on seeds 9, 12345 and
   4242) no house turned hostile in 40 years: a host is the price of
   taking sides.
+- In a live fight with a castle standing, the band (or host) comes for the
+  castle, where the gold is, and meets the warband before its gate (at
+  first it went for the square while the line waited at the gate, and a
+  fight the captains called certain was lost piecemeal). Live host fights
+  against a stone castle now follow the captains' odds
+  (`capture.tscn battle_stats` with `BATTLE_KEEP=stone BATTLE_HOST=1`): a
+  village's watch alone has little chance against a host of knights (odds
+  0 to 0.4 on seeds 12345, 9, 4242, all lost), which is what allies, trained
+  knights or paying the demand are for.
 - Save v18 (the castle; rivals and truces, migrated from the seed).
 
 ## The wider realm (Phase 5.2)

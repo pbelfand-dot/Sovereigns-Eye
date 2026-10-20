@@ -59,7 +59,8 @@ func show_report(r: Dictionary) -> void:
 	var band := str(r.get("band", "the raiders"))
 	_body.add_child(_wrap("%s%s: %d of %d %s fell." % ["The camp of " if camp else "", band if camp else Military._cap(band), int(r.get("raiders_fallen", 0)), int(r.get("size", 0)), "of the band" if camp else ("of its men" if host else "raiders")], 16, UITheme.TEXT))
 	if won and host:
-		_body.add_child(_wrap("Ransom for their fallen knights: %d gold. Renown +%d. They'll keep the peace." % [int(r.get("gold", 0)), int(r.get("renown", 0))], 15, UITheme.GOOD))
+		var ransom := "Ransom for their fallen knights: %d gold." % int(r.get("gold", 0)) if int(r.get("gold", 0)) > 0 else "None of their knights fell, so there's no ransom."
+		_body.add_child(_wrap("%s Renown +%d. They'll keep the peace." % [ransom, int(r.get("renown", 0))], 15, UITheme.GOOD))
 	elif host:
 		_body.add_child(_wrap("They took %d gold, and the realm thinks less of your house (renown %d)." % [-int(r.get("gold", 0)), int(r.get("renown", 0))], 15, UITheme.BAD))
 	elif won and camp:

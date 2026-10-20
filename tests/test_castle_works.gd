@@ -163,5 +163,6 @@ func test_the_castle_in_the_world() -> void:
 	st.minutes = float(st.day() * Calendar.MINUTES_PER_DAY + Military.strike_hour() * 60 + 1)
 	world._process(0.016)
 	check(world.battle != null and world.battle._rally.distance_to(CastleSystem.rally_point(st)) < 0.5, "a raid is met before the castle's gate")
+	check(world.battle._loot_point.distance_to(CastleSystem.rally_point(st)) < 0.5, "(the band comes for the castle, where the gold is)")
 	world.queue_free()
 	await frames(2)

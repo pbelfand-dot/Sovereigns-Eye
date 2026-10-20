@@ -83,6 +83,9 @@ func start(owner_world: VillageWorld) -> void:
 	if not CastleSystem.stands(state).is_empty():
 		# Behind the gate.
 		_fall_back = state.castle.transform() * Vector3(0, 0, CastleLayout.gate_z(CastleSystem.stands(state)) - 8.0)
+		# The house's gold is behind its walls: the band comes for the castle,
+		# and meets the warband before its gate.
+		_loot_point = _rally
 	# The band, at the end of its road.
 	var i := 0
 	for f: Dictionary in s["theirs"]:

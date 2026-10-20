@@ -280,7 +280,7 @@ The house builds its seat, and the noble houses take sides. `CastleSystem`, `Cas
 ![The host on the realm map, marching from its seat](docs/screenshots/keep_host_map.jpg)
 ![The warband and the allies' men form up before the gate](docs/screenshots/keep_gate.jpg)
 ![The fight against the host](docs/screenshots/keep_melee.jpg)
-![The host's fight: ransom, renown, and the allies' men](docs/screenshots/keep_report.jpg)
+![The host beaten back before the gate: renown, a truce, and how the allies' men fared](docs/screenshots/keep_report.jpg)
 
 ### Controls
 

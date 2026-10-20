@@ -1667,6 +1667,8 @@ func _realm_shots() -> void:
 ## in Defence (a friendly house's men sent, another asked), on the realm
 ## map, the fight before the gate and its report.
 func _keep_shots() -> void:
+	# KEEP_ONLY=fight: set everything up the same, draw only the fight.
+	var only_fight := OS.get_environment("KEEP_ONLY") == "fight"
 	Game.state = WorldGenerator.generate(seed_text)
 	var st := Game.state
 	st.minutes += 70.0 * Calendar.MINUTES_PER_DAY + 3.0 * 60.0
@@ -1681,7 +1683,8 @@ func _keep_shots() -> void:
 	Input.warp_mouse(Vector2(4, 890))
 	world.ui.toggle_court()
 	await _wait(8)
-	await _shot("keep_0_court.png")
+	if not only_fight:
+		await _shot("keep_0_court.png")
 	world.ui.toggle_court()
 	var r := world.order_castle("timber")
 	print("keep: %s" % r["text"])
@@ -1691,6 +1694,8 @@ func _keep_shots() -> void:
 	cam.far = 900.0
 	add_child(cam)
 	var view := func(file_name: String, from_local: Vector3, to_local: Vector3) -> void:
+		if only_fight:
+			return
 		world.ui.visible = false
 		# No names over anyone in the art views (hover follows the game camera).
 		for npc: NPC in world.npcs.values():
@@ -1753,11 +1758,13 @@ func _keep_shots() -> void:
 	_clear_toasts(world)
 	world.ui.toggle_court()
 	await _wait(8)
-	await _shot("keep_5_host_defence.png")
+	if not only_fight:
+		await _shot("keep_5_host_defence.png")
 	world.ui.toggle_court()
 	world.ui.show_realm("house", int(foe["id"]))
 	await _wait(8)
-	await _shot("keep_6_host_map.png")
+	if not only_fight:
+		await _shot("keep_6_host_map.png")
 	world.ui.toggle_realm()
 	# The fight before the gate, stepped by hand (only the stills are drawn).
 	st.military.raid["day"] = st.day()
@@ -1780,6 +1787,13 @@ func _keep_shots() -> void:
 			if npc and is_instance_valid(npc) and not f["down"] and not f.get("fled", false) and (f.get("engaged", false) or b.mustering and f["side"] == "house"):
 				sum += npc.global_position
 				n += 1
+		if n == 0:
+			# No one at blows yet: everyone still on their feet.
+			for f: Dictionary in b.ours + b.theirs:
+				var npc: NPC = f.get("npc")
+				if npc and is_instance_valid(npc) and not f["down"] and not f.get("fled", false):
+					sum += npc.global_position
+					n += 1
 		world.camera_rig.look_at_point(sum / n if n > 0 else b._rally, distance, true)
 		world.ui._map_banner.visible = false
 		_clear_toasts(world)
@@ -1788,6 +1802,7 @@ func _keep_shots() -> void:
 		await _shot(file_name)
 	var t := 0.0
 	var charge := -1.0
+	var met := -1.0
 	var taken := {}
 	for i in 8000:
 		if world.battle == null:
@@ -1800,13 +1815,15 @@ func _keep_shots() -> void:
 			break
 		if charge < 0.0 and not b.mustering:
 			charge = t
+		if met < 0.0 and (b.ours + b.theirs).filter(func(f: Dictionary) -> bool: return f.get("engaged", false) and not f["down"]).size() >= 4:
+			met = t
 		if not taken.has("line") and t >= 2.0:
 			taken["line"] = true
 			await frame_on.call("keep_7_gate.png", 34.0)
-		elif charge >= 0.0 and not taken.has("melee") and t >= charge + 20.0:
+		elif met >= 0.0 and not taken.has("melee") and t >= met + 3.0:
 			taken["melee"] = true
 			await frame_on.call("keep_8_melee.png", 18.0)
-	print("keep: fight over in %.0f s (charge at %.0f)" % [t, charge])
+	print("keep: fight over in %.0f s (charge at %.0f, the lines met at %.0f)" % [t, charge, met])
 	await _wait(10)
 	_clear_toasts(world)
 	await _shot("keep_9_report.png")
@@ -1816,14 +1833,32 @@ func _keep_shots() -> void:
 ## How raids fought in the village turn out against the captains' odds
 ## (Military.odds, fought out of sight), with and without the levy, on a few
 ## seeds (BATTLE_SEEDS="1,2,3"). Runs headless: the fight is stepped by hand.
+## BATTLE_KEEP=timber or stone fights at the house's castle, BATTLE_HOST=1
+## against a noble house's host (Phase 5.3).
 func _battle_stats() -> void:
 	var seeds := OS.get_environment("BATTLE_SEEDS").split(",", false) if not OS.get_environment("BATTLE_SEEDS").is_empty() else PackedStringArray(["12345", "9", "4242", "7", "31"])
+	var keep := OS.get_environment("BATTLE_KEEP")
+	var host := OS.get_environment("BATTLE_HOST") == "1"
 	for s in seeds:
 		for levy: bool in [false, true]:
 			Game.state = WorldGenerator.generate(s)
 			var st := Game.state
 			st.minutes += 70.0 * Calendar.MINUTES_PER_DAY
-			Military.plan_raid(st, Seeds.rng(st.world_seed, "capture_raid"))
+			if not keep.is_empty():
+				var gold := st.house.gold
+				st.house.gold = 99999
+				st.territory.charter = 2
+				for k: String in CastleSystem.KINDS:
+					CastleSystem.order(st, k)
+					CastleSystem.complete(st)
+					if k == keep:
+						break
+				st.house.gold = gold
+			if host:
+				st.realm.houses[0]["standing"] = -60
+				Military.plan_host(st, int(st.realm.houses[0]["id"]), Seeds.rng(st.world_seed, "capture_host"))
+			else:
+				Military.plan_raid(st, Seeds.rng(st.world_seed, "capture_raid"))
 			st.military.raid["day"] = st.day()
 			if levy:
 				Military.call_levy(st)
