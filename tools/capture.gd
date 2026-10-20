@@ -51,6 +51,7 @@ var keep_only := false
 var market_only := false
 var trade_only := false
 var carts_only := false
+var manor_only := false
 
 
 func _ready() -> void:
@@ -88,6 +89,7 @@ func _ready() -> void:
 	market_only = args.has("market")
 	trade_only = args.has("trade")
 	carts_only = args.has("carts")
+	manor_only = args.has("manor")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -210,6 +212,10 @@ func _run() -> void:
 		return
 	if carts_only:
 		await _cart_shots()
+		get_tree().quit()
+		return
+	if manor_only:
+		await _manor_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -2022,6 +2028,48 @@ func _cart_shots() -> void:
 		await _wait(8)
 		await _shot(str(s[2]))
 	print("carts: shown %d" % world.cart_view.shown_count())
+
+
+## Phase 6.3: the Court panel's Manor section (the mill's toll, the fair, a
+## levy coming with the choice to hide some) and the fair in the square.
+func _manor_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	var tithe := ManorSystem.levy_in(st, 1188)
+	st.minutes = float((int(tithe["day"]) - 4) * Calendar.MINUTES_PER_DAY + 10 * 60)
+	st.house.gold = 2400
+	st.territory.charter = 2
+	st.manor.fair_granted = true
+	st.manor.fair_feast = 0
+	var world := await _boot_world()
+	world.ui._help.visible = false
+	world.ui._map_mode = false
+	_clear_toasts(world)
+	Input.warp_mouse(Vector2(4, 890))
+	world.ui.toggle_court()
+	await _wait(6)
+	for l: Label in world.ui._court.find_children("*", "Label", true, false):
+		if l.text == "The Manor":
+			var scroll := world.ui._court.find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+			scroll.scroll_vertical = maxi(0, int(l.global_position.y - scroll.global_position.y) + scroll.scroll_vertical - 8)
+			break
+	await _wait(6)
+	await _shot("manor_0_court.png")
+	world.ui.toggle_court()
+	# The fair: the feast's morning, the square full of stalls.
+	st.minutes = float(ManorSystem.next_fair(st) * Calendar.MINUTES_PER_DAY + 10 * 60)
+	for i in 3:
+		world._process(0.1)
+	await _wait(10)
+	_clear_toasts(world)
+	world.camera_rig.set_yaw(0.7, true)
+	world.camera_rig.look_at_point(st.layout.square_center, 30.0, true)
+	await _wait(8)
+	await _shot("manor_1_fair.png")
+	world.camera_rig.look_at_point(st.layout.square_center + Vector3(4, 0, 2), 15.0, true)
+	await _wait(8)
+	await _shot("manor_2_fair_close.png")
+	print("manor: fair stalls %d" % world.fair_view.stall_count())
 
 
 ## How raids fought in the village turn out against the captains' odds

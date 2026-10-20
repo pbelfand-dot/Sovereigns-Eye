@@ -203,8 +203,10 @@ static func levy_in(state: WorldState, year: int) -> Dictionary:
 	if y != year:
 		return {}
 	var rng := Seeds.counted_rng(state.world_seed, "levy_%d" % year)
-	return {"year": year, "day": day_in(year, rng.randi_range(5, Calendar.days_per_year() - 5)), "name": str(c.get("later_name", "the King's levy")),
-		"why": str(c.get("later_why", "")), "share": float(Seeds.pick(rng, c.get("shares", [0.1])))}
+	var share := float(Seeds.pick(rng, c.get("shares", [0.1])))
+	# Named for its share, as England's were ("the thirteenth").
+	return {"year": year, "day": day_in(year, rng.randi_range(5, Calendar.days_per_year() - 5)), "name": "the %s" % _ordinal(roundi(1.0 / share)),
+		"why": str(c.get("later_why", "")), "share": share}
 
 
 ## The next levy not yet assessed (within twenty years), or {}.

@@ -43,20 +43,17 @@
   },
 
   "crown": {
-    "_comment": "The Crown's levies on movable wealth: the house's gold and the stores at their going price (not what it has built). Announced notice_days ahead, assessed on the levy's day of the year. 'history' runs from the game's start; after it, one comes every 'every' years (from the seed) at one of 'shares'. A carucage is a land tax: per_home gold a home instead. The house may hide a share of its movables (hide); its sworn neighbours may tell: exposed_base, plus exposed_per_unhappy for each point the village's happiness is under 50, at most exposed_max. Exposed, it pays the whole levy and a fine of fine times what it hid from it, and loses renown. Short of gold, the stores are taken at their price, and what's still owed is let go for renown.",
+    "_comment": "The Crown's levies on movable wealth: the house's gold and the stores at their going price (not what it has built). Announced notice_days ahead, assessed on the levy's day of the year. 'history' runs from the game's start (the Saladin tithe of 1188, a tenth; King Richard's ransom in 1193, a quarter; the carucages of 1194 and 1198); after it, one comes every 'every' years (from the seed) at one of 'shares', named for it as England's were (the thirteenth of 1207, the fifteenth of 1225, the seventh of 1203). A carucage is a land tax: per_home gold a home instead. The house may hide a share of its movables (hide); its sworn neighbours may tell: exposed_base, plus exposed_per_unhappy for each point the village's happiness is under 50, at most exposed_max. Exposed, it pays the whole levy and a fine of fine times what it hid from it, and loses renown. Short of gold, the stores are taken at their price, and what's still owed is let go for renown.",
     "notice_days": 10,
     "history": [
       {"year": 1188, "day": 8, "name": "the Saladin tithe", "share": 0.1, "why": "for the Crusade, now that Saladin holds Jerusalem"},
       {"year": 1193, "day": 18, "name": "King Richard's ransom", "share": 0.25, "why": "to buy the King out of the Emperor's prison"},
       {"year": 1194, "day": 25, "name": "the carucage", "per_home": 2, "why": "on every plough-land, for the King's wars in France"},
-      {"year": 1198, "day": 25, "name": "the great carucage", "per_home": 5, "why": "on every plough-land, for the King's wars in France"},
-      {"year": 1203, "day": 12, "name": "the seventh", "share": 0.143, "why": "on the barons who held back from Normandy"},
-      {"year": 1207, "day": 8, "name": "the thirteenth", "share": 0.077, "why": "for the King's war to win back Normandy"}
+      {"year": 1198, "day": 25, "name": "the great carucage", "per_home": 5, "why": "on every plough-land, for the King's wars in France"}
     ],
-    "every": [3, 6],
-    "shares": [0.067, 0.077, 0.1],
-    "later_name": "the King's levy",
-    "later_why": "for the King's needs",
+    "every": [2, 5],
+    "shares": [0.067, 0.077, 0.1, 0.143],
+    "later_why": "for the King's wars",
     "hide": 0.33,
     "exposed_base": 0.2,
     "exposed_per_unhappy": 0.02,

@@ -20,7 +20,53 @@ playable build. Numbers and content live in `data/*.json`.
 | **5.3** | **Your castle: a motte and bailey, then a stone castle, raised by your builders; houses that send men-at-arms in aid, rivals, and houses that come against you** (below) | Done |
 | **6.1** | **The economy, step 1: the market: prices that move with the season, the harvest and your own trade; buying and selling food, wood and stone; the steward's standing orders; the treasury** (below) | Done |
 | **6.2** | **The economy, step 2: crafts that make wares (cloth, ironware, ale) and carts to the noble houses' seats along the realm's roads, waylaid by the bands near them** (below) | Done |
-| 6.3 | The economy, step 3: the lord's mill, an annual fair by charter, and the Crown's tax on movable wealth (the sink for a rich town's gold) | Next |
+| **6.3** | **The economy, step 3: the lord's mill and its toll, a fair bought from the Crown, and the Crown's levies on movable wealth** (below) | Done |
+
+## The manor's dues and the Crown's levies (Phase 6.3)
+
+Decided (the player said to do both the carts in the village and 6.3, in
+the order I chose): the economy's third step, where the house's gold meets
+the realm's claims on it. `ManorSystem` (static), `ManorData`
+(`WorldState.manor`), `data/manor.json`; the Court panel's **Manor**.
+
+- **The lord's mill** (the village's windmill: England's first certain one
+  is the Templars' at Weedley, Yorkshire, in their survey of 1185). Suit of mill: the village must grind there
+  and the lord takes the multure. With a miller at work, 0.06 gold a
+  villager a day at the customary sixteenth; the Court may set a
+  twenty-fourth (two thirds as much, liked: +2 happiness) or a thirteenth
+  (a quarter more, resented: -5), the toll vessels England's and
+  Scotland's mills took. When the village's happiness falls under the
+  toll's mark (30, 42, 55), households grind at home on hand-querns (2.5%
+  of the toll a point under, at most 60%) and pay nothing; the lord may
+  have the querns seized (a season's full toll, -6 happiness as long), as
+  lords sued tenants for hand-mills (1243). No miller at work, no toll.
+- **The fair.** A Market Town with a Market Hall may buy one from the
+  Crown (400 gold, as lords paid fines for their fairs' charters): three
+  days a year from its saint's feast (from the seed: St John the Baptist,
+  St Peter, St Mary Magdalene, St James, St Bartholomew or Michaelmas).
+  While it's on the market trades four times as much on terms 10 points
+  finer, wares fetch a quarter more, the lord takes stallage (30 gold, a
+  quarter of a gold a villager and a tenth a point of renown, a day), the
+  house's renown grows by 8, and the village is merrier (+6 during and
+  four days after). The merchants' stalls stand in a ring in the square
+  (`FairView`).
+- **The Crown's levies on movables**: the house's gold and its stores at
+  their going price, not what it has built. The chronicle: the Saladin
+  tithe of 1188 (a tenth), King Richard's ransom in 1193 (a quarter), the
+  carucages of 1194 and 1198 (gold a home); after it, one every two to five
+  years from the seed at a seventh, a tenth, a thirteenth or a fifteenth,
+  named for it as England's were. Each is announced ten days ahead.
+  Declare everything, or hide a third: the house's sworn neighbours (the
+  Saladin tithe was assessed by oath and jury) tell one time in five, more
+  the unhappier they are (+2 in 100 a point under 50, at most 80), and
+  then the house pays it all, a fine of twice what it hid from it, and
+  10 renown. Short of gold, the sheriff takes stores at their price; what's
+  still owed is let go, for 15 renown.
+- UI: the Court panel's **Manor** (the mill and its toll, the querns, the
+  fair or buying one, the next levy and the choice to hide); the treasury
+  counts the mill's toll and the fair's stallage.
+- MANOR_CALIBRATION
+- Save v22 (the manor).
 
 ## Crafts and carts (Phase 6.2)
 
