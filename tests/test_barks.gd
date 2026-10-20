@@ -58,7 +58,7 @@ func test_no_remark_names_a_rank_or_a_number() -> void:
 		check_eq((cfg["gift"][attr] as Array).size(), 3, "%s: mild, keen and striking clues" % attr)
 		check(not (cfg["child_gift"][attr] as Array).is_empty(), "%s: a child's clue" % attr)
 	for occ: String in GameData.load_file("occupations")["occupations"]:
-		if not occ in ["child", "elder", "general", "king", "queen"]:
+		if not occ in ["child", "elder", "general", "king", "queen", "raider"]:
 			check(cfg["work"].has(occ), "a %s has something to say at work" % occ)
 	# And what villagers actually say, filled in.
 	var st := WorldGenerator.generate("barks-words")

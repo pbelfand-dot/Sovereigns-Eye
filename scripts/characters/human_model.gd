@@ -53,6 +53,7 @@ var _occupation_id := ""
 var _is_child := false
 var _is_noble := false
 var _head_y := 1.68
+var _weapons: Array[Node3D] = []
 
 
 static func available() -> bool:
@@ -217,6 +218,47 @@ func _clip_for(mode: String) -> String:
 	return "Idle" if _player.has_animation("Idle") else ""
 
 
+## Plays the current clip again from the start (a second blow, a second
+## stagger).
+func replay() -> void:
+	if _player and not _clip.is_empty():
+		_player.play(_clip, 0.05)
+		_player.seek(0.0, true)
+
+
+# --- Arms (Phase 5.1) ------------------------------------------------------------
+
+## Arms the body for a fight: `kinds` like ["sword", "shield"] (data/animations.json
+## "weapons"), held in the hands; [] puts them away.
+func set_weapons(kinds: Array) -> void:
+	for w in _weapons:
+		if is_instance_valid(w):
+			w.queue_free()
+	_weapons.clear()
+	if _skeleton == null or kinds.is_empty():
+		return
+	var cfg: Dictionary = anim_config().get("weapons", {})
+	for kind: String in kinds:
+		var off := kind == "shield"
+		var bone := "hand_l" if off else "hand_r"
+		var path := str(cfg.get("root", "")) + str(cfg.get(kind, ""))
+		if _skeleton.find_bone(bone) < 0 or not ResourceLoader.exists(path):
+			continue
+		var att := BoneAttachment3D.new()
+		att.name = "Weapon_%s" % kind
+		att.bone_name = bone
+		_skeleton.add_child(att)
+		var inst := (load(path) as PackedScene).instantiate() as Node3D
+		var t: Dictionary = cfg.get("off_hand" if off else "hand", {})
+		var p: Array = t.get("position", [0, 0, 0])
+		var r: Array = t.get("rotation", [0, 0, 0])
+		inst.position = Vector3(float(p[0]), float(p[1]), float(p[2]))
+		inst.rotation_degrees = Vector3(float(r[0]), float(r[1]), float(r[2]))
+		inst.scale = Vector3.ONE * float(t.get("scale", 1.0))
+		att.add_child(inst)
+		_weapons.append(att)
+
+
 # --- Shared resources -------------------------------------------------------------
 
 static func _body(gender: String) -> Dictionary:
@@ -366,6 +408,7 @@ static func _cut_head(mi: MeshInstance3D, skel: Skeleton3D, material: Material) 
 ## One shared clip library per body: both in-place Universal Animation
 ## Libraries, with the pelvis motion rescaled to this body's leg length.
 static func _library(pelvis_ratio: float) -> AnimationLibrary:
+	var one_shot: Array = anim_config().get("one_shot", [])
 	var lib := AnimationLibrary.new()
 	for path: String in anim_config().get("libraries", []):
 		if not ResourceLoader.exists(path):
@@ -378,7 +421,7 @@ static func _library(pelvis_ratio: float) -> AnimationLibrary:
 				if lib.has_animation(clip_name) or clip_name == &"A_TPose" or clip_name == &"RESET":
 					continue
 				var a := src.get_animation(clip_name).duplicate(true) as Animation
-				a.loop_mode = Animation.LOOP_LINEAR
+				a.loop_mode = Animation.LOOP_NONE if one_shot.has(str(clip_name)) else Animation.LOOP_LINEAR
 				for t in a.get_track_count():
 					if a.track_get_type(t) == Animation.TYPE_POSITION_3D:
 						for k in a.track_get_key_count(t):

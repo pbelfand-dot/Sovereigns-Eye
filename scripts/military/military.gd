@@ -297,11 +297,13 @@ static func broken(fighters: Array) -> bool:
 	return down >= fighters.size() or float(down) / fighters.size() >= breaking_point(fighters)
 
 
-## Fights it out without the world (the years passing, the sims): rounds in
-## which everyone standing strikes someone standing on the other side,
+## Fights it out without the world (the years passing, the sims) the way it
+## goes in the village (Battle): rounds in which everyone standing strikes
+## the foe they're on until it falls, each taking on whoever is least beset,
 ## until one side breaks. {winner ("house"/"raiders"), ours, theirs, rounds}
 static func resolve(ours: Array[Dictionary], theirs: Array[Dictionary], rng: RandomNumberGenerator) -> Dictionary:
 	var rounds := 0
+	var on := {}  # fighter (by instance) -> foe dict
 	while rounds < 400 and not broken(ours) and not broken(theirs):
 		rounds += 1
 		var all: Array = ours + theirs
@@ -309,10 +311,13 @@ static func resolve(ours: Array[Dictionary], theirs: Array[Dictionary], rng: Ran
 		for f: Dictionary in all:
 			if f["down"]:
 				continue
-			var foes: Array = (theirs if f["side"] == "house" else ours).filter(func(o: Dictionary) -> bool: return not o["down"])
-			if foes.is_empty():
-				break
-			strike(f, foes[rng.randi_range(0, foes.size() - 1)], rng)
+			var foe: Dictionary = on.get(str(f["side"]) + str(f["id"]), {})
+			if foe.is_empty() or foe["down"]:
+				foe = _least_beset(f, theirs if f["side"] == "house" else ours, ours if f["side"] == "house" else theirs, on, rng)
+				if foe.is_empty():
+					break
+				on[str(f["side"]) + str(f["id"])] = foe
+			strike(f, foe, rng)
 	var winner := "raiders" if broken(ours) else "house"
 	return {"winner": winner, "ours": ours, "theirs": theirs, "rounds": rounds}
 
@@ -342,6 +347,25 @@ static func odds_word(p: float) -> String:
 	if p >= 0.15:
 		return "poor"
 	return "hopeless"
+
+
+## The standing foe the fewest of `mates` are already on (ties at random).
+static func _least_beset(f: Dictionary, foes: Array, mates: Array, on: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+	var best: Array = []
+	var fewest := 1 << 30
+	for o: Dictionary in foes:
+		if o["down"]:
+			continue
+		var n := 0
+		for m: Dictionary in mates:
+			if not is_same(m, f) and not m["down"] and is_same(on.get(str(m["side"]) + str(m["id"]), {}), o):
+				n += 1
+		if n < fewest:
+			fewest = n
+			best = [o]
+		elif n == fewest:
+			best.append(o)
+	return best[rng.randi_range(0, best.size() - 1)] if not best.is_empty() else {}
 
 
 ## The raid fought out of sight (no world): resolve and finish. Returns the
@@ -374,7 +398,7 @@ static func finish(state: WorldState, winner: String, ours: Array, theirs: Array
 		var c := state.get_character(int(f["id"]))
 		if c == null:
 			continue
-		var line := {"id": c.id, "name": c.display_name(), "role": f["role"], "felled": int(f["felled"]), "fell": bool(f["down"]), "died": false, "wounded": false}
+		var line := {"id": c.id, "name": c.display_name(), "gender": c.gender, "role": f["role"], "felled": int(f["felled"]), "fell": bool(f["down"]), "died": false, "wounded": false}
 		if f["down"]:
 			if rng.randf() < float(k.get("death_chance", 0.35)):
 				line["died"] = true

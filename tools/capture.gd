@@ -3,7 +3,7 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk|life|matches|succession]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk|life|matches|succession|battle]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
@@ -44,6 +44,8 @@ var barks_only := false
 var life_only := false
 var matches_only := false
 var succession_only := false
+var battle_only := false
+var battle_stats := false
 
 
 func _ready() -> void:
@@ -74,6 +76,8 @@ func _ready() -> void:
 	life_only = args.has("life")
 	matches_only = args.has("matches")
 	succession_only = args.has("succession")
+	battle_only = args.has("battle")
+	battle_stats = args.has("battle_stats")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -168,6 +172,14 @@ func _run() -> void:
 		return
 	if succession_only:
 		await _succession_shots()
+		get_tree().quit()
+		return
+	if battle_stats:
+		await _battle_stats()
+		get_tree().quit()
+		return
+	if battle_only:
+		await _battle_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1474,6 +1486,144 @@ func _succession_shots() -> void:
 	world.ui.toggle_court()
 	await _wait(10)
 	await _shot("succession_regency.png")
+
+
+## A raid fought in the village (Phase 5.1): the band on its road, the
+## warband meeting it, the melee, and the report. The camera keeps over the
+## fighting. BATTLE_LEVY=1 calls the levy first; BATTLE_SPEED=2 runs at 2x.
+func _battle_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	st.minutes += 70.0 * Calendar.MINUTES_PER_DAY
+	Military.plan_raid(st, Seeds.rng(st.world_seed, "capture_raid"))
+	st.military.raid["day"] = st.day()
+	if OS.get_environment("BATTLE_LEVY") == "1":
+		Military.call_levy(st)
+	st.minutes = float(st.day() * Calendar.MINUTES_PER_DAY + Military.strike_hour() * 60) - 1.0
+	print("battle: %s, %d raiders vs %d (odds %.2f)" % [st.military.raid["name"], st.military.raid["size"], Military.warband(st).size(), Military.odds(st)])
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	# Before: the Court panel's Defence, the band on its way.
+	world.set_speed(0)
+	world.paused = true
+	st.minutes -= 60.0
+	_clear_toasts(world)
+	world.ui.toggle_court()
+	await _wait(8)
+	Input.warp_mouse(Vector2(4, 890))
+	await _shot("battle_0_defence.png")
+	world.ui.toggle_court()
+	st.minutes += 60.0
+	world.paused = false
+	world.set_view_mode("overview", true)
+	_clear_toasts(world)
+	for i in 30:
+		await get_tree().process_frame
+		if world.battle:
+			break
+	if world.battle == null:
+		print("battle: didn't start")
+		return
+	if OS.get_environment("BATTLE_SPEED") == "2":
+		world.set_speed(1)
+	# Stills on the fight's own beats: the line formed with the band on its
+	# road, the charge, the melee, and late in the fight.
+	var charge := -1
+	var taken := {}
+	for frame in 6000:
+		var b := world.battle
+		if b == null:
+			break
+		world.ui._map_banner.visible = false
+		Input.warp_mouse(Vector2(4, 890))
+		if charge < 0 and not b.mustering:
+			charge = frame
+		var sum := Vector3.ZERO
+		var n := 0
+		for f: Dictionary in b.ours + b.theirs:
+			var npc: NPC = f.get("npc")
+			if npc and is_instance_valid(npc) and not f["down"] and not f.get("fled", false) and (f.get("engaged", false) or b.mustering and f["side"] == "house"):
+				sum += npc.global_position
+				n += 1
+		var at := sum / n if n > 0 else b._rally
+		if frame == 0:
+			# From behind the line, looking out along the band's road.
+			var out := b._way_out - b._rally
+			world.camera_rig.set_yaw(atan2(-out.x, -out.z), true)
+		world.camera_rig.look_at_point(at, 30.0 if b.mustering else 15.0, frame < 2)
+		var shot := ""
+		if frame == 40:
+			shot = "battle_1_line.png"
+		elif charge >= 0 and frame == charge + 20:
+			shot = "battle_2_charge.png"
+		elif charge >= 0 and frame == charge + 110:
+			shot = "battle_3_melee.png"
+		elif charge >= 0 and frame == charge + 230:
+			shot = "battle_4_late.png"
+		if not shot.is_empty() and not taken.has(shot):
+			taken[shot] = true
+			print("battle: %s at frame %d (charge at %d, %.0fs in)" % [shot, frame, charge, b.elapsed])
+			_clear_toasts(world)
+			await _shot(shot)
+		else:
+			await get_tree().process_frame
+	await _wait(10)
+	_clear_toasts(world)
+	await _shot("battle_5_report.png")
+	print("battle: report %s" % world.state.military.last_report)
+
+
+## How raids fought in the village turn out against the captains' odds
+## (Military.odds, fought out of sight), with and without the levy, on a few
+## seeds (BATTLE_SEEDS="1,2,3"). Runs headless: the fight is stepped by hand.
+func _battle_stats() -> void:
+	var seeds := OS.get_environment("BATTLE_SEEDS").split(",", false) if not OS.get_environment("BATTLE_SEEDS").is_empty() else PackedStringArray(["12345", "9", "4242", "7", "31"])
+	for s in seeds:
+		for levy: bool in [false, true]:
+			Game.state = WorldGenerator.generate(s)
+			var st := Game.state
+			st.minutes += 70.0 * Calendar.MINUTES_PER_DAY
+			Military.plan_raid(st, Seeds.rng(st.world_seed, "capture_raid"))
+			st.military.raid["day"] = st.day()
+			if levy:
+				Military.call_levy(st)
+			var odds := Military.odds(st)
+			st.minutes = float(st.day() * Calendar.MINUTES_PER_DAY + Military.strike_hour() * 60) + 1.0
+			var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+			add_child(world)
+			await _wait(2)
+			world._process(0.016)
+			var res := {}
+			var b := world.battle
+			print("battle_stats: %s rally %.0f m from the square, %.1f m clear of buildings" % [s, b._rally.distance_to(st.layout.square_center), b._clearance(b._rally)])
+			var tally := {"ours_swings": 0, "ours_hits": 0, "theirs_swings": 0, "theirs_hits": 0}
+			b.finished.connect(func(r: Dictionary, _e: Array) -> void:
+				res.merge(r)
+				for f: Dictionary in b.ours:
+					tally["ours_swings"] += int(f.get("swings", 0))
+					tally["ours_hits"] += int(f.get("hits", 0))
+				for f: Dictionary in b.theirs:
+					tally["theirs_swings"] += int(f.get("swings", 0))
+					tally["theirs_hits"] += int(f.get("hits", 0)))
+			var t := 0.0
+			var muster := -1.0
+			for i in 8000:
+				world._process(0.05)
+				if world.battle:
+					world.battle._process(0.05)
+					if muster < 0.0 and not world.battle.mustering:
+						muster = t
+				t += 0.05
+				if world.battle == null:
+					break
+			var ours: Array = res.get("ours", [])
+			print("battle_stats: %s levy=%s odds %.2f -> %s in %.0fs (charge at %.0fs): raiders fell %d/%d, ours fell %d/%d, died %d  %s" % [s, levy, odds,
+				"WON " if res.get("won", false) else "lost", t, muster, res.get("raiders_fallen", 0), res.get("size", 0),
+				ours.filter(func(l: Dictionary) -> bool: return l["fell"]).size(), ours.size(), ours.filter(func(l: Dictionary) -> bool: return l["died"]).size(), tally])
+			world.queue_free()
+			await _wait(2)
 
 
 func _clear_toasts(world: VillageWorld) -> void:

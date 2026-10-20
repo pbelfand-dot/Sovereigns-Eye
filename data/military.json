@@ -11,7 +11,7 @@
     "band_per_people": 0.03,
     "band_per_charter": 1,
     "band_per_renown": 0.02,
-    "combat_per_year": 1.0,
+    "combat_per_year": 0.5,
     "band_max": 14,
     "combat": [12, 42],
     "leader_combat": [35, 60],

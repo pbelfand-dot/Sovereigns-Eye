@@ -176,6 +176,17 @@ func _build_tool(kind: String, metal: Material) -> void:
 
 
 ## Height of the face (meters, in the parent's space), for cameras and labels.
+## Plays the current animation again from the start (HumanModel).
+func replay() -> void:
+	pass
+
+
+## Arms the body for a fight (HumanModel draws them; the simple body keeps
+## its tool).
+func set_weapons(_kinds: Array) -> void:
+	pass
+
+
 func head_height() -> float:
 	return (0.86 + 0.88) * body_height
 

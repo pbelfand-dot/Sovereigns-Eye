@@ -186,3 +186,55 @@ func test_the_military_is_saved() -> void:
 	old.erase("military")
 	var migrated := WorldState.from_dict(SaveManager.migrate(old))
 	check(migrated.military != null and migrated.military.raid.is_empty(), "an older save starts at peace")
+
+
+func test_a_raid_is_fought_in_the_village() -> void:
+	Game.state = _raided("mil-live")
+	var st := Game.state
+	st.military.raid["day"] = st.day()
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	runner.add_child(world)
+	await frames(2)
+	st.minutes = float(st.day() * Calendar.MINUTES_PER_DAY + Military.strike_hour() * 60 + 1)
+	world._process(0.016)
+	check(world.battle != null, "at the raid hour the band attacks")
+	var b := world.battle
+	check(b.theirs.size() == int(st.military.raid["size"]) and b.ours.size() > 0, "%d raiders against %d of yours" % [b.theirs.size(), b.ours.size()])
+	check(b.ours.all(func(f: Dictionary) -> bool: return (f["npc"] as NPC).fighting and (f["npc"] as NPC).driven), "the warband is called away from its work")
+	var villager: NPC = null
+	for npc: NPC in world.npcs.values():
+		if not npc.fighting and npc != world.player_npc() and npc.character.home_building_id >= 0:
+			villager = npc
+			break
+	check(villager != null and str(villager.brain.errand.get("type", "")) == "shelter", "villagers run for shelter")
+	var skip: Dictionary = await world.pass_time(10)
+	check(skip.is_empty() and world.battle != null, "no letting the years pass mid-fight")
+	var report: Dictionary = {}
+	world.battle.finished.connect(func(r: Dictionary, _e: Array) -> void: report.merge(r))
+	var raider_bodies := b._raider_npcs.size()
+	check(raider_bodies == b.theirs.size(), "the raiders have bodies (their own, not villagers')")
+	var first: NPC = b.theirs[0]["npc"]
+	check(first.get_node_or_null("HealthBar") != null and (b.ours[0]["npc"] as NPC).get_node_or_null("HealthBar") != null, "everyone in the fight has a bar over their head")
+	check(not (first.model is HumanModel) or not (first.model as HumanModel)._weapons.is_empty(), "and a weapon in hand")
+	check(not b.heir_strike(), "you can't strike a raider who isn't in reach")
+	var me := world.player_npc()
+	me.teleport(first.global_position + Vector3(1.0, 0, 0))
+	check(b.heir_strike() and int(b.heir_f.get("swings", 0)) == 1 and b.heir_f["joined"], "walk up to one and you strike (and you're in the fight)")
+	var blows := 0
+	var seconds := 0.0
+	for i in 6000:
+		world._process(0.05)
+		if world.battle:
+			world.battle._process(0.05)
+		seconds += 0.05
+		if world.battle == null:
+			break
+		blows = b.ours.reduce(func(acc: int, f: Dictionary) -> int: return acc + int(f["hits"]), 0)
+	check(world.battle == null and not report.is_empty(), "the fight ends (%s after %.0f s)" % ["won" if report.get("won", false) else "lost", seconds])
+	check(blows > 0 or report.get("won", false) == false, "blows were struck")
+	check(st.military.raid.is_empty() and st.military.battles == 1, "the raid is over")
+	check(world.npcs.values().all(func(n: NPC) -> bool: return not n.fighting), "everyone goes back to their day")
+	check(villager == null or not is_instance_valid(villager) or str(villager.brain.errand.get("type", "")) != "shelter", "and out of shelter")
+	check(world.ui.is_report_open(), "you read how it went")
+	world.queue_free()
+	await frames(2)

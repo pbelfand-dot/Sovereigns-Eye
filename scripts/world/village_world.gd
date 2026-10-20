@@ -58,6 +58,11 @@ var paused := false
 var speed_index := 0
 ## True while the years are let pass (pass_time): news is gathered, not shown.
 var passing := false
+## The raid being fought in the village (Phase 5.1), or null.
+var battle: Battle
+## Music that overrides the time of day ("battle", then "victory"/"defeat").
+var music_override := ""
+var _music_override_left := 0.0
 var _passed: Dictionary = {}
 var selected: NPC
 var hovered: NPC
@@ -227,16 +232,21 @@ func _process(delta: float) -> void:
 		state.minutes += game_minutes
 		_check_new_day()
 		_advance_construction(game_minutes)
+	_check_raid()
+	if _music_override_left > 0.0:
+		_music_override_left -= delta
+		if _music_override_left <= 0.0:
+			music_override = ""
 	var heir := player_npc()
 	if heir_ctl:
-		heir_ctl.enabled = mode == "walk" and talking_to < 0 and not is_revealing() and not (ui and ui.is_menu_open())
+		heir_ctl.enabled = mode == "walk" and talking_to < 0 and not is_revealing() and not (ui and ui.is_menu_open()) and not (battle and battle.heir_down())
 		heir_ctl.update(delta)
 		if heir_ctl.enabled and paused and heir_ctl.move_input().length() > 0.5:
 			_hint_paused()
 	var eye := camera_rig.camera.global_position if camera_rig and camera_rig.camera else Vector3.ZERO
 	var near := ANIM_LOD_DISTANCE * ANIM_LOD_DISTANCE
 	for npc: NPC in npcs.values():
-		if npc != heir:
+		if npc != heir and not npc.fighting:
 			npc.brain.update(game_minutes)
 		npc.anim_lod = 1 if npc == heir or npc.global_position.distance_squared_to(eye) < near else 3
 		npc.tick(delta, scale_now)
@@ -261,7 +271,7 @@ func _update_barks(delta: float) -> void:
 		return
 	_bark_wait = 0.25
 	var heir := player_npc()
-	if heir == null or mode != "walk" or paused or talking_to >= 0 or is_revealing() \
+	if heir == null or mode != "walk" or paused or talking_to >= 0 or is_revealing() or battle != null \
 			or (ui and ui.is_menu_open()) or not GameSettings.remarks():
 		return
 	if barks == null:
@@ -443,13 +453,57 @@ func _on_life_event(e: Dictionary) -> void:
 		remove_character_body(int(e["gone"]))
 
 
+# --- Raids (Phase 5.1) ------------------------------------------------------------------------
+
+## The band due today strikes at its hour: the fight is played out here.
+func _check_raid() -> void:
+	if battle != null or passing or state.house == null or state.house.ended:
+		return
+	if not Military.due(state) or state.day() > int(state.military.raid["day"]):
+		return
+	if Calendar.hour_f(state.minutes) < float(Military.strike_hour()):
+		return
+	start_battle()
+
+
+## The raiders come in and the warband turns out (Battle).
+func start_battle() -> Battle:
+	if battle != null:
+		return battle
+	end_conversation()
+	hush_remarks()
+	if paused or speed_index > 0:
+		set_speed(0)
+	battle = Battle.new()
+	add_child(battle)
+	battle.finished.connect(_on_battle_finished)
+	battle.start(self)
+	music_override = "battle"
+	_music_override_left = 0.0
+	var raid := state.military.raid
+	Game.notify.emit("%s attack from the %s road! Your warband turns out; the village runs for shelter. Walk up to a raider and press %s to strike." % [
+		Military._cap(str(raid.get("name", "Raiders"))), raid.get("road", ""), key_hint("interact")], Game.COLOR_BAD)
+	if ui:
+		ui.refresh()
+	return battle
+
+
+func _on_battle_finished(report: Dictionary, events: Array) -> void:
+	battle = null
+	music_override = "victory" if report.get("won", false) else "defeat"
+	_music_override_left = 40.0
+	apply_life_events(events)
+	if ui:
+		ui.show_battle_report(report)
+
+
 # --- Letting the years pass (Phase 4.3) --------------------------------------------------------
 
 ## Let `days` pass (a season, a year) a few days a frame, quietly: the news is
 ## gathered for a summary instead of shown, and it stops early for what needs
 ## you (data/succession.json "pass_time" stop_on). Returns Succession.summary.
 func pass_time(days: int) -> Dictionary:
-	if passing or (state.house and state.house.ended):
+	if passing or battle != null or (state.house and state.house.ended):
 		return {}
 	passing = true
 	end_conversation()
@@ -1346,6 +1400,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			Audio.play("ui_error")
 			Game.notify.emit("Look at someone near you to use the Sovereign's Eye.", Game.COLOR_INFO)
+	elif event.is_action_pressed("interact") and mode == "walk" and battle and battle.heir_strike():
+		pass
 	elif event.is_action_pressed("interact") and mode == "walk":
 		if talking_to < 0 and focus:
 			try_talk(focus.character.id)

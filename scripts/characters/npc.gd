@@ -26,6 +26,11 @@ var _is_player := false
 var _crest_on := true
 ## Moved directly by the player (HeirController) instead of along paths.
 var driven := false
+## In a fight (Phase 5.1): the battle moves this body, not its brain.
+var fighting := false
+## Running (for shelter, or for their lives): faster along the path, the run
+## animation.
+var hurry := false
 var _drive_speed := 0.0
 var _last_drive_speed := 0.0
 ## Animation level of detail: 1 = every frame; far from the camera the
@@ -231,6 +236,14 @@ func set_anim(mode: String) -> void:
 	_anim_mode = mode
 
 
+## Plays a one-shot animation (a blow, a stagger), from the start even if it
+## is already playing.
+func play_once(mode: String) -> void:
+	if _anim_mode == mode and _anim_last == mode:
+		model.replay()
+	_anim_mode = mode
+
+
 ## What the villager is doing right now: "walk", "work", "talk" or "idle".
 func activity() -> String:
 	return "walk" if is_moving() or (driven and _last_drive_speed > 0.15) else _anim_mode
@@ -316,7 +329,7 @@ func tick(delta: float, time_scale: float) -> void:
 		return
 	var moving := false
 	if time_scale > 0.0 and is_moving():
-		var step := BASE_WALK_SPEED * _speed_factor * time_scale * delta
+		var step := BASE_WALK_SPEED * _speed_factor * time_scale * delta * (2.3 if hurry else 1.0)
 		while step > 0.0 and _path_index < _path.size():
 			var target := _path[_path_index]
 			var to := target - global_position
@@ -341,7 +354,7 @@ func tick(delta: float, time_scale: float) -> void:
 	if time_scale > 0.0:
 		_anim_phase += delta * time_scale * (9.0 if moving else 4.0) / maxf(1.0, sqrt(time_scale))
 	model.anim_time_scale = time_scale * (_speed_factor if moving else 1.0)
-	_animate("walk" if moving else _anim_mode, delta)
+	_animate(("run" if hurry else "walk") if moving else _anim_mode, delta)
 
 
 func _tick_driven(delta: float, time_scale: float) -> void:
