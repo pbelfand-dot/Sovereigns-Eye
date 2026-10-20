@@ -9,9 +9,14 @@ extends RefCounted
 ## The day the next band is due (-1 until it's set).
 var next_raid_day: int = -1
 ## The band on its way, or {}: {name, day, size, from [x, y, z], road,
-## tribute, loot_gold, loot_food, levy (called), fought}.
+## tribute, loot_gold, loot_food, levy (called), fought, camp (its camp's
+## id), host (a noble house's id, when it's that house's host: Phase 5.3),
+## allies [{house, men, asked}] (men-at-arms sent in aid)}.
 var raid: Dictionary = {}
 var raiders: Array[CharacterData] = []
+## Men-at-arms the noble houses send to fight beside you against this raid
+## (Phase 5.3; ids from -3000, never villagers): raid "allies" says whose.
+var allies: Array[CharacterData] = []
 ## Fights fought and won.
 var battles: int = 0
 var won: int = 0
@@ -43,7 +48,10 @@ func to_dict() -> Dictionary:
 	var list := []
 	for r in raiders:
 		list.append(r.to_dict())
-	return {"next_raid_day": next_raid_day, "raid": raid.duplicate(true), "raiders": list,
+	var aid := []
+	for a in allies:
+		aid.append(a.to_dict())
+	return {"next_raid_day": next_raid_day, "raid": raid.duplicate(true), "raiders": list, "allies": aid,
 		"battles": battles, "won": won, "last_report": last_report.duplicate(true),
 		"camps": camps.duplicate(true), "next_camp_day": next_camp_day, "next_camp_id": next_camp_id,
 		"expedition": expedition.duplicate(true), "gentle": gentle}
@@ -59,6 +67,15 @@ static func from_dict(d: Dictionary) -> MilitaryData:
 			m.raid[k] = int(m.raid[k])
 	for rd: Dictionary in d.get("raiders", []):
 		m.raiders.append(CharacterData.from_dict(rd))
+	for ad: Dictionary in d.get("allies", []):
+		m.allies.append(CharacterData.from_dict(ad))
+	for k: String in ["host"]:
+		if m.raid.has(k):
+			m.raid[k] = int(m.raid[k])
+	var sent: Array = m.raid.get("allies", [])
+	for s: Dictionary in sent:
+		s["house"] = int(s["house"])
+		s["men"] = int(s["men"])
 	m.battles = int(d.get("battles", 0))
 	m.won = int(d.get("won", 0))
 	m.last_report = (d.get("last_report", {}) as Dictionary).duplicate(true)

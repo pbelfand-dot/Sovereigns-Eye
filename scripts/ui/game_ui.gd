@@ -463,7 +463,7 @@ func _update_battle_banner() -> void:
 		_fall_back_button.visible = b.routed.is_empty() and not b.over
 		var s := b.standing()
 		var raid := world.state.military.raid
-		_battle_label.text = "%s  -  yours standing %d, raiders %d" % [Military._cap(str(raid.get("name", "Raiders"))), s["ours"], s["theirs"]]
+		_battle_label.text = "%s  -  yours standing %d, %s %d" % [Military._cap(str(raid.get("name", "Raiders"))), s["ours"], "theirs" if raid.has("host") else "raiders", s["theirs"]]
 		if b.heir_down():
 			_battle_label.text += "  -  you are down"
 		elif world.mode == "walk":

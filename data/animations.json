@@ -24,7 +24,7 @@
     "sword": "Sword_Bronze.gltf",
     "axe": "Axe_Bronze.gltf",
     "shield": "Shield_Wooden.gltf",
-    "by_role": { "knight": ["sword", "shield"], "retainer": ["sword", "shield"], "watch": ["sword", "shield"], "heir": ["sword"], "levy": ["axe"], "raider": ["axe"], "leader": ["sword", "shield"] },
+    "by_role": { "knight": ["sword", "shield"], "retainer": ["sword", "shield"], "watch": ["sword", "shield"], "heir": ["sword"], "levy": ["axe"], "raider": ["axe"], "leader": ["sword", "shield"], "ally": ["sword", "shield"], "host": ["axe", "shield"], "host_knight": ["sword", "shield"] },
     "hand": { "position": [0.0, 0.03, 0.02], "rotation": [90.0, 0.0, 0.0], "scale": 0.9 },
     "off_hand": { "position": [0.04, 0.08, 0.0], "rotation": [0.0, 90.0, 0.0], "scale": 0.8 }
   },

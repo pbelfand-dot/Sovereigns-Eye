@@ -18,6 +18,11 @@ extends RefCounted
 ## Static and deterministic. Numbers: data/military.json.
 
 
+## Men-at-arms other houses send you take ids from here down (Phase 5.3);
+## the bands and the hosts against you, from -1000 down.
+const ALLY_ID := -3000
+
+
 static func cfg() -> Dictionary:
 	return GameData.load_file("military")
 
@@ -83,7 +88,8 @@ static func plan_raid(state: WorldState, rng: RandomNumberGenerator) -> Dictiona
 	var from := Vector3(float(f[0]), float(f[1]), float(f[2]))
 	var day := state.day() + int(r.get("warning_days", 2))
 	var gold := state.house.gold
-	var loot_gold := roundi(gold * float(r.get("loot_share", 0.35)))
+	# The house's gold behind a castle's walls is out of reach (CastleSystem).
+	var loot_gold := roundi(gold * float(r.get("loot_share", 0.35)) * (1.0 - float(CastleSystem.defence(state)["gold_safe"])))
 	var food := state.territory.amount("food") if state.territory else 0.0
 	m.raid = {"name": band, "day": day, "size": size, "from": [from.x, from.y, from.z], "road": compass(state, from),
 		"loot_gold": loot_gold, "loot_food": roundi(food * float(r.get("loot_food", 0.25))),
@@ -93,8 +99,8 @@ static func plan_raid(state: WorldState, rng: RandomNumberGenerator) -> Dictiona
 	for i in size:
 		m.raiders.append(CharacterGenerator.raider(state, band, i, "raid_%d" % day))
 	camp["known"] = true
-	var text := "%s, %d strong, have come down the %s road from their camp. They'll strike in %d days unless you pay them %d gold. Court panel (K): Defence." % [
-		_cap(band), size, m.raid["road"], int(r.get("warning_days", 2)), int(m.raid["tribute"])]
+	var text := "%s, %d strong, have come down the %s road from their camp. They'll strike in %d days unless you pay them %d gold. Court panel (K): Defence.%s" % [
+		_cap(band), size, m.raid["road"], int(r.get("warning_days", 2)), int(m.raid["tribute"]), _send_aid(state)]
 	state.house.log_event(state.day(), "%s gathered on the %s road, %d strong." % [_cap(band), m.raid["road"], size], "bad")
 	return {"text": text, "kind": "bad", "raid_warning": true}
 
@@ -127,6 +133,8 @@ static func pay_off(state: WorldState) -> Dictionary:
 	if not camp.is_empty():
 		camp["hoard"] = int(camp["hoard"]) + cost
 	var text := "You pay %s %d gold, and they move on." % [m.raid["name"], cost]
+	if m.raid.has("host"):
+		text = Realm.demand_paid(state, int(m.raid["host"]), cost)
 	state.house.log_event(state.day(), text, "bad")
 	_clear(state)
 	return {"ok": true, "text": text}
@@ -150,6 +158,7 @@ static func _clear(state: WorldState) -> void:
 	var m := state.military
 	m.raid = {}
 	m.raiders.clear()
+	m.allies.clear()
 	m.next_raid_day = state.day() + _gap(Seeds.rng(state.world_seed, "raid_gap_%d" % state.day()))
 
 
@@ -195,6 +204,11 @@ static func levy(state: WorldState) -> Array[CharacterData]:
 ## How they fight: knight, retainer, watch, levy, heir, raider, leader.
 static func role_of(state: WorldState, c: CharacterData) -> String:
 	if c.id < 0:
+		if c.house_id >= 0:
+			# A noble house's men: sent in your aid, or in its host (Phase 5.3).
+			if c.id <= ALLY_ID:
+				return "ally"
+			return "host_knight" if c.is_knight() else "host"
 		return "leader" if c.id == -1000 else "raider"
 	if state.is_player(c):
 		return "heir"
@@ -226,6 +240,14 @@ static func sides(state: WorldState, heir: bool = false) -> Dictionary:
 		ours.append(fighter(state, c, "house"))
 	if heir and state.player():
 		ours.append(fighter(state, state.player(), "house"))
+	# Men-at-arms sent by the noble houses stand with you (Phase 5.3).
+	for a in state.military.allies:
+		ours.append(fighter(state, a, "house"))
+	# At home, a castle: the warband holds its gate (Phase 5.3).
+	var wall := CastleSystem.defence(state)
+	for f in ours:
+		f["combat"] = int(f["combat"]) + int(wall["combat"])
+		f["steady"] = float(wall["hold"])
 	var theirs: Array[Dictionary] = []
 	for r in state.military.raiders:
 		theirs.append(fighter(state, r, "raiders"))
@@ -238,6 +260,9 @@ static func person(state: WorldState, id: int) -> CharacterData:
 	for r in state.military.raiders:
 		if r.id == id:
 			return r
+	for a in state.military.allies:
+		if a.id == id:
+			return a
 	return null
 
 
@@ -295,6 +320,7 @@ static func breaking_point(fighters: Array) -> float:
 	for f: Dictionary in fighters:
 		for t: String in f["traits"]:
 			sum += float(mods.get(t, 0.0))
+		sum += float(f.get("steady", 0.0))  # walls at their backs (a castle's gate)
 	return clampf(point + sum / fighters.size(), 0.15, 0.95)
 
 
@@ -406,6 +432,9 @@ static func finish(state: WorldState, winner: String, ours: Array, theirs: Array
 	var report := {"won": won, "band": band, "ours": [], "size": theirs.size(), "raiders_fallen": fallen(theirs),
 		"gold": 0, "food": 0, "renown": 0, "day": state.day()}
 	var dead := _toll(state, ours, report, rng)
+	report["allies"] = _allies_report(state, ours)
+	if m.raid.has("host"):
+		return _finish_host(state, int(m.raid["host"]), won, theirs, report, dead, events)
 	var camp := m.get_camp(int(m.raid.get("camp", -1)))
 	var scattered := ""
 	if won:
@@ -791,3 +820,133 @@ static func _ride_home(state: WorldState, events: Array[Dictionary]) -> void:
 	m.expedition = {}
 	if not back.is_empty():
 		events.append({"text": "Your warband is home from the camp of %s." % band, "kind": "info", "back": back})
+
+
+# --- The noble houses in your fights (Phase 5.3) -------------------------------------------------
+
+## The houses that send men-at-arms against the coming raid (Realm.aid_offers):
+## their men are made and the raid notes whose. The news, or "".
+static func _send_aid(state: WorldState) -> String:
+	var m := state.military
+	m.raid["allies"] = Realm.aid_offers(state)
+	make_allies(state)
+	var names: Array[String] = []
+	for s: Dictionary in m.raid["allies"]:
+		names.append("%s sends %d men-at-arms" % [state.realm.house_title(int(s["house"])), int(s["men"])])
+	return (" " + "; ".join(names) + " to stand with you.") if not names.is_empty() else ""
+
+
+## The men-at-arms sent in aid, made from the raid's "allies" (the same men
+## for the same raid).
+static func make_allies(state: WorldState) -> void:
+	var m := state.military
+	m.allies.clear()
+	var aid := Realm.section("aid")
+	var n := 0
+	for s: Dictionary in m.raid.get("allies", []):
+		var house := state.realm.get_house(int(s["house"]))
+		for i in int(s["men"]):
+			m.allies.append(CharacterGenerator.house_soldier(state, house, ALLY_ID - n, false, aid.get("combat", [30, 50]), "aid_%d_%d_%d" % [int(m.raid.get("day", 0)), int(s["house"]), i]))
+			n += 1
+
+
+## Who of the houses' men fought, and how many fell: [{house, men, fell}].
+static func _allies_report(state: WorldState, ours: Array) -> Array:
+	var by := {}
+	for f: Dictionary in ours:
+		if str(f["role"]) != "ally":
+			continue
+		var a := person(state, int(f["id"]))
+		var key := a.house_id if a else -1
+		if not by.has(key):
+			by[key] = {"house": state.realm.house_title(key) if state.realm else "", "men": 0, "fell": 0}
+		by[key]["men"] += 1
+		if f["down"]:
+			by[key]["fell"] += 1
+	return by.values()
+
+
+## A noble house comes against you: it demands gold, or its host marches by
+## the road from its seat and strikes on the day it gave (fought like a
+## raid; paying the demand sends it home). The news.
+static func plan_host(state: WorldState, house_id: int, rng: RandomNumberGenerator) -> Dictionary:
+	var m := state.military
+	var k := Realm.section("hosts")
+	var house := state.realm.get_house(house_id)
+	var size := clampi(int(k.get("host_base", 5)) + roundi(int(house["renown"]) / float(k.get("host_per_renown", 12))), 3, int(k.get("host_max", 14)))
+	var demand := maxi(int(k.get("demand_min", 80)), roundi(state.house.gold * float(k.get("demand_share", 0.3))))
+	var toward := Realm.pos_of(house) - Realm.center()
+	var from := _entry_toward(state, Vector3(toward.x, 0, toward.y))
+	var day := state.day() + int(k.get("days_to_pay", 4))
+	var name := "the host of House %s" % house["name"]
+	var take := roundi(demand * float(k.get("take_share", 1.5)) * (1.0 - float(CastleSystem.defence(state)["gold_safe"])))
+	m.raid = {"name": name, "day": day, "size": size, "from": [from.x, from.y, from.z], "road": compass(state, from),
+		"loot_gold": take, "loot_food": 0, "tribute": demand, "levy": false, "fought": false, "host": house_id}
+	m.raiders.clear()
+	var knights := maxi(1, roundi(size * float(k.get("knights", 0.3))))
+	for i in size:
+		var knight := i < knights
+		m.raiders.append(CharacterGenerator.house_soldier(state, house, -1000 - i, knight, k.get("knight_combat" if knight else "combat", [30, 50]), "host_%d_%d" % [house_id, state.day()] + "/%d" % i))
+	var text := "%s demands %d gold of you. Pay by %s, or %s comes against you %d strong by the %s road. Court panel (K): Defence.%s" % [
+		state.realm.house_title(house_id), demand, Calendar.format_date(day * Calendar.MINUTES_PER_DAY), house["head"], size, m.raid["road"], _send_aid(state)]
+	state.house.log_event(state.day(), "%s demanded %d gold, or war." % [state.realm.house_title(house_id), demand], "bad")
+	return {"text": text, "kind": "bad", "raid_warning": true, "host": house_id}
+
+
+## The road end nearest the way toward `dir` (from the square).
+static func _entry_toward(state: WorldState, dir: Vector3) -> Vector3:
+	var best := state.layout.square_center
+	var best_dot := -INF
+	var names: Array = GrowthSystem.growth_cfg().get("entry_roads", [])
+	for road in state.layout.roads:
+		if not names.has(str(road.get("name", ""))):
+			continue
+		var pts: PackedVector3Array = road["points"]
+		var end := pts[pts.size() - 1].lerp(pts[pts.size() - 2], 0.15)
+		var d := (end - state.layout.square_center).normalized().dot(dir.normalized())
+		if d > best_dot:
+			best_dot = d
+			best = end
+	return best
+
+
+## What a host's fight leaves: beaten, the house pays ransom for its fallen
+## knights, you win renown and it keeps the peace; winning, it takes its
+## demand and more, and your house is thought less of.
+static func _finish_host(state: WorldState, house_id: int, won: bool, theirs: Array, report: Dictionary, dead: Array[CharacterData], events: Array[Dictionary]) -> Dictionary:
+	var m := state.military
+	var k := Realm.section("hosts")
+	var band := str(m.raid.get("name", "the host"))
+	var house := state.realm.get_house(house_id)
+	var lost := dead.size()
+	var text := ""
+	report["host"] = true
+	if won:
+		var knights := theirs.filter(func(f: Dictionary) -> bool: return f["down"] and str(f["role"]) == "host_knight").size()
+		var ransom := knights * int(k.get("ransom_per_knight", 40))
+		state.house.gold += ransom
+		state.house.renown += int(k.get("renown_win", 10))
+		report["gold"] = ransom
+		report["renown"] = int(k.get("renown_win", 10))
+		house["standing"] = maxi(int(house["standing"]), int(k.get("after_regard", -10)))
+		var knights_text := "none of them knights" if knights == 0 else ("%d of them %s, ransomed for %d gold" % [knights, "a knight" if knights == 1 else "knights", ransom])
+		text = "You beat back %s: %d of %d fell, %s. %s %s will keep the peace." % [band, fallen(theirs), theirs.size(), knights_text,
+			"None of yours died." if lost == 0 else "%d of yours died." % lost, house["head"]]
+	else:
+		var take := mini(int(m.raid.get("loot_gold", 0)), state.house.gold)
+		state.house.gold -= take
+		state.house.renown = maxi(0, state.house.renown + int(k.get("renown_loss", -6)))
+		report["gold"] = -take
+		report["renown"] = int(k.get("renown_loss", -6))
+		text = "%s broke your warband and took %d gold. %s" % [_cap(band), take, "None of yours died." if lost == 0 else "%d of yours died." % lost]
+	house["truce"] = state.day() + int(k.get("truce_days", 80))
+	state.house.log_event(state.day(), text, "office" if won else "bad")
+	m.battles += 1
+	if won:
+		m.won += 1
+	m.last_report = report
+	_clear(state)
+	events.append({"text": text, "kind": "good" if won else "bad", "battle": report})
+	for c in dead:
+		LifeSystem.die(state, c, "wounds taken fighting %s" % band, events)
+	return report

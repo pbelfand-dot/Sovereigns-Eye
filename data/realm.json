@@ -57,6 +57,45 @@
     "train_per_season": 3
   },
 
+  "rivals": {
+    "_comment": "Phase 5.3. Each house has a rival among the others (paired from the seed). What warms one toward you cools its rival: rival_share of every rise in regard you win from a house (a visit, a gift, a talk, fostering, a marriage, a camp cleared near it) is lost with its rival.",
+    "rival_share": 0.5
+  },
+
+  "aid": {
+    "_comment": "Phase 5.3. When a band (or a host) is on the road to you, a house that holds yours warmly (at least min_regard), its seat no more than max_days' ride away, sends men-at-arms: men_base + its renown / men_per_renown of them, up to men_max. They fight beside your warband that day, then go home. A friendly house (at least ask_regard) sends them if you ask, which spends ask_cost of its regard. Their men fight as men-at-arms (Combat in combat).",
+    "min_regard": 40,
+    "max_days": 3,
+    "men_base": 2,
+    "men_per_renown": 30,
+    "men_max": 4,
+    "ask_regard": 15,
+    "ask_cost": 12,
+    "combat": [30, 50]
+  },
+
+  "hosts": {
+    "_comment": "Phase 5.3. A house that holds yours in contempt (at most hostile_at) may come against you: at a season's start, with hostile_chance, it demands demand_share of your gold (at least demand_min) within days_to_pay, or its host marches. The host: host_base + its renown / host_per_renown men (up to host_max), knights a share of them (Combat knight_combat, the rest combat), coming by the road from its seat; it's fought like a raid, and paying the demand sends it home. Paid: the house is mollified (paid_regard) and keeps the peace (truce_days). Beaten: it pays ransom_per_knight for each of its knights who falls, you win renown_win, its regard comes back to after_regard and it keeps the peace. Winning: it takes take_share of the demand (as raiders take loot) and the house loses renown (renown_loss).",
+    "hostile_at": -40,
+    "hostile_chance": 0.35,
+    "demand_share": 0.3,
+    "demand_min": 80,
+    "days_to_pay": 4,
+    "host_base": 5,
+    "host_per_renown": 12,
+    "host_max": 14,
+    "knights": 0.3,
+    "knight_combat": [45, 70],
+    "combat": [28, 48],
+    "ransom_per_knight": 40,
+    "renown_win": 10,
+    "renown_loss": -6,
+    "take_share": 1.5,
+    "truce_days": 80,
+    "after_regard": -10,
+    "paid_regard": 15
+  },
+
   "hands": {
     "_comment": "At a seat you may ask (once a visit) for one of the house's young of an age to wed, for your heir or unmarried kin: the house must hold yours in min_regard; then the one asked weighs it (MatchSystem.consider, against its threshold) with their house's wish for the match added: wish_base + regard * wish_per_regard + your renown * wish_per_renown. The wedding is held when you come home, with the house's dowry.",
     "min_regard": 10,

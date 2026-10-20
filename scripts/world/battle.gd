@@ -44,7 +44,9 @@ var over := false
 ## "house" or "raiders" once that side breaks.
 var routed := ""
 
-var _raider_npcs: Array[NPC] = []
+## NPCs this battle brought (the band, and men other houses sent): ticked
+## and freed here, not by the village.
+var _own_npcs: Array[NPC] = []
 var _sheltered: Array[NPC] = []
 var _loot_point := Vector3.ZERO
 var _fall_back := Vector3.ZERO
@@ -78,6 +80,12 @@ func start(owner_world: VillageWorld) -> void:
 	_rally = _rally_point(from)
 	var manor := state.get_building(CourtSystem._building_of_type(state, "manor"))
 	_fall_back = manor.door_position() if manor else state.layout.square_center
+	if not CastleSystem.stands(state).is_empty():
+		# Behind the gate.
+		_fall_back = state.castle.transform() * Vector3(0, 0, CastleLayout.gate_z(CastleSystem.stands(state)) - 8.0)
+		# The house's gold is behind its walls: the band comes for the castle,
+		# and meets the warband before its gate.
+		_loot_point = _rally
 	# The band, at the end of its road.
 	var i := 0
 	for f: Dictionary in s["theirs"]:
@@ -88,15 +96,23 @@ func start(owner_world: VillageWorld) -> void:
 		var off := Vector3(float(i % 3) - 1.0, 0.0, float(i / 3)) * 1.4
 		npc.teleport(from + off)
 		_arm(npc, f)
-		_raider_npcs.append(npc)
+		_own_npcs.append(npc)
 		f["npc"] = npc
 		theirs.append(f)
 		i += 1
 	# The warband, warned days ago, stands in line at the rally point.
 	for f: Dictionary in s["ours"]:
-		var npc := world.npc_of(int(f["id"]))
-		if npc == null:
-			npc = world.spawn_character(int(f["id"]))
+		var npc: NPC
+		if int(f["id"]) <= Military.ALLY_ID:
+			# Men another house sent: they came by the road and stand with yours.
+			npc = NPC.new()
+			add_child(npc)
+			npc.setup(Military.person(state, int(f["id"])))
+			_own_npcs.append(npc)
+		else:
+			npc = world.npc_of(int(f["id"]))
+			if npc == null:
+				npc = world.spawn_character(int(f["id"]))
 		if npc == null:
 			continue
 		var c := npc.character
@@ -106,7 +122,8 @@ func start(owner_world: VillageWorld) -> void:
 				npc.teleport(b.door_position())
 			c.inside_building_id = -1
 			npc.set_inside(false)
-		npc.brain.set_errand({})
+		if npc.brain:
+			npc.brain.set_errand({})
 		npc.stop()
 		_arm(npc, f)
 		f["npc"] = npc
@@ -119,6 +136,7 @@ func start(owner_world: VillageWorld) -> void:
 	var me := world.player_npc()
 	if state.player() and me:
 		heir_f = Military.fighter(state, state.player(), "house")
+		heir_f["combat"] = int(heir_f["combat"]) + int(CastleSystem.defence(state)["combat"])
 		heir_f["npc"] = me
 		heir_f["joined"] = false
 		heir_f["cool"] = 0.0
@@ -151,7 +169,7 @@ func _process(delta: float) -> void:
 	if over or world == null:
 		return
 	var scale := world.time_scale()
-	for npc in _raider_npcs:
+	for npc in _own_npcs:
 		if is_instance_valid(npc):
 			npc.tick(delta, scale)
 	if scale <= 0.0:
@@ -241,6 +259,9 @@ const RALLY_FAR := 50.0
 
 
 func _rally_point(from: Vector3) -> Vector3:
+	# With a castle, the warband holds its gate (Phase 5.3).
+	if not CastleSystem.stands(state).is_empty():
+		return CastleSystem.rally_point(state)
 	var path := world.graph.find_path(_loot_point, from) if world.graph else PackedVector3Array()
 	var best := Vector3.INF
 	var best_clear := -INF
@@ -493,11 +514,16 @@ func order_fall_back() -> bool:
 		return false
 	routed = "house"
 	fell_back = true
-	Game.notify.emit("You call the fall back. The raiders take what they came for.", Game.COLOR_BAD)
+	Game.notify.emit("You call the fall back. %s take what they came for." % _foe(), Game.COLOR_BAD)
 	return true
 
 
 ## Raiders still standing, and yours ({ours, theirs}).
+## Who you're fighting, for the news: "The raiders", or a noble house's men.
+func _foe() -> String:
+	return "Their men" if state.military.raid.has("host") else "The raiders"
+
+
 func standing() -> Dictionary:
 	var o := ours.filter(func(f: Dictionary) -> bool: return not f["down"]).size()
 	if not heir_f.is_empty() and heir_f["joined"] and not heir_f["down"]:
@@ -530,10 +556,10 @@ func _check_end(dt: float) -> void:
 		var mine := _house_side()
 		if breaks(mine):
 			routed = "house"
-			Game.notify.emit("Your warband breaks! The raiders fall on the village." if not mine.is_empty() else "No one stands against the raiders!", Game.COLOR_BAD)
+			Game.notify.emit("Your warband breaks! %s fall on the village." % _foe() if not mine.is_empty() else "No one stands against %s!" % _foe().to_lower(), Game.COLOR_BAD)
 		elif breaks(theirs):
 			routed = "raiders"
-			Game.notify.emit("The raiders break and run!", Game.COLOR_GOOD)
+			Game.notify.emit("%s break and run!" % _foe(), Game.COLOR_GOOD)
 		elif elapsed > float(_k.get("max_seconds", 240)):
 			var a := float(Military.fallen(mine)) / maxf(1.0, mine.size())
 			var b := float(Military.fallen(theirs)) / maxf(1.0, theirs.size())
@@ -556,10 +582,10 @@ func finish() -> void:
 	for f: Dictionary in house + theirs:
 		f.erase("npc")
 	var report := Military.finish(state, winner, house, theirs, events)
-	for npc in _raider_npcs:
+	for npc in _own_npcs:
 		if is_instance_valid(npc):
 			npc.queue_free()
-	_raider_npcs.clear()
+	_own_npcs.clear()
 	for npc: NPC in world.npcs.values():
 		if npc.fighting:
 			npc.fighting = false

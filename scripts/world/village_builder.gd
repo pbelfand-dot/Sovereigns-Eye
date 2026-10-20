@@ -28,6 +28,10 @@ var _wear: Image
 var _wear_origin := Vector2.ZERO
 var _wear_size := 1.0
 var _terrain: MeshInstance3D
+## The castle's levelled ground (CastleSystem.pads) and its site, where
+## nothing grows (CastleSystem.yard); set by the world.
+var castle_pads: Array = []
+var castle_yard: Dictionary = {}
 ## Scatter group name -> items placed at build time, re-filtered (not
 ## re-rolled) when the ground changes so the rest of the meadow stays put.
 var _scatter_cache: Dictionary = {}
@@ -37,6 +41,7 @@ func build(source: VillageLayout) -> void:
 	layout = source
 	_rng.seed = layout.terrain_seed
 	TerrainHeight.configure(layout.terrain_seed, layout.flat_radius)
+	TerrainHeight.set_pads(castle_pads)
 	_build_terrain()
 	_build_roads()
 	_build_square()
@@ -447,6 +452,8 @@ func _clear_yards() -> Array:
 	for p: Dictionary in layout.props:
 		if types.has(p["type"]) and VillageLayoutGenerator.YARD_HALF.has(p["type"]):
 			out.append({"center": p["pos"], "rot": float(p["rot"]), "half": VillageLayoutGenerator.YARD_HALF[p["type"]]})
+	if not castle_yard.is_empty():
+		out.append(castle_yard)
 	return out
 
 
@@ -968,6 +975,20 @@ func refresh_ground() -> void:
 	else:
 		_rng.seed = layout.terrain_seed
 		_replace_holder("Trees", _build_trees)
+
+
+## Rebuilds the ground mesh (a castle's site levelled, Phase 5.3), then the
+## roads, trees and scatter that stand on it.
+func refresh_terrain() -> void:
+	TerrainHeight.set_pads(castle_pads)
+	if _terrain:
+		remove_child(_terrain)
+		_terrain.queue_free()
+		_terrain = null
+	_build_terrain()
+	refresh_ground()
+	refresh_props()
+	refresh_fields()
 
 
 ## Rebuilds the merged props (rocks cleared, new buildings dressed).

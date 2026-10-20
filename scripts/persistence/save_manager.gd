@@ -290,6 +290,17 @@ static func migrate(data: Dictionary) -> Dictionary:
 			realm.place(int(data.get("seed", 0)))
 			data["realm"] = realm.to_dict()
 		data["save_version"] = 17
+		version = 17
+	if version == 17:
+		# v18 (Phase 5.3): the house has no castle yet, and no works; the
+		# noble houses get their rivals (from the seed) and no truce.
+		if not data.has("castle"):
+			data["castle"] = {}
+		if data.has("realm") and not (data["realm"] as Dictionary).is_empty():
+			var realm := RealmData.from_dict(data["realm"])
+			realm.place(int(data.get("seed", 0)))
+			data["realm"] = realm.to_dict()
+		data["save_version"] = 18
 	return data
 
 

@@ -17,7 +17,74 @@ playable build. Numbers and content live in `data/*.json`.
 | **4.3** | **Succession: name your heir, play on as them, regency, a family tree, "let the years pass"** (below) | Done |
 | **5.1** | **Military: raids on the village, the warband, live battles with real risk** (below) | Done |
 | **5.2** | **The wider realm: a map of the noble houses' seats, visits, regard, fostering kin; bandit camps to clear; battle orders, gentle fights** (below) | Done |
-| 5.3 | Your castle (the castle kit is built), walls and a gatehouse; houses that send help (or come against you) | Next |
+| **5.3** | **Your castle: a motte and bailey, then a stone castle, raised by your builders; houses that send men-at-arms in aid, rivals, and houses that come against you** (below) | Done |
+| 6 | To decide with the player. Recommended: the economy (trade with the houses' seats, a use for the gold that piles up in a grown town) | Next |
+
+## Your castle, and the houses at war (Phase 5.3)
+
+Decided (going ahead on the recommendations after 5.2): the castle is the
+house's own works, not a Build menu building: a **motte and bailey** first,
+then a **stone castle** in its place; the steward chooses the ground; and
+the noble houses take sides: **rivals**, **men-at-arms in aid**, and
+**hosts** that come against a house they hold in contempt.
+
+- `CastleData` (`WorldState.castle`: what stands, the works, the site,
+  the crew, what's been used, why the works wait) and `CastleSystem`
+  (static, `data/castle.json`): ordered from the Court panel when the
+  charter allows (a Village for the motte and bailey, a Market Town for
+  the stone castle) and the hire is paid. The site is chosen once
+  (`CastleLayout.site_rect`: room for both castles) at the edge of the land
+  the village builds on, its gate toward the village; boulders there are
+  broken up for their stone, trees felled for their wood, the ground
+  levelled (`TerrainHeight.set_pads`), a lane laid to the nearest road, and
+  no building may be ordered on it. The village's builders work it at the
+  usual rates, using wood and stone as they go; the works wait when a
+  store runs dry. Builders at the castle make nothing else.
+- `CastleView` raises the pieces (`CastleLayout`, from the castle kit) as
+  the work is done; a stone castle takes the motte and bailey's place,
+  the old palisade coming down first and the motte last. Its walls are
+  solid (`WorldGeometry`), builders walk to their places at the works.
+- What it gives: renown, room for more retainers, the regard of every
+  house (not cooled by rivals); in a raid the warband forms up before the
+  gate, fights harder (+5 / +10 Combat), breaks later, and the house's gold
+  is half (timber) or wholly (stone) out of the raiders' reach.
+- Rivals (`RealmData` `rival`, paired from the seed): half of what you win
+  with a house you lose with its rival (gifts, talk, visits, fostering, a
+  marriage; not a castle raised or a camp cleared, which please everyone).
+- Aid: a house that holds yours warmly (40+), its seat within three days,
+  sends men-at-arms (2 to 4, by its renown) against a coming raid; a
+  friendly one (15+) sends them if you ask (Defence, "Ask House X for men"),
+  at a cost in its regard. They stand in your line (`Battle`'s own NPCs)
+  and the report says how they fared.
+- Hosts: at a season's start a house at -40 or worse may demand a share of
+  your gold (`Military.plan_host`), its host (5 to 14, a third of them
+  knights) marching by the road toward its seat. Pay, and it keeps the
+  peace (a truce); beat it, and it ransoms its fallen knights, you win
+  renown, and it keeps the peace; lose, and it takes more than it asked.
+- Pacing (historical): a motte of 40 m took some 50 men 42 working days;
+  Harlech (1283-89) and Conwy (1283-87) took years. Here a motte and
+  bailey takes about half a year of a well-run village's builders and a
+  stone castle some two years. The charter sim's steward (`charter_sim.gd`,
+  now raising the castle as soon as it can): on seed 12345 the motte and
+  bailey took 19 days (begun on day 39), the stone castle 74 (begun on day
+  68); on seed 9, 17 and 60 days; the charters came no later for it.
+- Hosts (`life_sim.gd <seed> 40 steward favour`, the house courting one
+  house each year): on seed 9 the courted house's rival turned to
+  contempt and came against the house in year 7 and again in year 14, the
+  courted house's men in the line both times (both beaten). Without
+  courting anyone (`steward`, `steward matches` on seeds 9, 12345 and
+  4242) no house turned hostile in 40 years: a host is the price of
+  taking sides.
+- In a live fight with a castle standing, the band (or host) comes for the
+  castle, where the gold is, and meets the warband before its gate (at
+  first it went for the square while the line waited at the gate, and a
+  fight the captains called certain was lost piecemeal). Live host fights
+  against a stone castle now follow the captains' odds
+  (`capture.tscn battle_stats` with `BATTLE_KEEP=stone BATTLE_HOST=1`): a
+  village's watch alone has little chance against a host of knights (odds
+  0 to 0.4 on seeds 12345, 9, 4242, all lost), which is what allies, trained
+  knights or paying the demand are for.
+- Save v18 (the castle; rivals and truces, migrated from the seed).
 
 ## The wider realm (Phase 5.2)
 

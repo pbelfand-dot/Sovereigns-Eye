@@ -211,8 +211,7 @@ func test_a_raid_is_fought_in_the_village() -> void:
 	check(skip.is_empty() and world.battle != null, "no letting the years pass mid-fight")
 	var report: Dictionary = {}
 	world.battle.finished.connect(func(r: Dictionary, _e: Array) -> void: report.merge(r))
-	var raider_bodies := b._raider_npcs.size()
-	check(raider_bodies == b.theirs.size(), "the raiders have bodies (their own, not villagers')")
+	check(b.theirs.all(func(f: Dictionary) -> bool: return b._own_npcs.has(f["npc"]) and not world.npcs.values().has(f["npc"])), "the raiders have bodies (their own, not villagers')")
 	var first: NPC = b.theirs[0]["npc"]
 	check(first.get_node_or_null("HealthBar") != null and (b.ours[0]["npc"] as NPC).get_node_or_null("HealthBar") != null, "everyone in the fight has a bar over their head")
 	check(not (first.model is HumanModel) or not (first.model as HumanModel)._weapons.is_empty(), "and a weapon in hand")

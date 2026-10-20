@@ -172,7 +172,7 @@ static func season_factor(state: WorldState, resource: String) -> float:
 ## What one person adds to the stores in a day: {resource: amount}.
 static func worker_output(state: WorldState, c: CharacterData) -> Dictionary:
 	var out := {}
-	if c.retainer or state.is_player(c) or builder_site(state, c) != null:
+	if c.retainer or state.is_player(c) or builder_site(state, c) != null or CastleSystem.is_builder(state, c):
 		return out
 	var prod: Dictionary = section("production").get(c.occupation_id, {})
 	if prod.is_empty():
@@ -377,6 +377,11 @@ static func check_placement(state: WorldState, type: String, pos: Vector3, rot: 
 		if rects_overlap(pos, rot, half + Vector2(gap, gap), sb.position, sb.rotation, sb.footprint * 0.5):
 			out["reason"] = "Too close to the %s being built." % display_name(sb.type)
 			return out
+	# The house's castle and the ground round it (Phase 5.3).
+	var keep := CastleSystem.yard(state)
+	if not keep.is_empty() and rects_overlap(pos, rot, half + Vector2(gap, gap), keep["center"], float(keep["rot"]), keep["half"]):
+		out["reason"] = "That's the castle's ground."
+		return out
 	var fgap := float(cfg.get("field_gap", 1.0))
 	for f in layout.fields:
 		if rects_overlap(pos, rot, half + Vector2(fgap, fgap), f["center"], float(f["rot"]), (f["size"] as Vector2) * 0.5):
@@ -608,7 +613,7 @@ static func refresh_crew(state: WorldState, site: ConstructionSite) -> void:
 	var rates: Dictionary = section("construction").get("builders", {})
 	var pool: Array[CharacterData] = []
 	for c in state.characters:
-		if can_build_with(state, c) and builder_site(state, c) == null:
+		if can_build_with(state, c) and builder_site(state, c) == null and not CastleSystem.is_builder(state, c):
 			pool.append(c)
 	pool.sort_custom(func(a: CharacterData, b: CharacterData) -> bool:
 		var ra := float(rates.get(a.occupation_id, 0.0))

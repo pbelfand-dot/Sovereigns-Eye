@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 5 in progress: the wider realm (visit the noble houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
+> **Status: Phase 5 done: your own castle (a motte and bailey, then stone), noble houses that send men to your aid or march against you, the wider realm (visit the houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -259,6 +259,29 @@ The noble houses become places, and the bands get homes. `Realm`, `RealmData`, `
 ![A bandit camp: the band, its hoard, your captains' odds](docs/screenshots/realm_camp.jpg)
 ![The warband back from a camp](docs/screenshots/realm_camp_report.jpg)
 
+### Your castle, and the houses at war (Phase 5, step 3)
+
+The house builds its seat, and the noble houses take sides. `CastleSystem`, `CastleData`, `data/castle.json`; `Realm` and `Military` for the houses.
+
+| | What happens |
+|---|---|
+| **Your castle** | **Court (K) → Castle**: once your village holds a Village charter, raise a **motte and bailey** (gold for the carpenters, then timber as they go); once it's a Market Town, a **stone castle** in its place (and a great deal of stone). Your steward picks the ground at the edge of the village, the trees and boulders there are cleared and the hill levelled, and a lane is laid to its gate. Your builders raise it piece by piece over months (the stone castle over years); they make nothing else meanwhile, and the works wait when the wood or stone runs out |
+| **What it gives** | Renown, room for more retainers and the regard of every house. When raiders or a host come, your warband forms up before the gate, fights harder and holds longer, and your gold is half (timber) or wholly (stone) beyond their reach |
+| **Rivals** | Every house has a rival. Win a house's favour (a gift, a talk, a marriage, a child fostered) and its rival thinks the less of you |
+| **Men in aid** | A house that holds yours warmly and lies close sends men-at-arms when a band is on the road; a friendly one sends them if you ask (Defence), though it costs you some of its regard. They stand in your line and fight beside your warband |
+| **A host against you** | A house that holds yours in contempt may demand gold: pay, and it keeps the peace; refuse, and its host (a third of them knights) marches by the road from its seat. Beat it and its fallen knights are ransomed and it keeps the peace; lose, and it takes more than it asked |
+
+![The Court panel's Castle section: what it costs and what it needs](docs/screenshots/keep_court.jpg)
+![The motte and bailey rising, the builders at the works](docs/screenshots/keep_rising.jpg)
+![The motte and bailey standing at the edge of the village](docs/screenshots/keep_motte.jpg)
+![The stone castle going up in its place](docs/screenshots/keep_stone_rising.jpg)
+![The stone castle](docs/screenshots/keep_stone.jpg)
+![A noble house demands gold; another sends men-at-arms, a third might if asked](docs/screenshots/keep_host_defence.jpg)
+![The host on the realm map, marching from its seat](docs/screenshots/keep_host_map.jpg)
+![The warband and the allies' men form up before the gate](docs/screenshots/keep_gate.jpg)
+![The fight against the host](docs/screenshots/keep_melee.jpg)
+![The host beaten back before the gate: renown, a truce, and how the allies' men fared](docs/screenshots/keep_report.jpg)
+
 ### Controls
 
 Every key below can be changed: **Esc → Keys...** (or **Settings → Keys...**
@@ -497,17 +520,22 @@ godot --headless --path . --script res://tools/life_sim.gd -- 12345 100 steward 
 godot --headless --path . res://tools/capture.tscn -- 1 /tmp/stats battle_stats
 # The realm map, a visit, a camp and its fight (needs a display)
 godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots realm
+# The house's castle rising and standing, a host's demand and its fight at the gate
+godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots keep
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 5, step 2)
+## 9. Known limitations (Phase 5)
 
 * A Town holds 200 people; there is no charter beyond it yet.
 * Fights at a bandit camp are told, not shown (raids in the village are
   played out). Fighters swing swords and axes but don't block on purpose or
-  use the ground; there are no bows, and no castle walls yet (Phase 5 step 3).
+  use the ground; there are no bows. The castle is fought before, not
+  from: no one mans its walls or is besieged in it, and its rooms aren't
+  furnished or lived in yet.
+* A grown town piles up gold with little to spend it on beyond the castle.
 * The noble houses don't yet act on their own: no wars between them, no
   help sent to you when you're raided, no wards sent to you to foster. Their
   young you meet are the only ones of their people the game keeps.

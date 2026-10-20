@@ -365,8 +365,7 @@ static func accept(state: WorldState, suitor: CharacterData, events: Array[Dicti
 	if not can["ok"]:
 		return {"ok": false, "text": str(can["reason"])}
 	var gold := dowry(state, suitor.house_id)
-	var house := state.realm.get_house(suitor.house_id)
-	house["standing"] = clampi(int(house["standing"]) + int(section("suitors").get("standing_accept", 25)), -100, 100)
+	Realm.change_regard(state, suitor.house_id, int(section("suitors").get("standing_accept", 25)))
 	state.house.gold += gold
 	var born_name := suitor.full_name()
 	wed(state, target, suitor, events)

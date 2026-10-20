@@ -1,11 +1,11 @@
 extends TestCase
 ## Lord's Castle (3D/buildings/lords-castle): stone and timber pieces for a
-## lord's castle, made ahead of the castle phase. Nothing in the game builds
-## a castle yet; the demo castles (tools/castle_demo.gd) show the pieces put
-## together, and these tests hold the pieces to the grid they join on.
+## lord's castle. The layouts (scripts/castle/castle_layout.gd) put the
+## pieces together, as the game builds them (Phase 5.3); these tests hold
+## the pieces to the grid they join on.
 
 const DIR := "res://3D/buildings/lords-castle/models/"
-const Demo := preload("res://tools/castle_demo.gd")
+const Demo := preload("res://scripts/castle/castle_layout.gd")
 const BUDGETS := {"SE_Curtain_Wall": 300, "SE_Curtain_Stair": 900, "SE_Curtain_Corner": 300, "SE_Tower_Square": 800,
 	"SE_Tower_Corner": 800, "SE_Gatehouse": 2000, "SE_Keep": 4000, "SE_Palisade": 1000, "SE_Palisade_Corner": 1000,
 	"SE_Palisade_Gate": 1400, "SE_Timber_Tower": 3200, "SE_Motte": 1000, "SE_Motte_Bridge": 1600}

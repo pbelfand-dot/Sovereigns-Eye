@@ -231,6 +231,14 @@ func _draw() -> void:
 				t = clampf(1.0 - (day - float(x["fight"])) / maxf(1.0, float(x["back"]) - float(x["fight"])), 0.0, 1.0)
 			var at := heart.lerp(to_screen(Realm.pos_of(camp)), maxf(0.15, t))
 			_banner(at, UITheme.GOLD)
+	# A noble house's host on the road to the village (Phase 5.3).
+	var raid := state.military.raid
+	var host := state.realm.get_house(int(raid.get("host", -1))) if not raid.is_empty() else {}
+	if not host.is_empty() and host.has("pos"):
+		var road := _road(Realm.center(), Realm.pos_of(host), float((_art["bends"] as Dictionary).get(int(host["id"]), 0.0)))
+		var span := float(Realm.section("hosts").get("days_to_pay", 4))
+		var t := clampf((float(raid["day"]) - float(state.day())) / maxf(1.0, span), 0.0, 1.0) * 0.6 + 0.15
+		_banner(to_screen(road[roundi(t * (road.size() - 1))]), UITheme.BAD)
 	# The places.
 	_village(heart)
 	_text(state.village_name, heart + Vector2(0, 26 * s + 8), maxi(14, roundi(17 * s)), INK, true)

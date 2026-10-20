@@ -10,10 +10,15 @@ extends RefCounted
 static var _noise: FastNoiseLite
 static var _detail: FastNoiseLite
 static var _flat_radius: float = 92.0
+## Ground levelled to the village's height (a castle's site, Phase 5.3):
+## [{inv: Transform3D (world -> the pad's frame), rect: Rect2 (x, z),
+## blend: metres it eases back into the hills}].
+static var _pads: Array = []
 
 
 static func configure(terrain_seed: int, flat_radius: float) -> void:
 	_flat_radius = flat_radius
+	_pads = []
 	_noise = FastNoiseLite.new()
 	_noise.seed = terrain_seed
 	_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
@@ -24,6 +29,11 @@ static func configure(terrain_seed: int, flat_radius: float) -> void:
 	_detail.frequency = 0.05
 
 
+## Levelled ground for the world now loaded (CastleSystem.pads); [] for none.
+static func set_pads(pads: Array) -> void:
+	_pads = pads
+
+
 static func height_at(x: float, z: float) -> float:
 	if _noise == null:
 		return 0.0
@@ -32,7 +42,15 @@ static func height_at(x: float, z: float) -> float:
 	if t <= 0.0:
 		return 0.0
 	var hills := (_noise.get_noise_2d(x, z) * 0.5 + 0.5) * 11.0
-	return t * (hills + 1.5) + t * _detail.get_noise_2d(x, z) * 0.6
+	var h := t * (hills + 1.5) + t * _detail.get_noise_2d(x, z) * 0.6
+	for pad: Dictionary in _pads:
+		var l: Vector3 = (pad["inv"] as Transform3D) * Vector3(x, 0.0, z)
+		var r: Rect2 = pad["rect"]
+		var dx := maxf(maxf(r.position.x - l.x, l.x - r.end.x), 0.0)
+		var dz := maxf(maxf(r.position.y - l.z, l.z - r.end.y), 0.0)
+		var out := Vector2(dx, dz).length()
+		h = lerpf(h, 0.0, 1.0 - smoothstep(0.0, float(pad["blend"]), out))
+	return h
 
 
 static func on_ground(p: Vector3) -> Vector3:

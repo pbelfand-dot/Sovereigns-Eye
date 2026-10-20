@@ -42,7 +42,7 @@
     "hit_range": [0.15, 0.92],
     "damage_base": 10,
     "damage_per_point": 0.16,
-    "armor": { "knight": 0.4, "retainer": 0.2, "watch": 0.2, "levy": 0.0, "heir": 0.25, "raider": 0.1, "leader": 0.2 },
+    "armor": { "knight": 0.4, "retainer": 0.2, "watch": 0.2, "levy": 0.0, "heir": 0.25, "raider": 0.1, "leader": 0.2, "ally": 0.2, "host": 0.2, "host_knight": 0.4 },
     "rout_base": 0.35,
     "rout_per_point": 0.003,
     "traits": { "brave": 0.08, "craven": -0.1, "wrathful": 0.04, "patient": 0.02 },

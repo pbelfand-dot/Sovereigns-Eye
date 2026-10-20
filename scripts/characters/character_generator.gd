@@ -1003,6 +1003,39 @@ static func bring_member(world: WorldState, house: Dictionary, member: Character
 	return member
 
 
+## One of a noble house's fighting men (Phase 5.3): in the host it sends
+## against you (`knight` for its knights; ids -1000 - index, like a band's)
+## or among the men-at-arms it sends in your aid (ids from -3000). Never one
+## of the village; made like anyone (looks, traits), hardened by `combat`.
+static func house_soldier(world: WorldState, house: Dictionary, id: int, knight: bool, combat: Array, stream: String) -> CharacterData:
+	var gen := CharacterGenerator.new()
+	gen._begin_settlers(world, stream)
+	var c := CharacterData.new()
+	c.id = id
+	c.gender = "male" if gen.rng_people.randf() < 0.9 else "female"
+	c.age = gen.rng_people.randi_range(20, 44)
+	c.occupation_id = "knight" if knight else "soldier"
+	c.social_status = "knight" if knight else "commoner"
+	c.house_id = int(house["id"])
+	var tmp := FamilyData.new()
+	tmp.name = str(house["name"]) if knight else ""
+	c.first_name = gen._pick_first_name(c.gender, tmp)
+	c.last_name = tmp.name
+	gen._roll_traits(c, [])
+	var ap := GameData.appearance()
+	c.appearance = gen._roll_appearance(c, str(Seeds.pick(gen.rng_looks, ap["skin_tones"])), str(Seeds.pick(gen.rng_looks, ap["hair_colors"])))
+	c.appearance["face"] = FaceFeatures.roll(gen.rng_looks, c)
+	c.appearance["figure"] = FaceFeatures.roll_figure(gen.rng_figure, c)
+	TalentRoller.roll_attributes(gen.rng_talent, c, "military", [])
+	var skill := gen.rng_talent.randi_range(int(combat[0]), int(combat[1]))
+	c.set_attribute("combat", skill, maxi(c.get_potential("combat"), skill))
+	c.home_building_id = -1
+	c.work_building_id = -1
+	c.happiness = 55.0
+	c.activity_text = "In the service of House %s" % house["name"]
+	return c
+
+
 ## One of a raiding band (Military): grown, hard, made like anyone (looks,
 ## traits) but never one of the village: not added to the world, id below
 ## zero (`index` -> -1000 - index). The leader (index 0) is the band's best.
