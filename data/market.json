@@ -1,0 +1,42 @@
+{
+  "_comment": "Phase 6.1, the market (Market, MarketData). Decided: food, wood and stone can be bought and sold for gold at the village's market: from the start at the merchant's stall in the square, more and on better terms with each Market Hall. Prices move with the season (bread dear in the hungry months before harvest, cheap after it), with the realm's harvest each year, and with your own trade (a big sale floods the market and the price falls; it recovers day by day). Your steward can keep standing orders: buy when a store falls below a mark, sell above another, keeping a reserve of gold.",
+
+  "goods": {
+    "_comment": "price: gold per unit in a fair year at an even market. season: a factor by season. Food is the cheapest to make and the dearest to want; stone is hauled and dressed by hand.",
+    "food": {"price": 0.3, "season": {"Spring": 1.25, "Summer": 1.15, "Autumn": 0.75, "Winter": 1.0}},
+    "wood": {"price": 0.35, "season": {"Spring": 0.95, "Summer": 0.9, "Autumn": 1.0, "Winter": 1.2}},
+    "stone": {"price": 0.9, "season": {"Spring": 1.0, "Summer": 0.95, "Autumn": 1.0, "Winter": 1.15}}
+  },
+
+  "harvest": {
+    "_comment": "Each autumn the realm's harvest comes in: one of these, by weight, from the seed. It sets the price of food until the next harvest, and the village's own fields yield 'yield' times as much that autumn.",
+    "kinds": [
+      {"id": "plenty", "name": "a harvest of plenty", "weight": 25, "price": 0.8, "yield": 1.1},
+      {"id": "fair", "name": "a fair harvest", "weight": 45, "price": 1.0, "yield": 1.0},
+      {"id": "poor", "name": "a poor harvest", "weight": 22, "price": 1.3, "yield": 0.9},
+      {"id": "dearth", "name": "a dearth", "weight": 8, "price": 1.8, "yield": 0.8}
+    ]
+  },
+
+  "trade": {
+    "_comment": "volume: units of each good the market takes or gives in a day: the stall's, and more for each Market Hall. spread: you pay the price times (1 + spread) and are paid it times (1 - spread): the stall's, less for each hall, less again for a merchant gifted at haggling (the best merchant at work's Politics / 100 times merchant_spread), never below min_spread. pressure: each unit you buy raises the day's price by this share (selling lowers it), at most max_pressure either way; it fades by 'recover' each day.",
+    "volume": 25,
+    "volume_per_hall": 60,
+    "spread": 0.3,
+    "spread_per_hall": 0.05,
+    "merchant_spread": 0.1,
+    "min_spread": 0.1,
+    "pressure": 0.004,
+    "max_pressure": 0.6,
+    "recover": 0.3,
+    "lots": [10, 50]
+  },
+
+  "orders": {
+    "_comment": "The steward's standing orders, carried out each morning (a steward must be appointed): buy what a store lacks of its 'keep' mark, sell what it holds above its 'sell' mark, within the day's volume, never spending below 'reserve_days' of wages (and at least reserve_min gold). steps: how much the marks move per click in the panel.",
+    "reserve_days": 10,
+    "reserve_min": 50,
+    "step": 50,
+    "ledger": 30
+  }
+}

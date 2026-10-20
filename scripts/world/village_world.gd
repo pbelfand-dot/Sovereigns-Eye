@@ -333,6 +333,8 @@ func _check_new_day() -> void:
 		_announce(e)
 		if e.has("hired"):
 			_on_hired(int(e["hired"]))
+	for e: Dictionary in Market.daily_update(state):
+		_announce(e)
 	for e: Dictionary in LifeSystem.daily_update(state):
 		_on_life_event(e)
 	for e: Dictionary in MatchSystem.daily_update(state):

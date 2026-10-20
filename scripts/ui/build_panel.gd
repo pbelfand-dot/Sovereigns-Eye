@@ -1,9 +1,10 @@
 class_name BuildPanel
 extends PanelContainer
 ## The village's works: its charter and the next one to petition for,
-## stores with what comes in and goes out each day, buildings the player can
-## order (pick one, then place it in the world), sites under construction
-## with their crews, and the Master of Works.
+## stores with what comes in and goes out each day, the market (Phase 6.1:
+## prices, buying and selling, the steward's standing orders), buildings the
+## player can order (pick one, then place it in the world), sites under
+## construction with their crews, and the Master of Works.
 
 signal character_chosen(character_id: int)
 signal close_requested
@@ -48,6 +49,7 @@ func refresh() -> void:
 		return
 	_charter(st)
 	_stores(st)
+	_market(st)
 	_growth(st)
 	_orders(st)
 	_sites(st)
@@ -115,6 +117,118 @@ func _stores(st: WorldState) -> void:
 	var food_f := TerritorySystem.season_factor(st, "food")
 	if food_f != 1.0:
 		_body.add_child(_wrap("%s: fields yield %d%% of their usual food." % [season, roundi(food_f * 100.0)], 13, UITheme.TEXT_DIM))
+
+
+## The market: today's prices, buying and selling in lots, the steward's
+## standing orders and the latest trades (Phase 6.1).
+func _market(st: WorldState) -> void:
+	if st.market == null:
+		return
+	_heading("Market")
+	var halls := Market.halls(st)
+	var where := "The merchant's stall in the square" if halls == 0 else ("%d Market Hall%s" % [halls, "s" if halls != 1 else ""])
+	var m := Market.best_merchant(st)
+	_body.add_child(_wrap("%s: up to %d of each good a day. You pay %d%% over the price and get %d%% under it%s." % [where, Market.volume(st),
+		roundi(Market.spread(st) * 100.0), roundi(Market.spread(st) * 100.0), (", %s haggling for you (Politics %d)" % [m.first_name, m.get_current("politics")]) if m else ""], 14, UITheme.TEXT))
+	var h := Market.harvest(st)
+	_body.add_child(_wrap("This year: %s. Food is %s until the next harvest; bread is dearest in spring and cheapest after the harvest." % [h["name"],
+		"dear" if float(h.get("price", 1.0)) > 1.05 else ("cheap" if float(h.get("price", 1.0)) < 0.95 else "at its usual price")], 13, UITheme.TEXT_DIM))
+	var lots: Array = Market.section("trade").get("lots", [10, 50])
+	for good: String in Market.GOODS:
+		var def := TerritorySystem.resource_def(good)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 5)
+		var name_l := UITheme.label(str(def.get("name", good)), 15, Color(str(def.get("color", "#ffffff"))))
+		name_l.custom_minimum_size.x = 56
+		row.add_child(name_l)
+		var p := Market.price(st, good)
+		var fair := Market.fair_price(st, good)
+		var price_l := UITheme.label("%.2f" % p, 15, UITheme.TEXT if absf(p - fair) < 0.005 else UITheme.ACCENT)
+		price_l.custom_minimum_size.x = 40
+		price_l.tooltip_text = "Gold a unit at the market today (buy at %.2f, sell at %.2f).%s" % [Market.buy_price(st, good), Market.sell_price(st, good),
+			"" if absf(p - fair) < 0.005 else " Your own trade has moved it from %.2f; it recovers day by day." % fair]
+		price_l.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.add_child(price_l)
+		var room := Market.room(st, good)
+		for n: int in lots:
+			var units := n
+			var have := floori(TerritorySystem.amount(st, good))
+			var sell_n := mini(units, mini(room, have))
+			var b := UITheme.button("Sell %d" % units, func() -> void: _trade(Market.sell(st, good, units)))
+			b.disabled = sell_n <= 0
+			b.tooltip_text = "Sell %d for %d gold." % [sell_n, -Market.quote(st, good, -sell_n)] if sell_n > 0 else ("The market will take no more today." if room <= 0 else "Nothing to sell.")
+			row.add_child(b)
+		for n: int in lots:
+			var units := n
+			var buy_n := Market.can_buy_units(st, good, units)
+			var cost := Market.quote(st, good, buy_n)
+			var b := UITheme.button("Buy %d" % units, func() -> void: _trade(Market.buy(st, good, units)))
+			b.disabled = buy_n <= 0 or cost > st.house.gold
+			b.tooltip_text = ("Buy %d for %d gold." % [buy_n, cost]) if buy_n > 0 else ("The market has no more today." if room <= 0 else "The stores are full.")
+			row.add_child(b)
+		_body.add_child(row)
+	if room_note(st) != "":
+		_body.add_child(_wrap(room_note(st), 13, UITheme.TEXT_DIM))
+	# The steward's standing orders.
+	_body.add_child(UITheme.label("Your steward's standing orders", 15, UITheme.ACCENT))
+	if not Market.has_steward(st):
+		_body.add_child(_wrap("Appoint a steward (Court panel, a retainer's card) to keep them: each morning, buy what a store lacks of its mark and sell what it holds above another.", 13, UITheme.TEXT_DIM))
+	else:
+		_body.add_child(_wrap("Each morning: buy up to the keep mark, sell above the sell mark, never spending below %d gold (the wages' reserve)." % Market.reserve(st), 13, UITheme.TEXT_DIM))
+	var step := int(Market.section("orders").get("step", 50))
+	for good: String in Market.GOODS:
+		var o := st.market.order(good)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 5)
+		var name_l := UITheme.label(TerritorySystem.resource_name(good), 14, UITheme.TEXT)
+		name_l.custom_minimum_size.x = 56
+		row.add_child(name_l)
+		for which: String in ["keep", "sell"]:
+			var key := which
+			var v := int(o[key])
+			row.add_child(UITheme.label("Keep" if key == "keep" else "Sell above", 14, UITheme.TEXT_DIM))
+			row.add_child(UITheme.button("-", func() -> void: _set_mark(st, good, key, v - step if v - step > 0 else -1)))
+			var v_l := UITheme.label("none" if v < 0 else str(v), 14, UITheme.TEXT)
+			v_l.custom_minimum_size.x = 40
+			v_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			row.add_child(v_l)
+			row.add_child(UITheme.button("+", func() -> void: _set_mark(st, good, key, step if v < 0 else mini(v + step, roundi(TerritorySystem.capacity(st, good))))))
+		_body.add_child(row)
+	# The latest trades.
+	var recent := st.market.ledger.slice(maxi(0, st.market.ledger.size() - 4))
+	recent.reverse()
+	for e: Dictionary in recent:
+		var units := int(e["units"])
+		_body.add_child(_wrap("%s: %s %s %d %s for %d gold." % [Calendar.format_date(int(e["day"]) * Calendar.MINUTES_PER_DAY), "You" if e["by"] == "you" else "Your steward",
+			"bought" if units > 0 else "sold", absi(units), TerritorySystem.resource_name(str(e["good"])).to_lower(), absi(int(e["gold"]))], 13, UITheme.TEXT_DIM))
+
+
+## What's left to trade today, when some of it has gone.
+func room_note(st: WorldState) -> String:
+	var parts: Array[String] = []
+	for good: String in Market.GOODS:
+		var left := Market.room(st, good)
+		if left < Market.volume(st):
+			parts.append("%d %s" % [left, TerritorySystem.resource_name(good).to_lower()])
+	return ("Left to trade today: " + ", ".join(parts) + ".") if not parts.is_empty() else ""
+
+
+func _trade(r: Dictionary) -> void:
+	Game.notify.emit(str(r["text"]), Game.COLOR_INFO if r["ok"] else Game.COLOR_BAD)
+	Audio.play("coins" if r["ok"] else "ui_error")
+	if world:
+		world.territory_changed.emit()
+	refresh()
+
+
+func _set_mark(st: WorldState, good: String, which: String, value: int) -> void:
+	var o := st.market.order(good)
+	if which == "keep":
+		Market.set_order(st, good, value, int(o["sell"]))
+	else:
+		Market.set_order(st, good, int(o["keep"]), value)
+	Audio.play("ui_click")
+	refresh()
 
 
 func _growth(st: WorldState) -> void:

@@ -50,6 +50,9 @@ func _init() -> void:
 			MoodSystem.daily_update(c, st, rng)
 		CourtSystem.daily_update(st, Seeds.rng(st.world_seed, "court_day_%d" % day))
 		TerritorySystem.daily_update(st)
+		for e: Dictionary in Market.daily_update(st):
+			if e.has("harvest") and str(e["harvest"]) in ["dearth", "plenty"]:
+				print("   day %4d  %s" % [day, e["text"]])
 		for e: Dictionary in LifeSystem.daily_update(st):
 			for key: String in ["born", "gone", "moved"]:
 				if not e.has(key):

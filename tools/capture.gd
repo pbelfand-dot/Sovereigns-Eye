@@ -48,6 +48,7 @@ var battle_only := false
 var battle_stats := false
 var realm_only := false
 var keep_only := false
+var market_only := false
 
 
 func _ready() -> void:
@@ -82,6 +83,7 @@ func _ready() -> void:
 	battle_stats = args.has("battle_stats")
 	realm_only = args.has("realm")
 	keep_only = args.has("keep")
+	market_only = args.has("market")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -192,6 +194,10 @@ func _run() -> void:
 		return
 	if keep_only:
 		await _keep_shots()
+		get_tree().quit()
+		return
+	if market_only:
+		await _market_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1828,6 +1834,55 @@ func _keep_shots() -> void:
 	_clear_toasts(world)
 	await _shot("keep_9_report.png")
 	print("keep: report %s" % st.military.last_report)
+
+
+## The market (Phase 6.1): the Build panel's Market section (prices, the
+## harvest, buying and selling, the steward's standing orders, the latest
+## trades) and the Court panel's treasury, after a few days of trade.
+func _market_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	var autumn := Calendar.seasons().find("Autumn") * Calendar.days_per_season()
+	st.minutes += float(Calendar.days_per_year() + autumn - 3) * Calendar.MINUTES_PER_DAY + 3.0 * 60.0
+	st.house.gold = 640
+	for r: String in Market.GOODS:
+		st.territory.stock[r] = 320.0
+	for c in st.characters:
+		if c.age >= 25 and not st.is_player(c) and c.occupation_id != "merchant":
+			st.house.offices["steward"] = c.id
+			break
+	Market.set_order(st, "food", 250, 450)
+	Market.set_order(st, "stone", 350, -1)
+	Market.sell(st, "wood", 50)
+	for d in 4:
+		st.minutes += Calendar.MINUTES_PER_DAY
+		st.last_daily_update = st.day()
+		TerritorySystem.daily_update(st)
+		for e: Dictionary in Market.daily_update(st):
+			print("market: %s" % e["text"])
+	Market.buy(st, "stone", 10)
+	var world := await _boot_world()
+	world.ui._help.visible = false
+	_clear_toasts(world)
+	Input.warp_mouse(Vector2(4, 890))
+	world.ui.toggle_build()
+	await _wait(6)
+	var show := func(panel: Control, prefix: String) -> void:
+		for l: Label in panel.find_children("*", "Label", true, false):
+			if l.text.begins_with(prefix):
+				var scroll := panel.find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+				scroll.scroll_vertical = maxi(0, int(l.global_position.y - scroll.global_position.y) + scroll.scroll_vertical - 8)
+				break
+	show.call(world.ui._build, "Market")
+	await _wait(6)
+	await _shot("market_0_panel.png")
+	world.ui.toggle_build()
+	world.ui.toggle_court()
+	await _wait(6)
+	show.call(world.ui._court, "Gold ")
+	await _wait(6)
+	await _shot("market_1_treasury.png")
+	print("market: %s" % str(Market.steward_summary(st, 10)))
 
 
 ## How raids fought in the village turn out against the captains' odds
