@@ -97,6 +97,10 @@ func test_unpaid_wages_and_low_loyalty_can_end_service() -> void:
 		CourtSystem.appoint(state, office_ids[i], c)
 		c.loyalty = 0.0
 	state.house.gold = 0
+	# The mill stands idle (its toll alone would pay these wages).
+	for c in state.characters:
+		if c.occupation_id == "miller":
+			c.away_at = "cart"
 	check(CourtSystem.daily_wages(state) > CourtSystem.daily_income(state), "the test household cannot cover wages")
 
 	# Pick a deterministic RNG seed whose first departure roll succeeds.
