@@ -81,7 +81,7 @@ bandit camps watch.
   Over 400 days the carts brought home 6,900 gold on seed 9 (44 carts, 2
   waylaid), 2,800 on 4242 (24 carts, 3 waylaid: its roads pass big camps
   the steward won't risk) and 10,500 on 12345 (61 carts, 1 waylaid),
-  about a fifth of a grown town's income where the roads are safe. Gold at
+  about a sixth of a grown town's income where the roads are safe. Gold at
   day 400 is 36,000, 63,000 and 58,000 (31,000, 62,000 and 48,000
   without): it still piles up, for Phase 6.3's Crown and works to take.
 - Save v20 (carts).
