@@ -1994,13 +1994,13 @@ func _cart_shots() -> void:
 	var speed := float(CartView.cfg()["speed"])
 	# The camera behind and a little aside, over the road (the camera sits
 	# at its yaw's (sin, cos) from the point it looks at).
-	var shots := [[0.12, 20.0, "carts_0_square.png"], [0.45, 22.0, "carts_1_road.png"], [0.8, 36.0, "carts_2_leaving.png"]]
+	var shots := [[0.1, 12.0, "carts_0_square.png"], [0.62, 13.0, "carts_1_road.png"], [0.85, 22.0, "carts_2_leaving.png"]]
 	for s: Array in shots:
 		st.minutes = float(cart["set_out_min"]) + length * float(s[0]) / speed
 		await _wait(3)
 		var at: Dictionary = CartView.along(pts, length * float(s[0]))
 		var dir: Vector3 = at["dir"]
-		world.camera_rig.set_yaw(atan2(-dir.x, -dir.z) + 0.6, true)
+		world.camera_rig.set_yaw(atan2(-dir.x, -dir.z) + 0.9, true)
 		world.camera_rig.look_at_point(at["at"], float(s[1]), true)
 		await _wait(8)
 		await _shot(str(s[2]))
@@ -2010,13 +2010,13 @@ func _cart_shots() -> void:
 		world._check_new_day()
 	var dusk := float(st.day() * Calendar.MINUTES_PER_DAY + int(CartView.cfg()["home_hour"]) * 60)
 	print("carts: home road %s" % cart["waylaid"])
-	for s: Array in [[0.35, 22.0, "carts_3_home.png"], [1.15, 26.0, "carts_4_square.png"]]:
+	for s: Array in [[0.5, 14.0, "carts_3_home.png"], [1.15, 15.0, "carts_4_square.png"]]:
 		st.minutes = dusk + length * float(s[0]) / speed
 		await _wait(3)
 		var w := CartView.where(st, cart, st.minutes)
 		var at: Dictionary = CartView.along(pts, float(w["at"]))
 		var dir: Vector3 = at["dir"]
-		world.camera_rig.set_yaw(atan2(dir.x, dir.z) + 0.6, true)
+		world.camera_rig.set_yaw(atan2(dir.x, dir.z) + 0.9, true)
 		world.camera_rig.look_at_point(at["at"], float(s[1]), true)
 		_clear_toasts(world)
 		await _wait(8)

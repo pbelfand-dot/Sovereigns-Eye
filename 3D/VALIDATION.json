@@ -1,10 +1,10 @@
 {
   "format": "glTF 2.0 (GLB and JSON glTF)",
-  "models_checked": 1547,
-  "models_valid": 1547,
-  "models_with_previews": 651,
+  "models_checked": 1550,
+  "models_valid": 1550,
+  "models_with_previews": 654,
   "models_with_animation": 65,
-  "external_dependencies_checked": 2897,
+  "external_dependencies_checked": 2911,
   "missing_dependencies": [],
   "errors": [],
   "checks": [

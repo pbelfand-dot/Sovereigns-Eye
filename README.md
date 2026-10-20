@@ -310,6 +310,9 @@ The village makes things to sell, and sends them out. `Trade`, `data/trade.json`
 ![The Build panel's stores: the wares and who makes them](docs/screenshots/trade_wares.jpg)
 ![A seat's Trade section: what they want, the prices there, a cart loaded and escorted, the risk on the road](docs/screenshots/trade_seat.jpg)
 ![A cart on the road to a seat, on the realm map](docs/screenshots/trade_map.jpg)
+![A cart loaded in the square sets out, its carter at the horse's head and its escort behind](docs/screenshots/carts_square.jpg)
+![Rolling out along the road toward the seat](docs/screenshots/carts_road.jpg)
+![Coming home at dusk on its last day on the road](docs/screenshots/carts_home.jpg)
 
 ### Controls
 
@@ -570,8 +573,8 @@ as readable JSON.
   furnished or lived in yet.
 * A grown town piles up gold: the market turns it into goods, but nothing
   yet takes it away (the Crown's tax and the lord's works come in Phase 6.3).
-* Carts and their fights on the road are told, not shown: no cart rolls
-  out of the village or along the roads in the 3D world yet.
+* A cart is seen setting out and coming home in the village, but not on
+  the realm's roads, and a fight on the road is told, not shown.
 * The noble houses don't yet act on their own: no wars between them, no
   help sent to you when you're raided, no wards sent to you to foster. Their
   young you meet are the only ones of their people the game keeps.
