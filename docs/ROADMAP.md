@@ -65,7 +65,19 @@ the realm's claims on it. `ManorSystem` (static), `ManorData`
 - UI: the Court panel's **Manor** (the mill and its toll, the querns, the
   fair or buying one, the next levy and the choice to hide); the treasury
   counts the mill's toll and the fair's stallage.
-- MANOR_CALIBRATION
+- Calibration (`tools/charter_sim.gd`, 400 days, the steward buys the
+  fair; seeds 9 / 4242 / 12345): the mill's toll 4,100 / 4,118 / 4,320
+  gold; the fair 24 / 24 / 27 days, 2,260 / 2,438 / 2,650 gold in
+  stallage; the levies 7,110 / 10,872 / 12,153 gold, nearly all of it
+  King Richard's ransom (6,927 / 10,734 / 12,002). Gold at day 400 with
+  the fair and the levies against without (`MANOR=0`): 42,425 vs 40,863;
+  63,985 vs 70,801; 72,171 vs 64,450: in ten years the fair's trade and
+  stallage about pay for the Crown. Hiding a third each time (`HIDE=1`,
+  seeds 9 and 12345): no neighbour told in those four assessments (a
+  carucage can't be hidden), and the house paid 4,026 and 8,147. Over 40
+  years (`tools/life_sim.gd`) ten levies, a seventh to a fifteenth each
+  after the carucages. A grown Town's gold still piles up (40–75 thousand
+  at day 400): what it can be spent on is a later phase's question.
 - Save v22 (the manor).
 
 ## Crafts and carts (Phase 6.2)
