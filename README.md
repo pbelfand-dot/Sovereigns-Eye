@@ -233,8 +233,9 @@ Combat and Leadership finally matter. `Military`, `Battle`, `data/military.json`
 
 ![The Court panel's Defence: a band on the road, your chances, pay or call the levy](docs/screenshots/battle_defence.jpg)
 ![The warband's line across the road as the band comes up](docs/screenshots/battle_line.jpg)
-![The fight: your warband (green bars) against the raiders (red)](docs/screenshots/battle_melee.jpg)
-![After the fight: who struck down raiders, who fell, who died](docs/screenshots/battle_report.jpg)
+![The charge: the line wheels onto the band, swords and shields in hand](docs/screenshots/battle_charge.jpg)
+![The fight, close: your warband (green bars) against the raiders (red)](docs/screenshots/battle_melee.jpg)
+![After the fight, here lost at even odds: the loot taken, who struck down raiders, who fell, who died](docs/screenshots/battle_report.jpg)
 
 ### Controls
 
