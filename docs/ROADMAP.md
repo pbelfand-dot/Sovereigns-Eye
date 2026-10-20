@@ -55,6 +55,14 @@ two orders in a fight (**Charge now**, **Fall back**).
   seed: woods, hills, a river; regard rings), `RealmPanel` (J), the
   `VisitPanel`, camps and the expedition in the Court panel's Defence,
   camp fights in the battle report.
+- Calibration (`life_sim.gd <seed> 40 steward`; the steward bot now also
+  rides against a known camp when the captains' odds are good). Before
+  camps were hidden, every fresh camp was cleared within days and no raid
+  ever came; now, over 40 years: seed 9, 17 raids (16 won), 15 camps
+  cleared, 15 fighters dead; 12345, 16 raids (all won), 13 camps, 4 dead;
+  4242, 16 raids (11 won, tribute paid three times, a camp held against
+  the warband), 9 camps, 22 dead. A band strikes every two to three years,
+  and the danger lies in who you lose.
 
 ## Military (Phase 5.1)
 

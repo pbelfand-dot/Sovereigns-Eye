@@ -552,11 +552,17 @@ func journey(house_id: int) -> void:
 		_end_away(out)  # the journey ended on the road (a death in the house)
 		return
 	_years_overlay.visible = false
+	# Home stands still while you're at the seat.
+	var was_paused := world.paused
+	world.paused = true
+	world.speed_changed.emit(world.time_scale())
 	_visit_overlay.visible = true
 	_visit.open(Realm.arrive(st))
 	Audio.play("panel_open")
 	await _visit.closed
 	_visit_overlay.visible = false
+	world.paused = was_paused
+	world.speed_changed.emit(world.time_scale())
 	var back := Realm.take_leave(st)
 	_years_overlay.visible = true
 	_years.show_progress(0, back, st.whole_minutes())
