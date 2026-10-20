@@ -60,6 +60,8 @@ var speed_index := 0
 var passing := false
 ## The raid being fought in the village (Phase 5.1), or null.
 var battle: Battle
+## The house's castle, standing or rising (Phase 5.3).
+var castle_view: CastleView
 ## Music that overrides the time of day ("battle", then "victory"/"defeat").
 var music_override := ""
 var _music_override_left := 0.0
@@ -118,8 +120,13 @@ func _ready() -> void:
 	builder = VillageBuilder.new()
 	builder.name = "Village"
 	builder.territory = state.territory
+	builder.castle_pads = CastleSystem.pads(state)
+	builder.castle_yard = CastleSystem.yard(state)
 	add_child(builder)
 	builder.build(state.layout)
+	castle_view = CastleView.new()
+	add_child(castle_view)
+	castle_view.setup(state)
 	graph = RoadGraph.new()
 	graph.build(state.layout)
 	_compute_worker_slots()
@@ -336,6 +343,8 @@ func _check_new_day() -> void:
 		_on_life_event(e)
 	for e: Dictionary in Realm.daily_update(state):
 		_on_life_event(e)
+	for e: Dictionary in CastleSystem.daily_update(state):
+		_announce(e)
 	for e: Dictionary in GrowthSystem.daily_update(state):
 		_on_growth_event(e)
 	_replan_crew_changes(crews_before)
@@ -364,6 +373,7 @@ func _announce(e: Dictionary) -> void:
 # --- Building (Phase 3) -------------------------------------------------------------------
 
 func _advance_construction(game_minutes: float) -> void:
+	_advance_castle(game_minutes)
 	if state.territory.sites.is_empty():
 		return
 	var finished := TerritorySystem.advance(state, game_minutes)
@@ -472,6 +482,46 @@ func _on_life_event(e: Dictionary) -> void:
 			ui.show_battle_report(e["battle"])
 
 
+# --- The castle (Phase 5.3) ------------------------------------------------------------------
+
+## The works go on; pieces rise as they're done; the castle stands at last.
+func _advance_castle(game_minutes: float) -> void:
+	if state.castle == null or state.castle.works.is_empty():
+		return
+	var finished := CastleSystem.advance(state, game_minutes)
+	if finished:
+		for e: Dictionary in CastleSystem.complete(state):
+			_announce(e)
+		if not passing:
+			Audio.play("knighted")
+	if castle_view:
+		castle_view.refresh()
+
+
+## Orders the house's castle (the Court panel): the steward chooses the
+## ground, it's levelled and cleared, a lane laid to the gate. {ok, text}
+func order_castle(kind: String) -> Dictionary:
+	var had_site := state.castle.has_site()
+	var r := CastleSystem.order(state, kind)
+	if not r["ok"]:
+		return r
+	if not had_site:
+		builder.castle_pads = CastleSystem.pads(state)
+		builder.castle_yard = CastleSystem.yard(state)
+		builder.refresh_terrain()
+		_layout_changed()
+		for npc: NPC in npcs.values():
+			npc.global_position = TerrainHeight.on_ground(npc.global_position)
+	castle_view.refresh()
+	for id in state.castle.builders:
+		var npc := npc_of(id)
+		if npc:
+			npc.brain.replan()
+	if ui:
+		ui.refresh()
+	return r
+
+
 # --- Raids (Phase 5.1) ------------------------------------------------------------------------
 
 ## The band due today strikes at its hour: the fight is played out here.
@@ -538,6 +588,7 @@ func pass_time(days: int, away: bool = false) -> Dictionary:
 			state.minutes += 30.0
 			for site in TerritorySystem.advance(state, 30.0):
 				_finish_site(site)
+			_advance_castle(30.0)
 		builder.update_sites()
 		_replan_crew_changes(crews_before)
 		_check_new_day()

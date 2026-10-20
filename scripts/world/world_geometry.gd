@@ -40,6 +40,21 @@ static func _out_of_box(b: BuildingData, p: Vector3, radius: float) -> Vector3:
 	return Vector3(out.x, p.y, out.z)
 
 
+## As _out_of_box, for any box: its middle, turn and half extents (x, z).
+static func _out_of_obox(center: Vector3, basis: Basis, half: Vector2, p: Vector3, radius: float) -> Vector3:
+	var local := basis.inverse() * (p - center)
+	var hx := half.x + radius
+	var hz := half.y + radius
+	if absf(local.x) >= hx or absf(local.z) >= hz:
+		return p
+	if hx - absf(local.x) < hz - absf(local.z):
+		local.x = hx * (1.0 if local.x >= 0.0 else -1.0)
+	else:
+		local.z = hz * (1.0 if local.z >= 0.0 else -1.0)
+	var out := center + basis * local
+	return Vector3(out.x, p.y, out.z)
+
+
 static func _out_of_circle(center: Vector2, r: float, p: Vector3) -> Vector3:
 	var d := Vector2(p.x, p.z) - center
 	var len := d.length()
@@ -84,6 +99,15 @@ static func resolve(state: WorldState, p: Vector3, radius: float) -> Vector3:
 			if absf(o.x - p.x) > 3.0 or absf(o.y - p.z) > 3.0:
 				continue
 			p = _out_of_circle(Vector2(o.x, o.y), o.z + radius, p)
+		# The castle's walls, towers, keep and motte (Phase 5.3).
+		for o: Dictionary in CastleSystem.obstacles(state):
+			var oc: Vector3 = o["center"]
+			if Vector2(oc.x - p.x, oc.z - p.z).length() > float(o["reach"]) + radius + 0.5:
+				continue
+			if o.has("r"):
+				p = _out_of_circle(Vector2(oc.x, oc.z), float(o["r"]) + radius, p)
+			else:
+				p = _out_of_obox(oc, o["basis"], o["half"], p, radius)
 	var limit := state.layout.extent - float(c.get("walk", {}).get("edge_margin", 6.0))
 	var flat := Vector2(p.x, p.z)
 	if flat.length() > limit:

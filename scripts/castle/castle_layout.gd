@@ -1,9 +1,10 @@
+class_name CastleLayout
 extends RefCounted
-## Demo castles assembled from the Lord's Castle family
-## (3D/buildings/lords-castle), for the capture tool and the family's tests.
-## The pieces are art made ahead of the castle phase: nothing in the game
-## builds a castle yet, so these layouts live here with the tools, not in
-## data/.
+## The house's castle as it stands, assembled from the Lord's Castle family
+## (3D/buildings/lords-castle): the layouts the game builds (Phase 5.3,
+## CastleSystem) and the capture tool shows. The pieces were made ahead of
+## the castle phase as demo castles; their layouts are geometry, kept here
+## with the code that places them.
 ##
 ## A layout is a list of [model, position, yaw (rad)] in the castle's own
 ## frame: the ground at y = 0, the gate toward +Z. Pieces are the family's
@@ -147,9 +148,22 @@ static func find_spots(lay: VillageLayout) -> Dictionary:
 ## buildings, fields, roads, yards and the footprints in `taken`
 ## ([Transform3D, Rect2]), inside the map.
 static func spots(lay: VillageLayout, kind: String, taken: Array, count: int) -> Array[Transform3D]:
-	var rect := footprint(kind).grow(3.0)
+	return spots_for(lay, footprint(kind).grow(3.0), taken, count)
+
+
+## The ground the house's castle needs (CastleSystem): room for the motte
+## and bailey and for the stone castle that takes its place.
+static func site_rect() -> Rect2:
+	return footprint("stone").merge(footprint("timber"))
+
+
+## As `spots`, for any footprint `rect` (in the castle's own frame). For the
+## house's own castle (`house`, CastleSystem) see spot_clear.
+static func spots_for(lay: VillageLayout, rect: Rect2, taken: Array, count: int, house: bool = false) -> Array[Transform3D]:
 	var out: Array[Transform3D] = []
-	var dist := 50.0
+	# The house's castle keeps to the edge of the land the village builds on,
+	# leaving that land to the village.
+	var dist := maxf(50.0, lay.flat_radius) if house else 50.0
 	while dist < lay.extent * 1.45:
 		for k in 48:
 			var ang := k * TAU / 48.0
@@ -157,7 +171,7 @@ static func spots(lay: VillageLayout, kind: String, taken: Array, count: int) ->
 			var to := -at.normalized()
 			for turn in [0.0, PI * 0.25, -PI * 0.25, PI * 0.5, -PI * 0.5]:
 				var xf := Transform3D(Basis(Vector3.UP, atan2(to.x, to.z) + turn), at)
-				if spot_clear(lay, xf, rect, taken):
+				if spot_clear(lay, xf, rect, taken, house):
 					out.append(xf)
 					if out.size() >= count:
 						return out
@@ -166,12 +180,22 @@ static func spots(lay: VillageLayout, kind: String, taken: Array, count: int) ->
 	return out
 
 
-static func spot_clear(lay: VillageLayout, xf: Transform3D, rect: Rect2, taken: Array) -> bool:
+## For the house's own castle (`house`), boulders don't stand in the way
+## (they're cleared, CastleSystem.clear_site) and its back may reach
+## HOUSE_REACH metres past the map's edge into the woods, so long as the
+## ground before its gate is in the village's reach.
+const HOUSE_REACH := 24.0
+
+
+static func spot_clear(lay: VillageLayout, xf: Transform3D, rect: Rect2, taken: Array, house: bool = false) -> bool:
 	var inv := xf.affine_inverse()
+	var bound := lay.extent + HOUSE_REACH if house else lay.extent - 4.0
 	for c in [rect.position, rect.position + Vector2(rect.size.x, 0), rect.end, rect.position + Vector2(0, rect.size.y)]:
 		var w := xf * Vector3(c.x, 0, c.y)
-		if absf(w.x) > lay.extent - 4.0 or absf(w.z) > lay.extent - 4.0:
+		if absf(w.x) > bound or absf(w.z) > bound:
 			return false
+	if house and (xf * Vector3(0, 0, rect.end.y + 10.0)).length() > lay.extent - 8.0:
+		return false
 	var hits := func(p: Vector3, r: float) -> bool:
 		var l := inv * p
 		return rect.grow(r).has_point(Vector2(l.x, l.z))
@@ -182,6 +206,8 @@ static func spot_clear(lay: VillageLayout, xf: Transform3D, rect: Rect2, taken: 
 		if hits.call(f["center"], (f["size"] as Vector2).length() * 0.5):
 			return false
 	for p: Dictionary in lay.props:
+		if house and str(p["type"]) == "rock":
+			continue
 		if hits.call(p["pos"], 3.0):
 			return false
 	for road: Dictionary in lay.roads:

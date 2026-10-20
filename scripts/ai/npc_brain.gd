@@ -249,6 +249,12 @@ func _plan_work(style: String) -> void:
 	if site:
 		_plan_build(site)
 		return
+	if CastleSystem.is_builder(world.state, c):
+		var st := world.state
+		var at := CastleSystem.work_spot(st, st.castle.builders.find(c.id))
+		_go(at, "Off to the castle works")
+		_stay(rng.randf_range(40, 90), "work", "Building the %s" % CastleSystem.name_of(st.castle.works), st.castle.transform().origin)
+		return
 	var wp := world.state.get_building(c.work_building_id)
 	var occ := c.occupation()
 	var text := str(occ.get("activity", "Working"))

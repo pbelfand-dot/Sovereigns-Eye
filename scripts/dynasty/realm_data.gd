@@ -9,9 +9,10 @@ extends RefCounted
 ## heir's journey under way (trip).
 
 ## [{id, name, seat, renown, standing, family, pos [x, y], days, known_for,
-## head, head_gender, visited}] ("family": the FamilyData their visitors
-## belong to, -1 until one comes; "visited": the last day the heir arrived
-## there, -1 if never).
+## head, head_gender, visited, rival, truce}] ("family": the FamilyData
+## their visitors belong to, -1 until one comes; "visited": the last day the
+## heir arrived there, -1 if never; "rival": the house it's at odds with
+## (Phase 5.3); "truce": the day its peace with yours ends, -1 for none).
 var houses: Array[Dictionary] = []
 ## The day the next suitor is due (MatchSystem), -1 until it's set.
 var next_suitor_day: int = -1
@@ -121,6 +122,24 @@ func place(world_seed: int) -> void:
 			h["head_gender"] = gender
 		if not h.has("visited"):
 			h["visited"] = -1
+	# Phase 5.3: rivals, in pairs (the odd one out rivals the first), and no
+	# truce yet.
+	var rng2 := Seeds.rng(world_seed, "realm_rivals")
+	var ids: Array = houses.map(func(x: Dictionary) -> int: return int(x["id"]))
+	Seeds.shuffle(rng2, ids)
+	for i in ids.size():
+		var mate := -1
+		if i % 2 == 1:
+			mate = int(ids[i - 1])
+		elif i + 1 < ids.size():
+			mate = int(ids[i + 1])
+		elif i > 0:
+			mate = int(ids[0])  # the odd one out
+		var h := get_house(int(ids[i]))
+		if not h.has("rival"):
+			h["rival"] = mate
+		if not h.has("truce"):
+			h["truce"] = -1
 
 
 func to_dict() -> Dictionary:
@@ -153,6 +172,9 @@ static func from_dict(d: Dictionary) -> RealmData:
 			house["head_gender"] = str(h.get("head_gender", "male"))
 		if h.has("visited"):
 			house["visited"] = int(h["visited"])
+		if h.has("rival"):
+			house["rival"] = int(h["rival"])
+			house["truce"] = int(h.get("truce", -1))
 		r.houses.append(house)
 	r.next_suitor_day = int(d.get("next_suitor_day", -1))
 	var young: Dictionary = d.get("households", {})

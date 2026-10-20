@@ -244,7 +244,7 @@ static func gift(state: WorldState, c: CharacterData) -> Dictionary:
 static func retainer_cap(state: WorldState) -> int:
 	var h := section("house")
 	return int(h.get("retainer_cap_base", 4)) + floori(state.house.renown / float(h.get("renown_per_extra_retainer", 15))) \
-		+ (CharterSystem.retainer_bonus(state) if state.territory else 0)
+		+ (CharterSystem.retainer_bonus(state) if state.territory else 0) + CastleSystem.retainer_bonus(state)
 
 
 static func retainer_count(state: WorldState) -> int:

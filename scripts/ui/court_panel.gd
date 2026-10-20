@@ -53,6 +53,7 @@ func refresh() -> void:
 		var role := CourtSystem.role_name(st, player)
 		_body.add_child(_person_button(player, "%s: %s (you), %d" % ["Heir" if role.begins_with("Heir") else role, player.full_name(), player.age]))
 	_defence(st)
+	_castle(st)
 	_succession(st)
 	_marriages(st)
 	var income := CourtSystem.daily_income(st)
@@ -126,21 +127,26 @@ func _defence(st: WorldState) -> void:
 	var raid := m.raid
 	if world.battle:
 		var s := world.battle.standing()
-		_body.add_child(_wrap("A fight is on! Yours standing %d, raiders %d. Walk up to a raider and press %s to strike." % [s["ours"], s["theirs"], world.key_hint("interact")], 15, UITheme.BAD))
+		var foe := "of the host" if raid.has("host") else "raiders"
+		_body.add_child(_wrap("A fight is on! Yours standing %d, %s %d. Walk up to one of them and press %s to strike." % [s["ours"], foe, s["theirs"], world.key_hint("interact")], 15, UITheme.BAD))
 	elif not raid.is_empty():
 		var when := Calendar.format_date(int(raid["day"]) * Calendar.MINUTES_PER_DAY)
-		_body.add_child(_wrap("%s, %d strong, are camped by the %s road. They strike on %s at %d o'clock." % [Military._cap(str(raid["name"])), int(raid["size"]), raid["road"], when, Military.strike_hour()], 15, UITheme.BAD))
+		var host := int(raid.get("host", -1))
+		if host >= 0:
+			_body.add_child(_wrap("%s, %d strong, comes by the %s road. It strikes on %s at %d o'clock unless you pay %s's demand." % [Military._cap(str(raid["name"])), int(raid["size"]), raid["road"], when, Military.strike_hour(), st.realm.house_title(host)], 15, UITheme.BAD))
+		else:
+			_body.add_child(_wrap("%s, %d strong, are camped by the %s road. They strike on %s at %d o'clock." % [Military._cap(str(raid["name"])), int(raid["size"]), raid["road"], when, Military.strike_hour()], 15, UITheme.BAD))
 		var odds := Military.odds(st)
 		_body.add_child(_wrap("Your captains reckon your chances %s.%s" % [Military.odds_word(odds), " (The levy is called.)" if raid.get("levy", false) else ""], 14, UITheme.GOOD if odds >= 0.65 else (UITheme.TEXT if odds >= 0.4 else UITheme.BAD)))
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
-		var pay := UITheme.button("Pay them off (%d gold)" % int(raid["tribute"]), func() -> void:
+		var pay := UITheme.button(("Pay their demand (%d gold)" if raid.has("host") else "Pay them off (%d gold)") % int(raid["tribute"]), func() -> void:
 			var r := Military.pay_off(st)
 			Game.notify.emit(str(r["text"]), Game.COLOR_INFO if r["ok"] else Game.COLOR_BAD)
 			Audio.play("coins" if r["ok"] else "ui_error")
 			refresh())
 		pay.disabled = st.house.gold < int(raid["tribute"])
-		pay.tooltip_text = "They go, and come back another year. A house that pays is thought a little less of." if not pay.disabled else "You haven't the gold."
+		pay.tooltip_text = "You haven't the gold." if pay.disabled else ("Their host goes home, and they keep the peace awhile." if raid.has("host") else "They go, and come back another year. A house that pays is thought a little less of.")
 		row.add_child(pay)
 		if not raid.get("levy", false):
 			var lv := UITheme.button("Call the levy (%d)" % Military.levy(st).size(), func() -> void:
@@ -150,6 +156,7 @@ func _defence(st: WorldState) -> void:
 			lv.tooltip_text = "The strongest villagers take up farm tools and fight beside the watch. They won't like it, and they can die."
 			row.add_child(lv)
 		_body.add_child(row)
+		_allies(st)
 	else:
 		_body.add_child(_wrap("No raiders on the road. Fights won: %d of %d." % [m.won, m.battles], 14, UITheme.TEXT_DIM))
 	if not m.expedition.is_empty():
@@ -184,6 +191,70 @@ func _defence(st: WorldState) -> void:
 	gentle.add_theme_font_size_override("font_size", 14)
 	gentle.toggled.connect(func(on: bool) -> void: m.gentle = on)
 	_body.add_child(gentle)
+
+
+## The men-at-arms the noble houses send against the coming raid, and
+## asking a friendly house for them (Phase 5.3).
+func _allies(st: WorldState) -> void:
+	var sent: Array = st.military.raid.get("allies", [])
+	for a: Dictionary in sent:
+		_body.add_child(_wrap("%s sends %d men-at-arms to stand with you%s." % [st.realm.house_title(int(a["house"])), int(a["men"]), " (you asked)" if a.get("asked", false) else ""], 14, UITheme.GOOD))
+	if st.realm == null:
+		return
+	var aid := Realm.section("aid")
+	for h in st.realm.houses:
+		var id := int(h["id"])
+		if id == int(st.military.raid.get("host", -1)) or sent.any(func(a: Dictionary) -> bool: return int(a["house"]) == id):
+			continue
+		if int(h.get("days", 99)) > int(aid.get("max_days", 3)):
+			continue
+		var can := Realm.can_ask(st, id)
+		var b := UITheme.button("Ask House %s for men (%d)" % [h["name"], Realm.men_from(h)], func() -> void:
+			var r := Realm.ask_aid(st, id)
+			Game.notify.emit(str(r["text"]), Game.COLOR_GOOD if r["ok"] else Game.COLOR_BAD)
+			refresh())
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.disabled = not can["ok"]
+		b.tooltip_text = str(can["reason"]) if b.disabled else "They send men-at-arms to fight beside your warband. It spends some of their regard (%d)." % int(aid.get("ask_cost", 12))
+		_body.add_child(b)
+
+
+## The house's castle: what stands, the works under way, and raising the
+## next (Phase 5.3).
+func _castle(st: WorldState) -> void:
+	var c := st.castle
+	if c == null:
+		return
+	_heading("Castle")
+	var stands := CastleSystem.stands(st)
+	if not stands.is_empty():
+		var d := CastleSystem.kind_def(stands)
+		var safe := float(d.get("gold_safe", 0.0))
+		_body.add_child(_wrap("Your %s stands. Renown +%d, room for %d more in the household; in a raid your warband holds its gate (+%d Combat, breaks later) and %s of your gold is out of reach." % [
+			CastleSystem.name_of(stands), int(d.get("renown", 0)), int(d.get("retainers", 0)), int(d.get("combat", 0)), "all" if safe >= 1.0 else "%d%%" % roundi(safe * 100.0)], 14, UITheme.GOOD))
+	if not c.works.is_empty():
+		var left := CastleSystem.days_left(st)
+		_body.add_child(_wrap("Raising a %s: %d%% done%s." % [CastleSystem.name_of(c.works), roundi(c.progress() * 100.0),
+			", some %d days to go" % ceili(left) if left < INF else ""], 15, UITheme.ACCENT))
+		var crew := c.builders.map(func(id: int) -> String: return st.get_character(id).first_name if st.get_character(id) else "?")
+		_body.add_child(_wrap("The crew: %s." % (", ".join(crew) if not crew.is_empty() else "no one (the village has no builders free)"), 13, UITheme.TEXT if not crew.is_empty() else UITheme.BAD))
+		if not c.stalled.is_empty():
+			_body.add_child(_wrap("The works wait for %s: the stores are dry." % c.stalled, 14, UITheme.BAD))
+		return
+	var next := CastleSystem.next_kind(st)
+	if next.is_empty():
+		return
+	var d := CastleSystem.kind_def(next)
+	var can := CastleSystem.can_order(st, next)
+	var b := UITheme.button("Raise a %s (%d gold)" % [CastleSystem.name_of(next), int(d.get("gold", 0))], func() -> void:
+		var r := world.order_castle(next)
+		Game.notify.emit(str(r["text"]), Game.COLOR_GOOD if r["ok"] else Game.COLOR_BAD)
+		Audio.play("coins" if r["ok"] else "ui_error")
+		refresh())
+	b.disabled = not can["ok"]
+	b.tooltip_text = str(can["reason"]) if b.disabled else "The steward chooses the ground. Your builders raise it from the stores: %s." % CastleSystem.needs_text(next)
+	_body.add_child(b)
+	_body.add_child(_wrap(("%s " % can["reason"] if b.disabled and not str(can["reason"]).is_empty() else "") + "Uses %s as it goes, %d builder-hours of work." % [CastleSystem.needs_text(next), int(d.get("work", 0))], 13, UITheme.TEXT_DIM))
 
 
 ## Your health and heir, a regency while you're young, the family tree, and

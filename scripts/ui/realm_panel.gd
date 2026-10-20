@@ -108,6 +108,19 @@ func _house(st: WorldState, h: Dictionary) -> void:
 	_line("%s holds the seat. Renown %d." % [h["head"], int(h["renown"])], 14, UITheme.TEXT)
 	var regard := int(h["standing"])
 	_line("They are %s toward your house (%+d)." % [MatchSystem.standing_word(regard), regard], 15, UITheme.GOOD if regard >= 10 else (UITheme.BAD if regard <= -10 else UITheme.TEXT))
+	# Phase 5.3: their rival, whether they'd help or come against you.
+	var rival := Realm.rival_of(st, int(h["id"]))
+	if not rival.is_empty():
+		_line("At odds with House %s: what warms one toward you cools the other." % rival["name"], 13, UITheme.TEXT_DIM)
+	var aid := Realm.section("aid")
+	if int(h.get("truce", -1)) > st.day():
+		_line("They keep the peace with you until %s." % Calendar.format_date(int(h["truce"]) * Calendar.MINUTES_PER_DAY), 13, UITheme.TEXT)
+	elif regard <= int(Realm.section("hosts").get("hostile_at", -40)):
+		_line("They hold your house in contempt, and may come against you.", 14, UITheme.BAD)
+	if regard >= int(aid.get("min_regard", 40)) and int(h["days"]) <= int(aid.get("max_days", 3)):
+		_line("They'd send men-at-arms against a raid on your village.", 13, UITheme.GOOD)
+	elif regard >= int(aid.get("ask_regard", 15)) and int(h["days"]) <= int(aid.get("max_days", 3)):
+		_line("They'd send men-at-arms against a raid if you asked.", 13, UITheme.TEXT)
 	var attr := str(GameData.attribute_def(Realm.known_for_attribute(h)).get("name", ""))
 	_line("%s. A child fostered there learns %s." % [Military._cap(Realm.days_text(int(h["days"]))), attr], 14, UITheme.TEXT_DIM)
 	if int(h.get("visited", -1)) >= 0:
@@ -134,7 +147,7 @@ func _house(st: WorldState, h: Dictionary) -> void:
 	if not can["ok"] and not str(can["reason"]).is_empty():
 		_line(str(can["reason"]), 13, UITheme.BAD)
 	elif not st.military.raid.is_empty():
-		_line("A band is on the road to the village: your warband will meet it without you.", 13, UITheme.BAD)
+		_line("%s is on the road to the village: your warband will meet it without you." % Military._cap(str(st.military.raid["name"])) if st.military.raid.has("host") else "A band is on the road to the village: your warband will meet it without you.", 13, UITheme.BAD)
 
 
 func _camp(st: WorldState, c: Dictionary) -> void:

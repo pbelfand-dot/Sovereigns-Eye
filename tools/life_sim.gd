@@ -9,7 +9,12 @@ extends SceneTree
 ## the house accepts the first suitor (for the heir or kin) with a gift of
 ## B rank or better and sends the rest home. With "heirs" the most gifted
 ## child is named heir each year. You live and die on the same curve as
-## everyone (Phase 4.3), so a long run passes through several rulers.
+## everyone (Phase 4.3), so a long run passes through several rulers. The
+## steward also raises a castle when the house can (Phase 5.3), and pays a
+## noble house's demand when the captains reckon its host too strong. With
+## "favour" the house courts one noble house each year (what a visit with a
+## gift and a good talk is worth), so its rival cools.
+##   godot --headless --path . --script res://tools/life_sim.gd -- <seed> 40 steward favour
 
 
 func _init() -> void:
@@ -25,6 +30,9 @@ func _init() -> void:
 	var raids := 0
 	var raids_won := 0
 	var camps_cleared := 0
+	var hosts := 0
+	var hosts_won := 0
+	var hosts_paid := 0
 	print("%s, %d people, the heir %s (%d)" % [st.village_name, st.characters.size(), st.player().full_name(), st.player().age])
 	var days := years * Calendar.days_per_year()
 	for d in days:
@@ -32,6 +40,9 @@ func _init() -> void:
 			st.minutes += 60.0
 			for s in TerritorySystem.advance(st, 60.0):
 				TerritorySystem.complete(st, s)
+			if CastleSystem.advance(st, 60.0):
+				for e: Dictionary in CastleSystem.complete(st):
+					print("   day %4d  %s" % [st.day(), e["text"]])
 		var day := Calendar.day_index(st.whole_minutes())
 		st.last_daily_update = day
 		var rng := Seeds.rng(st.world_seed, "day_%d" % day)
@@ -74,9 +85,11 @@ func _init() -> void:
 			if Military.odds(st) < 0.5:
 				Military.call_levy(st)
 			if Military.odds(st) < 0.35:
+				var host := st.military.raid.has("host")
 				var paid := Military.pay_off(st)
 				if paid["ok"]:
 					print("   day %4d  %s" % [day, paid["text"]])
+					hosts_paid += 1 if host else 0
 		if Military.due(st):
 			Military.fight(st, war)
 		# The steward sends the warband against a camp when the captains
@@ -91,12 +104,31 @@ func _init() -> void:
 				print("   day %4d  %s" % [day, e["text"]])
 				if e.has("battle") and e["battle"].get("camp", false):
 					camps_cleared += 1 if e["battle"]["won"] else 0
+				elif e.has("battle") and e["battle"].get("host", false):
+					hosts += 1
+					hosts_won += 1 if e["battle"]["won"] else 0
 				elif e.has("battle"):
 					raids += 1
 					raids_won += 1 if e["battle"]["won"] else 0
 			if e.has("gone"):
 				year_counts["died"] += 1
+		if args.has("favour") and day % Calendar.days_per_year() == 5 and st.realm and not st.realm.houses.is_empty():
+			var r := Realm.section("regard")
+			var worth := int(r.get("visit", 5)) + roundi(75 * float(r.get("gift_per_gold", 0.12))) + int(r.get("talk_base", 3)) + 4
+			Realm.change_regard(st, int(st.realm.houses[0]["id"]), worth)
+			if day % (Calendar.days_per_year() * 5) == 5:
+				print("   day %4d  regard: %s" % [day, ", ".join(st.realm.houses.map(func(h: Dictionary) -> String: return "%s %+d" % [h["name"], int(h["standing"])]))])
 		for e: Dictionary in Realm.daily_update(st):
+			print("   day %4d  %s" % [day, e["text"]])
+			# A host's demand comes at a season's start: the same steward.
+			if steward and e.has("host") and Military.odds(st) < 0.5:
+				Military.call_levy(st)
+			if steward and e.has("host") and Military.odds(st) < 0.35:
+				var paid := Military.pay_off(st)
+				if paid["ok"]:
+					print("   day %4d  %s" % [day, paid["text"]])
+					hosts_paid += 1
+		for e: Dictionary in CastleSystem.daily_update(st):
 			print("   day %4d  %s" % [day, e["text"]])
 		if st.house.ended:
 			print("   day %4d  the house is ended" % day)
@@ -118,8 +150,12 @@ func _init() -> void:
 			for k: String in totals:
 				totals[k] += year_counts[k]
 				year_counts[k] = 0
-	print("\n%d years in %.1f s: born %d, died %d, left %d, weddings %d, departed on record %d, you have been %d people, raids %d (won %d), camps cleared %d" % [years, (Time.get_ticks_msec() - started) / 1000.0,
-		totals["born"], totals["died"], totals["left"], totals["married"], st.departed.size(), generations + 1, raids, raids_won, camps_cleared])
+	print("\n%d years in %.1f s: born %d, died %d, left %d, weddings %d, departed on record %d, you have been %d people, raids %d (won %d), camps cleared %d, hosts %d (won %d, paid %d more), castle %s" % [years, (Time.get_ticks_msec() - started) / 1000.0,
+		totals["born"], totals["died"], totals["left"], totals["married"], st.departed.size(), generations + 1, raids, raids_won, camps_cleared, hosts, hosts_won, hosts_paid,
+		CastleSystem.name_of(st.castle.kind) if not st.castle.kind.is_empty() else "none"])
+	var next := CastleSystem.next_kind(st)
+	print("Gold %d, renown %d, charter %d; %s" % [st.house.gold, st.house.renown, CharterSystem.current(st),
+		("next castle: " + str(CastleSystem.can_order(st, next)["reason"])) if not next.is_empty() else ("works on the %s, %d%%" % [CastleSystem.name_of(st.castle.works), roundi(st.castle.progress() * 100.0)] if not st.castle.works.is_empty() else "")])
 	var p := st.player()
 	if p == null:
 		print("The house is ended.")
@@ -160,9 +196,13 @@ func _report(st: WorldState, year: int, counts: Dictionary) -> void:
 			float(TerritorySystem.consumption(st)["food"]), ", ".join(parts)])
 
 
-## A plain steward: keeps food up with farmsteads and petitions when it can.
+## A plain steward: keeps food up with farmsteads and petitions when it can;
+## raises a castle when the house has its hire and something to spare.
 func _steward(st: WorldState) -> void:
 	CharterSystem.petition(st)
+	var next := CastleSystem.next_kind(st)
+	if not next.is_empty() and CastleSystem.can_order(st, next)["ok"] and st.house.gold >= int(CastleSystem.kind_def(next)["gold"]) + 150:
+		print("   day %4d  %s" % [st.day(), CastleSystem.order(st, next)["text"]])
 	var net := TerritorySystem.net_change(st)
 	if float(net["food"]) < 2.0 and TerritorySystem.can_build(st, "farmhouse")["ok"]:
 		var spot := TerritorySystem.find_spot(st, "farmhouse", 18.0, CharterSystem.build_radius(st))

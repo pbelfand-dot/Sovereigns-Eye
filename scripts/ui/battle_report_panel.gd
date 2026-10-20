@@ -1,8 +1,9 @@
 class_name BattleReportPanel
 extends PanelContainer
 ## After a raid (Military.finish) or a fight at a bandit camp
-## (Military.finish_camp): who won, what it cost and brought, and each of
-## yours: who struck down raiders, who fell, who died.
+## (Military.finish_camp), or against a noble house's host (Phase 5.3): who
+## won, what it cost and brought, each of yours (who struck down raiders,
+## who fell, who died) and the men other houses sent.
 
 signal closed
 
@@ -47,14 +48,21 @@ func show_report(r: Dictionary) -> void:
 		child.queue_free()
 	var won := bool(r.get("won", false))
 	var camp := bool(r.get("camp", false))
+	var host := bool(r.get("host", false))
 	if camp:
 		_title.text = "The camp is taken" if won else "Beaten off at the camp"
+	elif host:
+		_title.text = "The host is beaten back" if won else "The host has its way"
 	else:
 		_title.text = "Victory" if won else "Defeat"
 	_title.add_theme_color_override("font_color", UITheme.GOOD if won else UITheme.BAD)
 	var band := str(r.get("band", "the raiders"))
-	_body.add_child(_wrap("%s%s: %d of %d %s fell." % ["The camp of " if camp else "", band if camp else Military._cap(band), int(r.get("raiders_fallen", 0)), int(r.get("size", 0)), "of the band" if camp else "raiders"], 16, UITheme.TEXT))
-	if won and camp:
+	_body.add_child(_wrap("%s%s: %d of %d %s fell." % ["The camp of " if camp else "", band if camp else Military._cap(band), int(r.get("raiders_fallen", 0)), int(r.get("size", 0)), "of the band" if camp else ("of its men" if host else "raiders")], 16, UITheme.TEXT))
+	if won and host:
+		_body.add_child(_wrap("Ransom for their fallen knights: %d gold. Renown +%d. They'll keep the peace." % [int(r.get("gold", 0)), int(r.get("renown", 0))], 15, UITheme.GOOD))
+	elif host:
+		_body.add_child(_wrap("They took %d gold, and the realm thinks less of your house (renown %d)." % [-int(r.get("gold", 0)), int(r.get("renown", 0))], 15, UITheme.BAD))
+	elif won and camp:
 		_body.add_child(_wrap("Their hoard and purses: %d gold. Renown +%d. The band is no more." % [int(r.get("gold", 0)), int(r.get("renown", 0))], 15, UITheme.GOOD))
 		var grateful: Array = r.get("grateful", [])
 		if not grateful.is_empty():
@@ -82,6 +90,9 @@ func show_report(r: Dictionary) -> void:
 		var felled := int(l["felled"])
 		var deeds := "" if felled == 0 else "  -  struck down %d" % felled
 		_body.add_child(_wrap("%s (%s): %s%s" % [l["name"], l["role"], fate, deeds], 14, color))
+	for a: Dictionary in r.get("allies", []):
+		var fell := int(a["fell"])
+		_body.add_child(_wrap("Men-at-arms of %s: %d fought beside you%s." % [a["house"], int(a["men"]), "" if fell == 0 else ", %d fell" % fell], 14, UITheme.TEXT_DIM))
 	_body.add_child(HSeparator.new())
 	_body.add_child(_wrap("Those who fought and stood grew in Combat. Look at your fighters with the Eye: the gifted grow fastest.", 13, UITheme.TEXT_DIM))
 

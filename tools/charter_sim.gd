@@ -7,7 +7,9 @@ extends SceneTree
 ## The bot does what a sensible player would: recruits a chancellor (renown)
 ## and a steward, keeps food up with farmsteads, builds a stonecutter's yard,
 ## a bakery and a granary, raises taverns, chapels and a Market Hall once a
-## charter allows them, and petitions as soon as it can.
+## charter allows them, and petitions as soon as it can. It raises the
+## house's castle as soon as the charter and the purse allow (Phase 5.3):
+## when the works begin and end, and how long they wait for stores.
 
 
 func _init() -> void:
@@ -18,11 +20,15 @@ func _init() -> void:
 	TerritorySystem.initialize(st)
 	_court(st)
 	var started := Time.get_ticks_msec()
+	var stalls := 0
 	for d in days:
 		for k in 48:
 			st.minutes += 30.0
 			for s in TerritorySystem.advance(st, 30.0):
 				TerritorySystem.complete(st, s)
+			if CastleSystem.advance(st, 30.0):
+				for e: Dictionary in CastleSystem.complete(st):
+					print("day %3d  %s" % [d + 1, e["text"]])
 		var day := Calendar.day_index(st.whole_minutes())
 		var rng := Seeds.rng(st.world_seed, "day_%d" % day)
 		for c in st.characters:
@@ -40,6 +46,12 @@ func _init() -> void:
 		var r := CharterSystem.petition(st)
 		if r["ok"]:
 			print("day %3d  %s" % [d + 1, r["text"]])
+		for e: Dictionary in CastleSystem.daily_update(st):
+			stalls += 1
+		var keep := CastleSystem.next_kind(st)
+		if not keep.is_empty() and CastleSystem.can_order(st, keep)["ok"] and st.house.gold >= int(CastleSystem.kind_def(keep)["gold"]) + 100:
+			var o := CastleSystem.order(st, keep)
+			print("day %3d  %s (%d builders, ~%.0f days)" % [d + 1, o["text"], st.castle.builders.size(), CastleSystem.days_left(st)])
 		if d % 20 == 19:
 			_report(st, d + 1)
 			if OS.get_environment("SIM_HOMES") == "1":
@@ -51,6 +63,8 @@ func _init() -> void:
 								why[need["label"]] = int(why.get(need["label"], 0)) + 1
 				print("        Timber Houses held back by: %s" % why)
 	print("\n%d days in %.1f s" % [days, (Time.get_ticks_msec() - started) / 1000.0])
+	print("castle: %s%s, %d days the works waited for stores" % [CastleSystem.name_of(st.castle.kind) if not st.castle.kind.is_empty() else "none",
+		(", works on the %s %d%%" % [CastleSystem.name_of(st.castle.works), roundi(st.castle.progress() * 100.0)]) if not st.castle.works.is_empty() else "", stalls])
 	_report(st, days)
 	print("home spot: %s" % GrowthSystem.best_home_spot(st))
 	var reasons := {}

@@ -58,15 +58,109 @@ static func known_for_attribute(house: Dictionary) -> String:
 	return str((kinds.get(str(house.get("known_for", "")), {}) as Dictionary).get("attribute", "combat"))
 
 
-## Moves a house's regard for yours by `delta` (kept to -100..100). Returns
-## the change made.
-static func change_regard(state: WorldState, house_id: int, delta: int) -> int:
+## Moves a house's regard for yours by `delta` (kept to -100..100). What
+## you win with a house you lose in part with its rival (Phase 5.3), unless
+## `rivals` is false. Returns the change made.
+static func change_regard(state: WorldState, house_id: int, delta: int, rivals: bool = true) -> int:
 	var h := state.realm.get_house(house_id) if state.realm else {}
 	if h.is_empty():
 		return 0
 	var before := int(h["standing"])
 	h["standing"] = clampi(before + delta, -100, 100)
-	return int(h["standing"]) - before
+	var made := int(h["standing"]) - before
+	var rival := state.realm.get_house(int(h.get("rival", -1)))
+	if rivals and made > 0 and not rival.is_empty():
+		var cost := roundi(made * float(section("rivals").get("rival_share", 0.5)))
+		rival["standing"] = clampi(int(rival["standing"]) - cost, -100, 100)
+	return made
+
+
+## The house a house is at odds with ({} if none).
+static func rival_of(state: WorldState, house_id: int) -> Dictionary:
+	var h := state.realm.get_house(house_id)
+	return state.realm.get_house(int(h.get("rival", -1))) if not h.is_empty() else {}
+
+
+# --- Help, and hosts (Phase 5.3) ------------------------------------------------------------------
+
+## How many men-at-arms a house sends.
+static func men_from(house: Dictionary) -> int:
+	var a := section("aid")
+	return clampi(int(a.get("men_base", 2)) + floori(int(house["renown"]) / float(a.get("men_per_renown", 30))), 1, int(a.get("men_max", 4)))
+
+
+## The houses that send men unasked against a coming raid: those that hold
+## yours warmly, their seats near enough. [{house, men, asked}]
+static func aid_offers(state: WorldState) -> Array:
+	var out := []
+	if state.realm == null:
+		return out
+	var a := section("aid")
+	var host := int(state.military.raid.get("host", -1))
+	for h in state.realm.houses:
+		if int(h["id"]) == host or not h.has("days"):
+			continue
+		if int(h["standing"]) >= int(a.get("min_regard", 40)) and int(h["days"]) <= int(a.get("max_days", 3)):
+			out.append({"house": int(h["id"]), "men": men_from(h), "asked": false})
+	return out
+
+
+## Could you ask this house for men against the coming raid? {ok, reason}
+static func can_ask(state: WorldState, house_id: int) -> Dictionary:
+	var a := section("aid")
+	var m := state.military
+	var h := state.realm.get_house(house_id) if state.realm else {}
+	if h.is_empty() or m.raid.is_empty() or bool(m.raid.get("fought", false)):
+		return {"ok": false, "reason": ""}
+	if int(m.raid.get("host", -1)) == house_id:
+		return {"ok": false, "reason": "They're the ones coming against you."}
+	if (m.raid.get("allies", []) as Array).any(func(x: Dictionary) -> bool: return int(x["house"]) == house_id):
+		return {"ok": false, "reason": "Their men are coming."}
+	if int(h["days"]) > int(a.get("max_days", 3)):
+		return {"ok": false, "reason": "Their seat is too far to come in time."}
+	if int(h["standing"]) < int(a.get("ask_regard", 15)):
+		return {"ok": false, "reason": "They don't think well enough of your house to send men."}
+	return {"ok": true, "reason": ""}
+
+
+## Asks a friendly house for men against the coming raid (spending some of
+## its regard). {ok, text}
+static func ask_aid(state: WorldState, house_id: int) -> Dictionary:
+	var can := can_ask(state, house_id)
+	if not can["ok"]:
+		return {"ok": false, "text": can["reason"]}
+	var h := state.realm.get_house(house_id)
+	var men := men_from(h)
+	(state.military.raid["allies"] as Array).append({"house": house_id, "men": men, "asked": true})
+	Military.make_allies(state)
+	change_regard(state, house_id, -int(section("aid").get("ask_cost", 12)), false)
+	return {"ok": true, "text": "%s sends %d men-at-arms to stand with you. You owe them for it." % [state.realm.house_title(house_id), men]}
+
+
+## You pay a house's demand: its host goes home, and it keeps the peace. The news.
+static func demand_paid(state: WorldState, house_id: int, gold: int) -> String:
+	var k := section("hosts")
+	var h := state.realm.get_house(house_id)
+	h["standing"] = clampi(int(h["standing"]) + int(k.get("paid_regard", 15)), -100, 100)
+	h["truce"] = state.day() + int(k.get("truce_days", 80))
+	return "You pay %s %d gold. Their host goes home, and they'll keep the peace awhile." % [state.realm.house_title(house_id), gold]
+
+
+## At a season's start, a house that holds yours in contempt may come
+## against you (Military.plan_host): one at a time, never with a band on
+## the road. The news, or {}.
+static func _hostility(state: WorldState) -> Dictionary:
+	var k := section("hosts")
+	var m := state.military
+	if m == null or not m.raid.is_empty() or state.player() == null:
+		return {}
+	var rng := Seeds.rng(state.world_seed, "hostility_%d" % state.day())
+	for h in state.realm.houses:
+		if int(h["standing"]) > int(k.get("hostile_at", -40)) or int(h.get("truce", -1)) > state.day():
+			continue
+		if rng.randf() < float(k.get("hostile_chance", 0.35)):
+			return Military.plan_host(state, int(h["id"]), rng)
+	return {}
 
 
 ## A camp near their seats is gone: the houses within reach are grateful.
@@ -78,7 +172,7 @@ static func camp_cleared(state: WorldState, camp: Dictionary) -> Array[String]:
 	var r := section("regard")
 	for h in state.realm.houses:
 		if h.has("pos") and ride_days(pos_of(h), pos_of(camp)) <= float(r.get("camp_reach_days", 3)):
-			change_regard(state, int(h["id"]), int(r.get("camp_cleared", 10)))
+			change_regard(state, int(h["id"]), int(r.get("camp_cleared", 10)), false)
 			out.append(state.realm.house_title(int(h["id"])))
 	return out
 
@@ -100,6 +194,9 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 		for h in state.realm.houses:
 			var s := int(h["standing"])
 			h["standing"] = maxi(0, s - drift) if s > 0 else mini(0, s + drift)
+		var hostile := _hostility(state)
+		if not hostile.is_empty():
+			events.append(hostile)
 	var f := section("fostering")
 	for c: CharacterData in state.characters.duplicate():
 		var at := c.fostered_at()

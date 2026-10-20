@@ -1,0 +1,46 @@
+{
+  "_comment": "Phase 5.3, the house's castle (CastleSystem, CastleData; the pieces and layouts in scripts/castle/castle_layout.gd). Decided: a castle is the house's own works, not a building from the Build menu: first a motte and bailey of timber, then a stone castle in its place; the steward chooses the site (the nearest open ground round the village with room for both), the hills are levelled there and the trees felled. Builders work it like any site (TerritorySystem's rates and the Master of Works), using the stores as they go; when the stores run dry the works wait. A castle raises the house (renown, room for retainers, the noble houses' regard) and defends it: the warband holds the gate in a raid, harder to beat and slower to break, and the house's gold is kept behind its walls.",
+
+  "kinds": {
+    "_comment": "charter: the charter needed (0 hamlet, 1 village, 2 market town, 3 town); gold: paid when ordered (the masons' and carpenters' hire); wood and stone: what the works use in all, a share with each builder-hour; work: builder-hours; crew: builders at once. Paced from the steward bot (tools/charter_sim.gd): a motte and bailey in about half a year of a well-run village's builders (a motte of 40 m took some 50 men 42 working days), a stone castle in some two years (Edward I's Harlech, 1283-89, and Conwy, 1283-87, took years with hundreds of men). When it stands: renown, retainers (more room in the household), regard (every house thinks better of yours), and its defence: combat on your fighters at the gate, hold (a side that breaks later), gold_safe (the share of the house's gold the raiders can't reach).",
+    "timber": {
+      "name": "motte and bailey",
+      "charter": 1,
+      "gold": 200,
+      "wood": 300,
+      "stone": 0,
+      "work": 1400,
+      "crew": 6,
+      "renown": 8,
+      "retainers": 2,
+      "regard": 3,
+      "combat": 5,
+      "hold": 0.08,
+      "gold_safe": 0.5
+    },
+    "stone": {
+      "name": "stone castle",
+      "charter": 2,
+      "needs": "timber",
+      "gold": 1200,
+      "wood": 200,
+      "stone": 1000,
+      "work": 7200,
+      "crew": 8,
+      "renown": 20,
+      "retainers": 4,
+      "regard": 6,
+      "combat": 10,
+      "hold": 0.15,
+      "gold_safe": 1.0
+    }
+  },
+
+  "site": {
+    "_comment": "The ground is levelled over the castle's footprint and pad_margin metres round it, blending into the hills over blend metres; trees in it, within apron metres or on the approach to the gate are felled (their wood to the stores). In a raid the warband forms up rally metres before the gate.",
+    "pad_margin": 6.0,
+    "blend": 14.0,
+    "apron": 10.0,
+    "rally": 9.0
+  }
+}
