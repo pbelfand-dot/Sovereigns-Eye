@@ -50,6 +50,7 @@ var realm_only := false
 var keep_only := false
 var market_only := false
 var trade_only := false
+var carts_only := false
 
 
 func _ready() -> void:
@@ -86,6 +87,7 @@ func _ready() -> void:
 	keep_only = args.has("keep")
 	market_only = args.has("market")
 	trade_only = args.has("trade")
+	carts_only = args.has("carts")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -204,6 +206,10 @@ func _run() -> void:
 		return
 	if trade_only:
 		await _trade_shots()
+		get_tree().quit()
+		return
+	if carts_only:
+		await _cart_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1961,6 +1967,61 @@ func _trade_shots() -> void:
 	await _wait(6)
 	await _shot("trade_3_map.png")
 	print("trade: on the road %s" % str(Trade.on_road(st)))
+
+
+## The village sees its carts (CartView): one loaded in the square, rolling
+## out along the road with its carter and escort, and coming home at dusk on
+## its last day (shots from the strategy camera and close by).
+func _cart_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	st.minutes = float(30 * Calendar.MINUTES_PER_DAY + 9 * 60)
+	st.house.gold = 900
+	for g: String in TerritorySystem.WARES:
+		st.territory.stock[g] = 90.0
+	var h := st.realm.houses[1]
+	var r := Trade.send(st, int(h["id"]), {Trade.wants(st, int(h["id"]))[0]: 40, "ale": 20}, 2)
+	print("carts: %s" % r["text"])
+	var cart: Dictionary = r["cart"]
+	var world := await _boot_world()
+	world.ui._help.visible = false
+	world.ui._map_mode = false
+	world.set_speed(0)
+	_clear_toasts(world)
+	Input.warp_mouse(Vector2(4, 890))
+	var pts := CartView.route(st, cart)
+	var length := CartView.length_of(pts)
+	var speed := float(CartView.cfg()["speed"])
+	# The camera behind and a little aside, over the road (the camera sits
+	# at its yaw's (sin, cos) from the point it looks at).
+	var shots := [[0.12, 20.0, "carts_0_square.png"], [0.45, 22.0, "carts_1_road.png"], [0.8, 36.0, "carts_2_leaving.png"]]
+	for s: Array in shots:
+		st.minutes = float(cart["set_out_min"]) + length * float(s[0]) / speed
+		await _wait(3)
+		var at: Dictionary = CartView.along(pts, length * float(s[0]))
+		var dir: Vector3 = at["dir"]
+		world.camera_rig.set_yaw(atan2(-dir.x, -dir.z) + 0.6, true)
+		world.camera_rig.look_at_point(at["at"], float(s[1]), true)
+		await _wait(8)
+		await _shot(str(s[2]))
+	# Its last day on the road home: in at dusk, standing in the square.
+	while st.day() < int(cart["back"]) - 1:
+		st.minutes += Calendar.MINUTES_PER_DAY
+		world._check_new_day()
+	var dusk := float(st.day() * Calendar.MINUTES_PER_DAY + int(CartView.cfg()["home_hour"]) * 60)
+	print("carts: home road %s" % cart["waylaid"])
+	for s: Array in [[0.35, 22.0, "carts_3_home.png"], [1.15, 26.0, "carts_4_square.png"]]:
+		st.minutes = dusk + length * float(s[0]) / speed
+		await _wait(3)
+		var w := CartView.where(st, cart, st.minutes)
+		var at: Dictionary = CartView.along(pts, float(w["at"]))
+		var dir: Vector3 = at["dir"]
+		world.camera_rig.set_yaw(atan2(dir.x, dir.z) + 0.6, true)
+		world.camera_rig.look_at_point(at["at"], float(s[1]), true)
+		_clear_toasts(world)
+		await _wait(8)
+		await _shot(str(s[2]))
+	print("carts: shown %d" % world.cart_view.shown_count())
 
 
 ## How raids fought in the village turn out against the captains' odds

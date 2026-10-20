@@ -311,6 +311,13 @@ static func migrate(data: Dictionary) -> Dictionary:
 	if version == 19:
 		# v20 (Phase 6.2): no carts on the road yet (MarketData reads none).
 		data["save_version"] = 20
+		version = 20
+	if version == 20:
+		# v21: a cart on the road keeps the minute it set out (for the
+		# village to see it go; MarketData gives an old one its day's
+		# morning) and whether its road home has been travelled (an old one
+		# hasn't: its last day on the road decides it, or its homecoming).
+		data["save_version"] = 21
 	return data
 
 
