@@ -68,6 +68,10 @@ func refresh() -> void:
 		ins.append("%d in charter dues" % roundi(parts["dues"]))
 	if float(parts["market"]) > 0.0:
 		ins.append("%d from the Market Halls" % roundi(parts["market"]))
+	if float(parts["mill"]) > 0.0:
+		ins.append("%d from the mill's toll" % roundi(parts["mill"]))
+	if float(parts["fair"]) > 0.0:
+		ins.append("%d in the fair's stallage" % roundi(parts["fair"]))
 	var factor := float(parts["factor"])
 	var outs: Array[String] = ["wages %d" % CourtSystem.retainer_wages(st)]
 	if not CourtSystem.tutored(st).is_empty():
@@ -105,6 +109,7 @@ func refresh() -> void:
 	if upkeep > 0:
 		_body.add_child(_wrap("Your household is larger than your renown supports: %d gold a day in upkeep (in the wages above)." % upkeep, 14, UITheme.TEXT_DIM))
 
+	_manor(st)
 	_heading("Offices")
 	for o: Dictionary in CourtSystem.offices():
 		var oid := str(o["id"])
@@ -294,6 +299,108 @@ func _castle(st: WorldState) -> void:
 	b.tooltip_text = str(can["reason"]) if b.disabled else "The steward chooses the ground. Your builders raise it from the stores: %s." % CastleSystem.needs_text(next)
 	_body.add_child(b)
 	_body.add_child(_wrap(("%s " % can["reason"] if b.disabled and not str(can["reason"]).is_empty() else "") + "Uses %s as it goes, %d builder-hours of work." % [CastleSystem.needs_text(next), int(d.get("work", 0))], 13, UITheme.TEXT_DIM))
+
+
+## The manor's dues and the Crown's levies (Phase 6.3): the mill's toll and
+## the querns, the fair, and the next levy (declare it all, or hide some).
+func _manor(st: WorldState) -> void:
+	if st.manor == null:
+		return
+	_heading("The Manor")
+	# The mill.
+	var miller := ManorSystem.miller(st)
+	var toll := ManorSystem.toll_def(st)
+	if ManorSystem.mill(st) == null:
+		_body.add_child(_wrap("The village has no mill of its own.", 14, UITheme.TEXT_DIM))
+	elif miller == null:
+		_body.add_child(_wrap("The lord's mill stands idle with no miller: the village grinds its grain at home, and pays no toll.", 14, UITheme.BAD))
+	else:
+		_body.add_child(_wrap("The lord's mill: %s grinds the village's grain and takes %s of it for the house: %.1f gold a day." % [
+			miller.first_name, toll["name"], ManorSystem.mill_income(st)], 14, UITheme.TEXT))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.add_child(UITheme.label("The toll:", 14, UITheme.TEXT_DIM))
+	var tolls: Dictionary = ManorSystem.section("mill").get("tolls", {})
+	for id: String in tolls:
+		var t: Dictionary = tolls[id]
+		var b := UITheme.button(Military._cap(str(t["name"])), func() -> void:
+			var r := ManorSystem.set_toll(st, id)
+			Game.notify.emit(str(r["text"]), Game.COLOR_INFO)
+			Audio.play("ui_click")
+			refresh())
+		b.disabled = st.manor.toll == id
+		var mood := int(t.get("happiness", 0))
+		b.tooltip_text = "%s%s" % ["Customary." if mood == 0 else ("Liked: %+d happiness." % mood if mood > 0 else "Resented: %d happiness." % mood),
+			" Hand-querns come out when the village's happiness is under %d." % int(t.get("querns_below", 42))]
+		row.add_child(b)
+	_body.add_child(row)
+	var querns := ManorSystem.querns_share(st)
+	if st.manor.querns_seized_until > st.day():
+		_body.add_child(_wrap("The querns were seized: every household grinds at the mill till %s, and the village resents it." % Calendar.format_date(st.manor.querns_seized_until * Calendar.MINUTES_PER_DAY), 13, UITheme.TEXT_DIM))
+	elif querns > 0.0 and miller != null:
+		_body.add_child(_wrap("The village is unhappy, and some households grind at home on hand-querns: %d%% of the toll is lost." % roundi(querns * 100.0), 13, UITheme.BAD))
+		var seize := UITheme.button("Seize the querns", func() -> void:
+			var r := ManorSystem.seize_querns(st)
+			Game.notify.emit(str(r["text"]), Game.COLOR_INFO if r["ok"] else Game.COLOR_BAD)
+			refresh())
+		seize.tooltip_text = "Your men break them: the toll is paid in full for %d days, and the village resents it as long." % int(ManorSystem.section("mill").get("seize_days", 10))
+		_body.add_child(seize)
+	# The fair.
+	var f := ManorSystem.section("fair")
+	if st.manor.fair_granted:
+		var fe := ManorSystem.feast(st)
+		if ManorSystem.fair_on(st):
+			_body.add_child(_wrap("The fair of %s is on: the market trades %dx as much on finer terms, wares fetch more, and the stallage is %.0f gold a day." % [
+				fe["name"], roundi(float(f.get("volume", 4.0))), ManorSystem.fair_income(st)], 14, UITheme.GOOD))
+		else:
+			_body.add_child(_wrap("Your house's fair: %d days from the feast of %s, next on %s." % [int(f.get("days", 3)), fe["name"],
+				Calendar.format_date(ManorSystem.next_fair(st) * Calendar.MINUTES_PER_DAY)], 14, UITheme.TEXT))
+	else:
+		var can := ManorSystem.can_grant_fair(st)
+		var b := UITheme.button("Buy a fair from the Crown (%d gold)" % int(f.get("fee", 400)), func() -> void:
+			var r := ManorSystem.grant_fair(st)
+			Game.notify.emit(str(r["text"]), Game.COLOR_GOOD if r["ok"] else Game.COLOR_BAD)
+			Audio.play("coins" if r["ok"] else "ui_error")
+			refresh())
+		b.disabled = not can["ok"]
+		b.tooltip_text = str(can["reason"]) if b.disabled else "Three days a year on a saint's feast: merchants from afar, stallage for the house, a merrier village."
+		_body.add_child(b)
+		if b.disabled and not str(can["reason"]).is_empty():
+			_body.add_child(_wrap(str(can["reason"]), 13, UITheme.TEXT_DIM))
+	# The Crown.
+	var levy := ManorSystem.next_levy(st)
+	if not levy.is_empty():
+		var notice := int(levy["day"]) - int(ManorSystem.section("crown").get("notice_days", 10))
+		var due := ManorSystem.levy_due(st, levy)
+		if st.day() >= notice:
+			var what := ("%d gold a home" % int(levy["per_home"])) if levy.has("per_home") else ("%s of your movables" % ManorSystem._share_text(float(levy["share"])))
+			_body.add_child(_wrap("The Crown's officers assess %s on %s, %s: %s, %d gold as you stand." % [levy["name"], Calendar.format_date(int(levy["day"]) * Calendar.MINUTES_PER_DAY),
+				levy["why"], what, due], 14, UITheme.BAD))
+			if levy.has("share"):
+				var hide := float(ManorSystem.section("crown").get("hide", 0.33))
+				var hrow := HBoxContainer.new()
+				hrow.add_theme_constant_override("separation", 6)
+				var all := UITheme.button("Declare everything", func() -> void:
+					ManorSystem.set_hiding(st, false)
+					refresh())
+				all.disabled = st.manor.hide <= 0.0
+				hrow.add_child(all)
+				var some := UITheme.button("Hide a third", func() -> void:
+					ManorSystem.set_hiding(st, true)
+					refresh())
+				some.disabled = st.manor.hide > 0.0
+				some.tooltip_text = "Pay on two thirds. Your neighbours are sworn to the assessment: about %d in 100 would tell, and then you pay it all and a fine of twice what you hid from it." % roundi(ManorSystem.exposed_chance(st) * 100.0)
+				hrow.add_child(some)
+				_body.add_child(hrow)
+				if st.manor.hide > 0.0:
+					_body.add_child(_wrap("You mean to hide a third: %d gold saved if your neighbours hold their tongues (about %d in 100 would tell)." % [
+						roundi(due * hide), roundi(ManorSystem.exposed_chance(st) * 100.0)], 13, UITheme.TEXT_DIM))
+		else:
+			_body.add_child(_wrap("The Crown's next levy: %s, in %d. Your gold and your stores are movables; what you've built isn't." % [levy["name"], int(levy["year"])], 13, UITheme.TEXT_DIM))
+	if not st.manor.levies.is_empty():
+		var last: Dictionary = st.manor.levies[-1]
+		_body.add_child(_wrap("Last paid: %s in %d, %d gold%s." % [last["name"], int(last["year"]), int(last["paid"]),
+			" (and a fine: you were told on)" if last["exposed"] else ""], 13, UITheme.TEXT_DIM))
 
 
 ## Your health and heir, a regency while you're young, the family tree, and

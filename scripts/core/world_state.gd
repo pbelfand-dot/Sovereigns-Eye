@@ -3,7 +3,7 @@ extends RefCounted
 ## Everything that defines one playthrough: the seed, the clock, the village
 ## layout, families and characters. Saving the game = saving this object.
 
-const SAVE_VERSION := 21
+const SAVE_VERSION := 22
 
 var seed_text: String = ""
 var world_seed: int = 0
@@ -23,6 +23,8 @@ var military: MilitaryData = MilitaryData.new()
 var castle: CastleData = CastleData.new()
 ## The village's market: prices moved by trade, standing orders (Phase 6.1).
 var market: MarketData = MarketData.new()
+## The manor's dues and the Crown's levies: the mill's toll, the fair (Phase 6.3).
+var manor: ManorData = ManorData.new()
 ## Minutes since 00:00 on day 1 of the calendar.
 var minutes: float = 0.0
 ## Last whole day for which daily updates (mood drift) ran.
@@ -189,6 +191,7 @@ func to_dict() -> Dictionary:
 		"military": military.to_dict() if military else {},
 		"castle": castle.to_dict() if castle else {},
 		"market": market.to_dict() if market else {},
+		"manor": manor.to_dict() if manor else {},
 		"minutes": snappedf(minutes, 0.01),
 		"last_daily_update": last_daily_update,
 		"layout": layout.to_dict() if layout else {},
@@ -214,6 +217,7 @@ static func from_dict(d: Dictionary) -> WorldState:
 	w.military = MilitaryData.from_dict(d.get("military", {}))
 	w.castle = CastleData.from_dict(d.get("castle", {}))
 	w.market = MarketData.from_dict(d.get("market", {}))
+	w.manor = ManorData.from_dict(d.get("manor", {}))
 	w.minutes = float(d.get("minutes", 0.0))
 	w.last_daily_update = int(d.get("last_daily_update", 0))
 	w.layout = VillageLayout.from_dict(d.get("layout", {}))

@@ -69,6 +69,9 @@ static func price(state: WorldState, good: String) -> float:
 		# Ale's price is set from grain's (the Assize of Bread and Ale).
 		var f := str(g["follows"])
 		p *= fair_price(state, f) / float(section("goods").get(f, {}).get("price", 1.0))
+	if TerritorySystem.WARES.has(good):
+		# Merchants from afar at the fair pay more for the village's wares.
+		p *= float(ManorSystem.fair_market(state)["wares_price"])
 	if state.market:
 		p *= 1.0 + float(state.market.pressure.get(good, 0.0))
 	return p
@@ -102,7 +105,8 @@ static func spread(state: WorldState) -> float:
 	var m := best_merchant(state)
 	if m:
 		s -= m.get_current("politics") / 100.0 * float(t.get("merchant_spread", 0.1))
-	return maxf(float(t.get("min_spread", 0.1)), s)
+	# The fair's merchants, competing, trade on finer terms still.
+	return maxf(0.02, maxf(float(t.get("min_spread", 0.1)), s) - float(ManorSystem.fair_market(state)["spread"]))
 
 
 ## Units of a good the market takes or gives in a day (wares in smaller
@@ -110,7 +114,7 @@ static func spread(state: WorldState) -> float:
 static func volume(state: WorldState, good: String = "food") -> int:
 	var t := section("trade")
 	var share := float(section("goods").get(good, {}).get("volume", 1.0))
-	return roundi((int(t.get("volume", 25)) + halls(state) * int(t.get("volume_per_hall", 60))) * share)
+	return roundi((int(t.get("volume", 25)) + halls(state) * int(t.get("volume_per_hall", 60))) * share * float(ManorSystem.fair_market(state)["volume"]))
 
 
 ## Units of a good left to trade today.

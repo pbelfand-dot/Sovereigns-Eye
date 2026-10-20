@@ -65,6 +65,7 @@ static func happiness_factors(c: CharacterData, world: WorldState) -> Array[Dict
 		out.append({"label": "Fine home (%s)" % home.type_name(), "value": home_bonus})
 	if world != null and world.territory != null:
 		out.append_array(CharterSystem.mood_factors(world, c))
+		out.append_array(ManorSystem.mood_factors(world, c))
 	var grief := mourning(c, world)
 	if not grief.is_empty():
 		out.append(grief)

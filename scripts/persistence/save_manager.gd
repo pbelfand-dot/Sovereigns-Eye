@@ -318,6 +318,14 @@ static func migrate(data: Dictionary) -> Dictionary:
 		# morning) and whether its road home has been travelled (an old one
 		# hasn't: its last day on the road decides it, or its homecoming).
 		data["save_version"] = 21
+		version = 21
+	if version == 21:
+		# v22 (Phase 6.3): the mill takes the customary toll, the house has
+		# no fair, and the Crown's levies before now are past (ManorData's
+		# defaults; the next one is found from the day).
+		if not data.has("manor"):
+			data["manor"] = {}
+		data["save_version"] = 22
 	return data
 
 

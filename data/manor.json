@@ -1,0 +1,68 @@
+{
+  "_comment": "Phase 6.3, the manor's dues and the Crown's levies (ManorSystem, ManorData). Decided: the economy's third step. The lord's mill takes its toll of the village's grain (suit of mill: tenants must grind there and the lord takes a share, the multure); set the toll and live with what it does to the village. A Market Town may buy a fair from the Crown: three days a year on its saint's feast, when merchants come from afar. And the Crown taxes the house's movable wealth: the Saladin tithe of 1188, King Richard's ransom in 1193, and levies after them, assessed by the house's own sworn neighbours: declare it all, or hide some and hope they hold their tongues.",
+
+  "mill": {
+    "_comment": "The village's windmill is the lord's. With a miller at work there, each villager's bread pays the toll: per_head gold a day at the customary rate (a sixteenth; the toll in grain, sold), times the rate's share. Tolls (one is chosen at the Court): a lighter one is liked, a harder one resented (happiness, every villager but the house). Hand-querns: when the village's happiness is under the toll's 'querns_below', that share of it (per point under, up to querns_max) is ground at home and pays nothing; seizing the querns stops it for seize_days, at a cost in happiness for as long. The rates are the toll vessels England's mills took: a 24th, a 16th, a 13th.",
+    "per_head": 0.06,
+    "tolls": {
+      "light": {"name": "a twenty-fourth", "share": 0.67, "happiness": 2, "label": "A fair toll at the mill", "querns_below": 30},
+      "customary": {"name": "a sixteenth", "share": 1.0, "happiness": 0, "label": "", "querns_below": 42},
+      "hard": {"name": "a thirteenth", "share": 1.25, "happiness": -5, "label": "A grasping toll at the mill", "querns_below": 55}
+    },
+    "querns_per_point": 0.025,
+    "querns_max": 0.6,
+    "seize_days": 10,
+    "seize_happiness": -6,
+    "seize_label": "Querns broken by the lord's men"
+  },
+
+  "fair": {
+    "_comment": "A fair is bought from the Crown (fee, as lords paid fines for their fairs' charters) once the village is a Market Town (min_charter) with a Market Hall. It's held each year for 'days' from its saint's feast (day of the year, 0-39; the first feast in the list the seed picks). While it's on, the market trades volume times as much on spread less (merchants from afar), wares fetch wares_price times more, and the lord takes stallage and tolls: stallage + per_head a villager + per_renown a point of renown, a day. The village is merrier for it (happiness while on and after_days after) and the house's renown grows each fair.",
+    "min_charter": 2,
+    "fee": 400,
+    "days": 3,
+    "feasts": [
+      {"name": "St John the Baptist", "day": 12},
+      {"name": "St Peter", "day": 13},
+      {"name": "St Mary Magdalene", "day": 15},
+      {"name": "St James", "day": 16},
+      {"name": "St Bartholomew", "day": 18},
+      {"name": "Michaelmas", "day": 21}
+    ],
+    "volume": 4.0,
+    "spread": 0.1,
+    "wares_price": 1.25,
+    "stallage": 30,
+    "per_head": 0.25,
+    "per_renown": 0.1,
+    "happiness": 6,
+    "label": "The fair",
+    "after_days": 4,
+    "renown": 8,
+    "stalls": 6
+  },
+
+  "crown": {
+    "_comment": "The Crown's levies on movable wealth: the house's gold and the stores at their going price (not what it has built). Announced notice_days ahead, assessed on the levy's day of the year. 'history' runs from the game's start; after it, one comes every 'every' years (from the seed) at one of 'shares'. A carucage is a land tax: per_home gold a home instead. The house may hide a share of its movables (hide); its sworn neighbours may tell: exposed_base, plus exposed_per_unhappy for each point the village's happiness is under 50, at most exposed_max. Exposed, it pays the whole levy and a fine of fine times what it hid from it, and loses renown. Short of gold, the stores are taken at their price, and what's still owed is let go for renown.",
+    "notice_days": 10,
+    "history": [
+      {"year": 1188, "day": 8, "name": "the Saladin tithe", "share": 0.1, "why": "for the Crusade, now that Saladin holds Jerusalem"},
+      {"year": 1193, "day": 18, "name": "King Richard's ransom", "share": 0.25, "why": "to buy the King out of the Emperor's prison"},
+      {"year": 1194, "day": 25, "name": "the carucage", "per_home": 2, "why": "on every plough-land, for the King's wars in France"},
+      {"year": 1198, "day": 25, "name": "the great carucage", "per_home": 5, "why": "on every plough-land, for the King's wars in France"},
+      {"year": 1203, "day": 12, "name": "the seventh", "share": 0.143, "why": "on the barons who held back from Normandy"},
+      {"year": 1207, "day": 8, "name": "the thirteenth", "share": 0.077, "why": "for the King's war to win back Normandy"}
+    ],
+    "every": [3, 6],
+    "shares": [0.067, 0.077, 0.1],
+    "later_name": "the King's levy",
+    "later_why": "for the King's needs",
+    "hide": 0.33,
+    "exposed_base": 0.2,
+    "exposed_per_unhappy": 0.02,
+    "exposed_max": 0.8,
+    "fine": 2.0,
+    "exposed_renown": -10,
+    "unpaid_renown": -15
+  }
+}
