@@ -26,6 +26,11 @@ var _report_overlay: ColorRect
 var _report: BattleReportPanel
 var _battle_banner: PanelContainer
 var _battle_label: Label
+var _charge_button: Button
+var _fall_back_button: Button
+var _realm: RealmPanel
+var _visit_overlay: ColorRect
+var _visit: VisitPanel
 var _build: BuildPanel
 var _building_card: BuildingCard
 var _conversation: NegotiationPanel
@@ -81,6 +86,7 @@ func setup(owner_world: VillageWorld) -> void:
 	_build_years()
 	_build_ended()
 	_build_battle()
+	_build_realm()
 	Game.keys_changed.connect(_refresh_keys)
 	world.selection_changed.connect(_on_selection_changed)
 	world.speed_changed.connect(_on_speed_changed)
@@ -171,6 +177,9 @@ func _build_top_bar() -> void:
 	var ledger_button := UITheme.button("Ledger", toggle_ledger)
 	_key_text(ledger_button, "tooltip_text", "Village ledger ({key:toggle_ledger})")
 	row.add_child(ledger_button)
+	var realm_button := UITheme.button("Realm", toggle_realm)
+	_key_text(realm_button, "tooltip_text", "The realm: the noble houses round about and the bandit camps ({key:toggle_realm})")
+	row.add_child(realm_button)
 	var save_button := UITheme.button("Save", func() -> void: Game.save_game("quicksave"))
 	_key_text(save_button, "tooltip_text", "Quicksave ({key:quicksave})")
 	row.add_child(save_button)
@@ -396,12 +405,29 @@ func _build_battle() -> void:
 	_battle_banner.offset_left = -260
 	_battle_banner.offset_right = 260
 	_battle_banner.offset_top = 132
-	_battle_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_battle_banner.mouse_filter = Control.MOUSE_FILTER_PASS
 	_battle_banner.visible = false
 	_root.add_child(_battle_banner)
+	var banner_box := VBoxContainer.new()
+	banner_box.add_theme_constant_override("separation", 4)
+	_battle_banner.add_child(banner_box)
 	_battle_label = UITheme.label("", 17, UITheme.BAD, true)
 	_battle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_battle_banner.add_child(_battle_label)
+	banner_box.add_child(_battle_label)
+	var orders := HBoxContainer.new()
+	orders.alignment = BoxContainer.ALIGNMENT_CENTER
+	orders.add_theme_constant_override("separation", 8)
+	banner_box.add_child(orders)
+	_charge_button = UITheme.button("Charge now", func() -> void:
+		if world.battle:
+			world.battle.order_charge())
+	_charge_button.tooltip_text = "The line goes at the band now, without waiting for it to come up."
+	orders.add_child(_charge_button)
+	_fall_back_button = UITheme.button("Fall back", func() -> void:
+		if world.battle:
+			world.battle.order_fall_back())
+	_fall_back_button.tooltip_text = "Your warband falls back to the manor: the band takes its loot, but no more of yours fall."
+	orders.add_child(_fall_back_button)
 	_report_overlay = ColorRect.new()
 	_report_overlay.color = Color(0, 0, 0, 0.55)
 	_report_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -433,6 +459,8 @@ func _update_battle_banner() -> void:
 	var b := world.battle
 	_battle_banner.visible = b != null
 	if b:
+		_charge_button.visible = b.mustering and not b.over
+		_fall_back_button.visible = b.routed.is_empty() and not b.over
 		var s := b.standing()
 		var raid := world.state.military.raid
 		_battle_label.text = "%s  -  yours standing %d, raiders %d" % [Military._cap(str(raid.get("name", "Raiders"))), s["ours"], s["theirs"]]
@@ -440,6 +468,154 @@ func _update_battle_banner() -> void:
 			_battle_label.text += "  -  you are down"
 		elif world.mode == "walk":
 			_battle_label.text += "  -  %s: strike a raider in reach" % world.key_hint("interact")
+
+
+# --- The realm (Phase 5.2) -----------------------------------------------------------------
+
+func _build_realm() -> void:
+	_realm = RealmPanel.new()
+	_realm.world = world
+	_realm.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_realm.offset_left = 12
+	_realm.offset_right = -12
+	_realm.offset_top = 58
+	_realm.offset_bottom = -12
+	_realm.visible = false
+	_root.add_child(_realm)
+	_realm.close_requested.connect(toggle_realm)
+	_realm.visit_requested.connect(func(id: int) -> void: journey(id))
+	_realm.ride_requested.connect(func(id: int, lead: bool) -> void: ride_out(id, lead))
+	# With the other panels: notices, menus and overlays stay on top of it.
+	_root.move_child(_realm, _tree.get_index() + 1)
+	_visit_overlay = ColorRect.new()
+	_visit_overlay.color = Color(0, 0, 0, 0.6)
+	_visit_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_visit_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_visit_overlay.visible = false
+	_root.add_child(_visit_overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_visit_overlay.add_child(center)
+	_visit = VisitPanel.new()
+	_visit.world = world
+	center.add_child(_visit)
+
+
+## The realm map (J): the noble houses round about and the bandit camps.
+func toggle_realm() -> void:
+	_realm.visible = not _realm.visible
+	Audio.play("panel_open" if _realm.visible else "panel_close")
+	if _realm.visible:
+		_help.visible = false
+		_ledger.visible = false
+		_court.visible = false
+		_tree.visible = false
+		_build.visible = false
+		world.deselect()
+		_realm.refresh()
+
+
+## Opens the realm map on a place ("house"/"camp", its id).
+func show_realm(kind: String, id: int) -> void:
+	if not _realm.visible:
+		toggle_realm()
+	_realm.show_place(kind, id)
+
+
+func is_realm_open() -> bool:
+	return _realm != null and _realm.visible
+
+
+func is_visit_open() -> bool:
+	return _visit_overlay != null and _visit_overlay.visible
+
+
+## You ride to a noble house's seat: the days on the road pass (the years
+## panel shows them), the visit, then the ride home and what happened while
+## you were away.
+func journey(house_id: int) -> void:
+	var st := world.state
+	if world.passing or world.battle:
+		return
+	var r := Realm.set_out(st, house_id)
+	if not r["ok"]:
+		Game.notify.emit(str(r["text"]), Game.COLOR_BAD)
+		return
+	var h := st.realm.get_house(house_id)
+	_realm.visible = false
+	world.apply_life_events([{"text": "", "away": [st.player_id]}])
+	_years_overlay.visible = true
+	_years.show_progress(0, int(r["days"]), st.whole_minutes())
+	_years.set_heading("On the road to %s" % h["seat"])
+	var out: Dictionary = await world.pass_time(int(r["days"]), true)
+	if st.realm.trip.is_empty() or st.player() == null or st.player().away_at != "journey":
+		_end_away(out)  # the journey ended on the road (a death in the house)
+		return
+	_years_overlay.visible = false
+	# Home stands still while you're at the seat.
+	var was_paused := world.paused
+	world.paused = true
+	world.speed_changed.emit(world.time_scale())
+	_visit_overlay.visible = true
+	_visit.open(Realm.arrive(st))
+	Audio.play("panel_open")
+	await _visit.closed
+	_visit_overlay.visible = false
+	world.paused = was_paused
+	world.speed_changed.emit(world.time_scale())
+	var back := Realm.take_leave(st)
+	_years_overlay.visible = true
+	_years.show_progress(0, back, st.whole_minutes())
+	_years.set_heading("Home from %s" % h["seat"])
+	var home: Dictionary = await world.pass_time(back, true)
+	var events: Array[Dictionary] = []
+	Realm.come_home(st, events)
+	world.apply_life_events(events)
+	home["lines"] = (out.get("lines", []) as Array) + (home.get("lines", []) as Array)
+	home["days"] = int(out.get("days", 0)) + int(home.get("days", 0))
+	home["from_day"] = out.get("from_day", home.get("from_day", st.day()))
+	home["title"] = "Home from %s" % h["seat"]
+	_end_away(home)
+
+
+## The warband rides against a camp; with you at its head, the days pass
+## until it's home, and you read how it went.
+func ride_out(camp_id: int, lead: bool) -> void:
+	var st := world.state
+	if world.passing or world.battle:
+		return
+	if lead and not Realm.can_travel(st)["ok"]:
+		Game.notify.emit(str(Realm.can_travel(st)["reason"]), Game.COLOR_BAD)
+		return
+	var r := Military.ride_out(st, camp_id, lead)
+	Game.notify.emit(str(r["text"]), Game.COLOR_INFO if r["ok"] else Game.COLOR_BAD)
+	if not r["ok"]:
+		return
+	world.apply_life_events([{"text": "", "away": r["away"]}])
+	if not lead:
+		_realm.refresh()
+		return
+	_realm.visible = false
+	var days := int(st.military.expedition["back"]) - st.day()
+	_years_overlay.visible = true
+	_years.show_progress(0, days, st.whole_minutes())
+	_years.set_heading("With the warband")
+	var summary: Dictionary = await world.pass_time(days, true)
+	summary["title"] = "Back from the camp"
+	_end_away(summary)
+
+
+## The summary of days away (and the fight at a camp, after it).
+func _end_away(summary: Dictionary) -> void:
+	if summary.is_empty():
+		_years_overlay.visible = false
+		return
+	Audio.play("panel_open")
+	_years.show_summary(summary)
+	refresh()
+	if summary.has("report"):
+		await _years.closed
+		show_battle_report(summary["report"])
 
 
 # --- The house ended ------------------------------------------------------------------------
@@ -491,6 +667,7 @@ func toggle_ledger() -> void:
 		_court.visible = false
 		_tree.visible = false
 		_build.visible = false
+		_realm.visible = false
 		_ledger.refresh()
 
 
@@ -502,6 +679,7 @@ func toggle_court() -> void:
 		_ledger.visible = false
 		_tree.visible = false
 		_build.visible = false
+		_realm.visible = false
 		_court.refresh()
 
 
@@ -869,7 +1047,7 @@ func _build_help() -> void:
 			"{key:interact} / (A) - talk: ask what they want, make an offer\n" +
 			"{keys:toggle_overview} - the map table (build, plan)    Click a villager - their card\n" +
 			"Wheel / pinch / {key:cam_zoom_in},{key:cam_zoom_out} - zoom    {key:toggle_pause} - pause    {key:speed_1}-{key:speed_4} - game speed\n" +
-			"{key:toggle_build} - build    {key:toggle_court} - your court    {key:toggle_ledger} - village ledger    {key:quicksave} / {key:quickload} - quicksave / quickload\n" +
+			"{key:toggle_build} - build    {key:toggle_court} - your court    {key:toggle_ledger} - village ledger    {key:toggle_realm} - the realm    {key:quicksave} / {key:quickload} - quicksave / quickload\n" +
 			"Esc - close / menu    {key:toggle_help} - hide this help")
 	_help.add_child(text)
 	_root.add_child(_help)
@@ -976,7 +1154,7 @@ func _close_keys() -> void:
 
 
 func is_menu_open() -> bool:
-	return _pause_overlay.visible or is_years_open() or is_report_open() or (_ended_overlay != null and _ended_overlay.visible)
+	return _pause_overlay.visible or is_years_open() or is_report_open() or is_visit_open() or (_ended_overlay != null and _ended_overlay.visible)
 
 
 func open_pause_menu() -> void:
@@ -1033,8 +1211,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				_years_overlay.visible = false
 		elif is_report_open():
 			_report_overlay.visible = false
-		elif _ended_overlay.visible:
+		elif is_visit_open() or _ended_overlay.visible:
 			pass
+		elif _realm.visible:
+			toggle_realm()
 		elif _conversation.visible:
 			world.end_conversation()
 		elif _card.visible or _building_card.visible:
@@ -1055,6 +1235,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_ledger()
 	elif event.is_action_pressed("toggle_court"):
 		toggle_court()
+	elif event.is_action_pressed("toggle_realm") and not is_menu_open():
+		toggle_realm()
 	elif event.is_action_pressed("toggle_help"):
 		_help.visible = not _help.visible
 	else:

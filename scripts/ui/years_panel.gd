@@ -10,6 +10,7 @@ var _title: Label
 var _progress: Label
 var _body: VBoxContainer
 var _ok: Button
+var _heading := "The years pass"
 
 
 func _init() -> void:
@@ -47,15 +48,22 @@ func _ready() -> void:
 func show_progress(done: int, total: int, minutes: int) -> void:
 	visible = true
 	_ok.visible = false
-	_title.text = "The years pass"
+	_title.text = _heading
 	_progress.text = "%s   (%d of %d days)" % [Calendar.format_date(minutes), done, total]
 	for child in _body.get_children():
 		_body.remove_child(child)
 		child.queue_free()
 
 
-## What happened (Succession.summary).
+## Days away from the village (a journey): what to call them while they pass.
+func set_heading(text: String) -> void:
+	_heading = text
+	_title.text = text
+
+
+## What happened (Succession.summary; "title" names days spent away).
 func show_summary(s: Dictionary) -> void:
+	_heading = "The years pass"
 	visible = true
 	_ok.visible = true
 	_ok.grab_focus.call_deferred()
@@ -65,7 +73,9 @@ func show_summary(s: Dictionary) -> void:
 	var from := Calendar.format_date(int(s["from_day"]) * Calendar.MINUTES_PER_DAY)
 	var to := Calendar.format_date(int(s["to_day"]) * Calendar.MINUTES_PER_DAY)
 	var days := int(s["days"])
-	if days == Calendar.days_per_year():
+	if s.has("title"):
+		_title.text = str(s["title"])
+	elif days == Calendar.days_per_year():
 		_title.text = "A year passes"
 	elif days == Calendar.days_per_season():
 		_title.text = "A season passes"

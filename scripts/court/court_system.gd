@@ -580,7 +580,7 @@ static func mentor_for(state: WorldState, c: CharacterData, attr_id: String) -> 
 ## manor in their focus, for a fee (court.json "tutors").
 static func is_tutored(state: WorldState, c: CharacterData) -> bool:
 	var t := section("tutors")
-	return is_kin(state, c) and not state.is_player(c) and not c.retainer \
+	return is_kin(state, c) and not state.is_player(c) and not c.retainer and not c.is_away() \
 		and c.age >= int(t.get("min_age", 6)) and c.age <= int(t.get("max_age", 17))
 
 

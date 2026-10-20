@@ -107,6 +107,13 @@ var suitor_for: int = -1
 ## Wounded in a fight: resting until this day (-1 = hale).
 var wounded_until: int = -1
 
+# --- Away (Phase 5.2) ---------------------------------------------------------------
+## Not in the village: where ("journey" with the heir, "camp" with the warband
+## against a camp, "foster:<house id>" fostered at a noble house; "" = home),
+## and the day they're due back (-1: when fostering ends, at its age).
+var away_at: String = ""
+var away_until: int = -1
+
 
 # --- Identity ----------------------------------------------------------------
 
@@ -121,6 +128,16 @@ func is_adult() -> bool:
 ## A suitor visiting from another noble house (not one of the village).
 func is_visitor() -> bool:
 	return visiting_until >= 0
+
+
+## Away from the village (a journey, a camp, fostering): no body walks about.
+func is_away() -> bool:
+	return not away_at.is_empty()
+
+
+## The house they're fostered at (RealmData id), -1 if they aren't.
+func fostered_at() -> int:
+	return int(away_at.substr(7)) if away_at.begins_with("foster:") else -1
 
 
 func is_knight() -> bool:
@@ -331,6 +348,8 @@ func to_dict() -> Dictionary:
 		"visiting_until": visiting_until,
 		"suitor_for": suitor_for,
 		"wounded_until": wounded_until,
+		"away_at": away_at,
+		"away_until": away_until,
 	}
 
 
@@ -404,6 +423,8 @@ static func from_dict(d: Dictionary) -> CharacterData:
 	c.visiting_until = int(d.get("visiting_until", -1))
 	c.suitor_for = int(d.get("suitor_for", -1))
 	c.wounded_until = int(d.get("wounded_until", -1))
+	c.away_at = str(d.get("away_at", ""))
+	c.away_until = int(d.get("away_until", -1))
 	return c
 
 

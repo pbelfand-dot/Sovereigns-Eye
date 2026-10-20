@@ -279,6 +279,17 @@ static func migrate(data: Dictionary) -> Dictionary:
 		if not data.has("military"):
 			data["military"] = {}
 		data["save_version"] = 16
+		version = 16
+	if version == 16:
+		# v17 (Phase 5.2, the wider realm): the houses' seats go on the map
+		# (from the seed, as for a new village); no one has met their young,
+		# no one is away and there are no camps yet (the first is made on the
+		# next day's update; a band already on the road raids as before).
+		if data.has("realm") and not (data["realm"] as Dictionary).is_empty():
+			var realm := RealmData.from_dict(data["realm"])
+			realm.place(int(data.get("seed", 0)))
+			data["realm"] = realm.to_dict()
+		data["save_version"] = 17
 	return data
 
 

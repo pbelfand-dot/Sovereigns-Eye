@@ -333,6 +333,13 @@ func _build_court() -> void:
 	gb.tooltip_text = str(gift["reason"]) if not gift["ok"] else "A gift raises their opinion of you (more for the greedy)."
 	row.add_child(gb)
 	_court_box.add_child(row)
+	if c.is_away():
+		var where := "riding with the warband against a camp"
+		if c.fostered_at() >= 0:
+			where = "fostered at %s until %d" % [st.realm.get_house(c.fostered_at()).get("seat", "?"), int(Realm.section("fostering").get("return_age", 16))]
+		elif c.away_at == "journey":
+			where = "on a journey"
+		_court_box.add_child(_wrap_label("Away: %s." % where, 14, UITheme.ACCENT))
 	if c.is_visitor():
 		_build_court_visitor()
 	elif CourtSystem.is_kin(st, c):

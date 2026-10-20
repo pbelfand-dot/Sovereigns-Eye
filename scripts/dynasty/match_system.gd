@@ -253,7 +253,7 @@ static func dowry(state: WorldState, house_id: int) -> int:
 ## house's unmarried kin of an age.
 static func seeks(state: WorldState, c: CharacterData) -> bool:
 	var ages := section("ages")
-	if c.age < int(ages.get("min", 16)) or LifeSystem.spouse_of(state, c) != null:
+	if c.age < int(ages.get("min", 16)) or LifeSystem.spouse_of(state, c) != null or c.is_away():
 		return false
 	if state.is_player(c):
 		return c.age <= int(ages.get("max", 50))
@@ -272,8 +272,8 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 	for c in state.characters.duplicate():
 		if c.is_visitor() and state.get_character(c.suitor_for) == null:
 			send_home(state, c, "bereaved", events)
-		elif c.is_visitor() and day >= c.visiting_until:
-			send_home(state, c, "lapse", events)
+		elif c.is_visitor() and day >= c.visiting_until and not state.get_character(c.suitor_for).is_away():
+			send_home(state, c, "lapse", events)  # (they wait while the one they came for is away)
 	if visitor(state) != null:
 		return events
 	var target := _sought(state)

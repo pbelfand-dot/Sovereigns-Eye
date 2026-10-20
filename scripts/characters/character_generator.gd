@@ -942,6 +942,67 @@ static func suitor(world: WorldState, house: Dictionary, target: CharacterData, 
 	return c
 
 
+## One of a noble house's young (Phase 5.2, Realm): met when the heir visits
+## their seat, never one of the village until they marry into it
+## (`bring_member`): not added to the world, id below -2000 (`id`). Made like
+## a suitor (a noble's gifts and looks), at `age`.
+static func house_member(world: WorldState, house: Dictionary, age: int, id: int, stream: String) -> CharacterData:
+	var gen := CharacterGenerator.new()
+	gen._begin_settlers(world, stream)
+	var c := CharacterData.new()
+	c.id = id
+	c.gender = "male" if gen.rng_people.randf() < 0.5 else "female"
+	c.age = age
+	c.occupation_id = "child" if age < 13 else "noble_scion"
+	c.social_status = "noble"
+	c.house_id = int(house["id"])
+	var fam := FamilyData.new()
+	fam.name = str(house["name"])
+	c.first_name = gen._pick_first_name(c.gender, fam)
+	c.last_name = fam.name
+	gen._roll_traits(c, [])
+	var ap := GameData.appearance()
+	c.appearance = gen._roll_appearance(c, str(Seeds.pick(gen.rng_looks, ap["skin_tones"])), str(Seeds.pick(gen.rng_looks, ap["hair_colors"])))
+	c.appearance["face"] = FaceFeatures.roll(gen.rng_looks, c)
+	c.appearance["figure"] = FaceFeatures.roll_figure(gen.rng_figure, c)
+	TalentRoller.roll_attributes(gen.rng_talent, c, "noble", [])
+	c.birthday = gen.rng_people.randi_range(0, Calendar.days_per_year() - 1)
+	c.add_history(world.current_year() - age, gen._season(), "life", "Born at %s, of House %s" % [house["seat"], house["name"]])
+	c.home_building_id = -1
+	c.work_building_id = -1
+	c.happiness = 60.0
+	c.loyalty = 40.0
+	c.activity_text = "At %s" % house["seat"]
+	return c
+
+
+## One of a house's young comes to live in the village (betrothed to one of
+## yours at their seat): a new id, their house's family (made the first
+## time, as for a suitor), a guest at the manor until the wedding.
+static func bring_member(world: WorldState, house: Dictionary, member: CharacterData) -> CharacterData:
+	var fam := world.get_family(int(house.get("family", -1)))
+	if fam == null:
+		fam = FamilyData.new()
+		fam.id = 1
+		for f in world.families:
+			fam.id = maxi(fam.id, f.id + 1)
+		fam.name = str(house["name"])
+		fam.background = "noble"
+		fam.social_status = "noble"
+		world.add_family(fam)
+		house["family"] = fam.id
+	member.id = world.last_character_id() + 1
+	member.family_id = fam.id
+	fam.member_ids.append(member.id)
+	var manor := CourtSystem._building_of_type(world, "manor")
+	member.home_building_id = manor
+	member.work_building_id = manor
+	member.occupation_id = "noble_scion"
+	member.activity_text = "Arriving from %s" % house["seat"]
+	world.add_character(member)
+	return member
+
+
 ## One of a raiding band (Military): grown, hard, made like anyone (looks,
 ## traits) but never one of the village: not added to the world, id below
 ## zero (`index` -> -1000 - index). The leader (index 0) is the band's best.

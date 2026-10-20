@@ -51,6 +51,9 @@ func load_game(slot: String) -> bool:
 func save_game(slot: String) -> bool:
 	if state == null:
 		return false
+	if state.player() and state.player().is_away():
+		notify.emit("You can't save while you're away from the village.", COLOR_BAD)
+		return false
 	before_save.emit()
 	var err := SaveManager.save(state, slot)
 	if err != OK:

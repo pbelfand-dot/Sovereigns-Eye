@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 5 in progress: bandits raid the village and your warband fights them in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
+> **Status: Phase 5 in progress: the wider realm (visit the noble houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -91,7 +91,11 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 28 | Live and die | You age like everyone. Around 62 you're told your health is failing; when you die you go on as your heir. A ruler under 16 has a regent (Court panel → **Choose another regent...**) |
 | 29 | Let the years pass | Court panel (**K**) → **Let a season pass** / **Let a year pass**: the days run and you read what happened. It stops early for what needs you: a suitor, a death in the family, your health. **Family tree** shows the house from its eldest forebear down |
 | 30 | Defend the village | Now and then bandits gather on a road and send word: pay, or they strike in two days. Court panel (**K**) → **Defence**: your captains' reckoning of your chances, **Pay them off**, or **Call the levy**. On the day, your warband (retainers, knights and the watch) forms a line across the band's road and the village runs for shelter |
-| 31 | Fight | Watch the fight in the village or join it: walk up to a raider and press **E** to strike. Anyone who falls may die, you too (real risk); the wounded rest. A win brings renown, the raiders' purse and Combat for those who stood; a loss, the band takes its loot. Find fighters with the Eye: Combat wins fights, Leadership holds a line |
+| 31 | Fight | Watch the fight in the village or join it: walk up to a raider and press **E** to strike. **Charge now** sends the line at the band; **Fall back** gives up the loot but saves your people. Anyone who falls may die, you too (real risk; **Gentle fights** in the Defence section makes it rarer); the wounded rest. A win brings renown, the raiders' purse and Combat for those who stood; a loss, the band takes its loot. Find fighters with the Eye: Combat wins fights, Leadership holds a line |
+| 32 | The realm | **Realm** in the top bar (**J**): the noble houses' seats a few days' ride out, and the bandit camps. Each house holds yours in some regard (warm to cold); it fades unless you tend it |
+| 33 | Visit a noble house | Click a seat → **Ride to ...**: the days pass at home while you're away. At the seat: gifts, a talk with the lord or lady (your Politics), and their young: **Look with the Eye** at each, and **ask for a hand** for yourself or your kin (the wedding when you're home) |
+| 34 | Foster a child | At a friendly house, leave a kin child (7 to 13) to be fostered until 16: they learn what the house is known for (its knights: Combat; its learning: Intelligence...), and the house is honoured |
+| 35 | Clear a camp | Raids come from the bands' camps. Click a camp → **Send the warband** (or **Lead them yourself**): they ride out, fight on arrival and come home. Win, and the camp's hoard is yours and the houses near it are grateful; while they're away, the village is the barer |
 
 The same seed always creates the same village and the same people.
 
@@ -237,6 +241,24 @@ Combat and Leadership finally matter. `Military`, `Battle`, `data/military.json`
 ![The fight, close: your warband (green bars) against the raiders (red)](docs/screenshots/battle_melee.jpg)
 ![After the fight, here lost at even odds: the loot taken, who struck down raiders, who fell, who died](docs/screenshots/battle_report.jpg)
 
+### The wider realm (Phase 5, step 2)
+
+The noble houses become places, and the bands get homes. `Realm`, `RealmData`, `data/realm.json`; the camps in `Military`.
+
+| | What happens |
+|---|---|
+| **The map** | **Realm** (**J**): your village at the heart, the four noble houses' seats two to four days' ride out along their roads, each with its lord or lady and something it's known for (its knights, its captains, its learning, its standing at court, its well-run lands). Woods, hills and a river are drawn from the seed |
+| **Regard** | What each house thinks of yours, from cold to warm. It fades a little each season. A visit, gifts and a good talk raise it (a clumsy word lowers it), and so do fostering and clearing a camp near their seat. A house must be at least friendly to foster your child or give you a son or daughter; friendly houses send more suitors |
+| **Visits** | Ride to a seat and the days on the road pass at home (your warband meets any raid without you; you can't save while away). At the seat you meet the house's young: the Eye sees them as it sees your villagers, so you may find a gifted child in another house and ask for their hand for your heir. They come home with you and the wedding is held, with their dowry |
+| **Fostering** | A kin child of 7 to 13 left at a friendly house trains there each season in what it's known for, until they come home at 16 (or sooner, if they inherit) |
+| **Bandit camps** | Bands now live in camps a day or two out along the village's roads. A camp grows while it's left alone and sends its whole band to raid. Beaten in the village, a band loses its fallen and scatters when too few are left; winning or paid, it keeps its takings. Send the warband to clear a camp (your captains give the odds; the band fights harder on its own ground): won, its hoard is yours and the houses near it are grateful. While the warband is away, the village defends itself with whoever is left |
+
+![The realm map: the village, the noble houses' seats and a bandit camp](docs/screenshots/realm_map.jpg)
+![A visit: gifts given, the house's young seen with the Eye, a hand to ask for](docs/screenshots/realm_visit.jpg)
+![A noble house on the map: its regard, the young you've met, a ride to visit](docs/screenshots/realm_house.jpg)
+![A bandit camp: the band, its hoard, your captains' odds](docs/screenshots/realm_camp.jpg)
+![The warband back from a camp](docs/screenshots/realm_camp_report.jpg)
+
 ### Controls
 
 Every key below can be changed: **Esc → Keys...** (or **Settings → Keys...**
@@ -273,6 +295,7 @@ Controller buttons don't change.
 | Pause / speed | Top bar buttons | Space · 1 2 3 4 |
 | Village ledger | Top bar | L |
 | Your court | Top bar | K |
+| The realm (houses, camps) | Top bar | J |
 | Build menu / stores | Top bar | B |
 | Inspect a building | Left-click it | — |
 | Turn building being placed | — | T |
@@ -472,18 +495,24 @@ godot --headless --path . --script res://tools/life_sim.gd -- 12345 40
 godot --headless --path . --script res://tools/life_sim.gd -- 12345 100 steward matches heirs
 # How raids fought in the village turn out against the captains' odds
 godot --headless --path . res://tools/capture.tscn -- 1 /tmp/stats battle_stats
+# The realm map, a visit, a camp and its fight (needs a display)
+godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots realm
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 5, step 1)
+## 9. Known limitations (Phase 5, step 2)
 
 * A Town holds 200 people; there is no charter beyond it yet.
-* Raids are the only fighting yet: no bandit camps to clear, no levies of
-  your own to send out, no castle walls (Phase 5 steps 2 and 3). Fighters swing
-  swords and axes but don't block on purpose or use the ground; there are no
-  bows.
+* Fights at a bandit camp are told, not shown (raids in the village are
+  played out). Fighters swing swords and axes but don't block on purpose or
+  use the ground; there are no bows, and no castle walls yet (Phase 5 step 3).
+* The noble houses don't yet act on their own: no wars between them, no
+  help sent to you when you're raided, no wards sent to you to foster. Their
+  young you meet are the only ones of their people the game keeps.
+* You can't save while you're away from the village (a journey, riding with
+  the warband); the trip runs from the start to home in one go.
 * A game saved during a fight comes back to the start of it (the band
   returns to its road).
 * The house's own (kin and retainers) don't court on their own: match them
@@ -492,9 +521,6 @@ as readable JSON.
   their own, and a child ruler can do everything a grown one can.
 * While the years pass no one walks about; everyone takes up their day again
   afterwards. Births, deaths and new homes all happen, only unseen.
-* The noble houses round about are names, seats, renown and their regard for
-  yours; you can't visit them or send your kin to them yet (the wider realm is
-  Phase 5).
 * Babies have no body in the world until they're 3 (they're at home). There are
   no weddings or funerals to watch yet, only the news and the chronicle.
 * Farms don't gain levels; only cottages do.
