@@ -1694,8 +1694,8 @@ func _keep_shots() -> void:
 		world.ui.visible = false
 		# No names over anyone in the art views (hover follows the game camera).
 		for npc: NPC in world.npcs.values():
-			npc._label.modulate.a = 0.0
-			npc._ring.transparency = 1.0
+			npc.quiet = true
+			npc.refresh_markers()
 		var to := xf * to_local
 		var from := xf * from_local
 		from.y = TerrainHeight.height_at(from.x, from.z) + from_local.y
