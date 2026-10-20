@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 6 in progress: the market (prices that move with the season, the harvest and your trade; buy and sell, or leave it to your steward). Phase 5 done: your own castle (a motte and bailey, then stone), noble houses that send men to your aid or march against you, the wider realm (visit the houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
+> **Status: Phase 6 in progress: the market (prices that move with the season, the harvest and your trade; buy and sell, or leave it to your steward), and crafts and carts (weavers, the smith and the alewives make wares; carts take them to the noble houses' seats, past the bandits). Phase 5 done: your own castle (a motte and bailey, then stone), noble houses that send men to your aid or march against you, the wider realm (visit the houses, look at their children with the Eye, foster your own there, clear the bandit camps) and raids fought in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -296,6 +296,21 @@ Gold becomes goods, and goods gold. `Market`, `MarketData`, `data/market.json`.
 ![The Build panel's Market: prices, the harvest, buying and selling, the steward's standing orders, the latest trades](docs/screenshots/market_panel.jpg)
 ![The Court panel's treasury, part by part](docs/screenshots/market_treasury.jpg)
 
+### Crafts and carts (Phase 6, step 2)
+
+The village makes things to sell, and sends them out. `Trade`, `data/trade.json`, `TerritorySystem.craft`.
+
+| | What happens |
+|---|---|
+| **Wares** | Weavers weave **cloth**, the smith beats out **ironware** (burning wood), the tavern folk brew **ale** (from grain). They only work the stores' surplus, so the village's bread and the timber for its homes come first. **Build (B) → Stores** shows them and who makes them; raise a **Weavers' Workshop** (a hamlet may) and, from a Village charter, a **smithy** |
+| **The seats** | **Realm (J) → a house's seat → Trade**: each house wants two goods (one for what it's known for: knights want ironware, scholars cloth, stewards ale) and pays well for them, more if it likes your house, with no merchant's cut. Load a cart (60 at most), choose an escort from the warband, and **Send the cart**: a labourer, farmhand, woodcutter or farmer drives it, away from work until it's home, a few days each way. A sale warms the house to yours |
+| **The road** | A bandit camp near the road may waylay the cart, going (the goods) or coming home (the gold). The panel shows the risk from the camps you know of; an escort fights for the load, and can scatter a small band. Clear the camps, or send carts the safe way |
+
+![A Weavers' Workshop facing the road](docs/screenshots/trade_weavery.jpg)
+![The Build panel's stores: the wares and who makes them](docs/screenshots/trade_wares.jpg)
+![A seat's Trade section: what they want, the prices there, a cart loaded and escorted, the risk on the road](docs/screenshots/trade_seat.jpg)
+![A cart on the road to a seat, on the realm map](docs/screenshots/trade_map.jpg)
+
 ### Controls
 
 Every key below can be changed: **Esc → Keys...** (or **Settings → Keys...**
@@ -538,6 +553,8 @@ godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shot
 godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots keep
 # The market and the treasury
 godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots market
+# The weavers' workshop, the wares, a seat's Trade section and a cart on the map
+godot --path . --resolution 1600x900 res://tools/capture.tscn -- 12345 /tmp/shots trade
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
@@ -553,7 +570,8 @@ as readable JSON.
   furnished or lived in yet.
 * A grown town piles up gold: the market turns it into goods, but nothing
   yet takes it away (the Crown's tax and the lord's works come in Phase 6.3).
-* Craftsmen (the smith, the tavern) make nothing to sell yet (Phase 6.2).
+* Carts and their fights on the road are told, not shown: no cart rolls
+  out of the village or along the roads in the 3D world yet.
 * The noble houses don't yet act on their own: no wars between them, no
   help sent to you when you're raided, no wards sent to you to foster. Their
   young you meet are the only ones of their people the game keeps.

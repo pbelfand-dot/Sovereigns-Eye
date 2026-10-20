@@ -49,6 +49,7 @@ var battle_stats := false
 var realm_only := false
 var keep_only := false
 var market_only := false
+var trade_only := false
 
 
 func _ready() -> void:
@@ -84,6 +85,7 @@ func _ready() -> void:
 	realm_only = args.has("realm")
 	keep_only = args.has("keep")
 	market_only = args.has("market")
+	trade_only = args.has("trade")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -198,6 +200,10 @@ func _run() -> void:
 		return
 	if market_only:
 		await _market_shots()
+		get_tree().quit()
+		return
+	if trade_only:
+		await _trade_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1883,6 +1889,78 @@ func _market_shots() -> void:
 	await _wait(6)
 	await _shot("market_1_treasury.png")
 	print("market: %s" % str(Market.steward_summary(st, 10)))
+
+
+## Phase 6.2: the Weavers' Workshop at its looms, the wares in the stores, a
+## seat's Trade section with a cart loaded (a camp on its road) and a cart
+## on the realm map.
+func _trade_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	st.minutes += 30.0 * Calendar.MINUTES_PER_DAY + 3.0 * 60.0
+	st.house.gold = 900
+	for r: String in TerritorySystem.RESOURCES:
+		st.territory.stock[r] = 560.0
+	st.territory.stock["cloth"] = 64.0
+	st.territory.stock["ironware"] = 46.0
+	st.territory.stock["ale"] = 90.0
+	var spot := TerritorySystem.find_spot(st, "weavery")
+	var res := TerritorySystem.place(st, "weavery", spot["pos"], spot["rot"])
+	var site: ConstructionSite = res["site"]
+	site.work_done = site.work_needed
+	TerritorySystem.complete(st, site)
+	var workshop := st.get_building(site.id())
+	var h := st.realm.houses[0]
+	var other := st.realm.houses[1]
+	h["standing"] = 22
+	other["standing"] = 8
+	var camp: Dictionary = Military.make_camp(st, Seeds.rng(st.world_seed, "capture_camp_t"))["camp"]
+	var mid := Realm.center().lerp(Realm.pos_of(h), 0.55)
+	camp["pos"] = [mid.x, mid.y]
+	camp["men"] = 5
+	Military.reveal_camp(st, camp, "Your woodcutters have found where")
+	var r := Trade.send(st, int(other["id"]), {Trade.wants(st, int(other["id"]))[0]: 40}, 0)
+	print("trade: %s" % r["text"])
+	st.minutes += 2.0 * Calendar.MINUTES_PER_DAY
+	st.last_daily_update = st.day()
+	var world := await _boot_world()
+	world.ui._help.visible = false
+	world.ui._map_mode = false
+	_clear_toasts(world)
+	Input.warp_mouse(Vector2(4, 890))
+	world.camera_rig.set_yaw(float(OS.get_environment("TRADE_YAW")) if OS.get_environment("TRADE_YAW") != "" else workshop.rotation, true)
+	world.camera_rig.look_at_point(workshop.position, 36.0, true)
+	for i in 30:
+		world._process(0.1)
+	await _wait(8)
+	await _shot("trade_0_weavery.png")
+	world.ui.toggle_build()
+	await _wait(6)
+	for l: Label in world.ui._build.find_children("*", "Label", true, false):
+		if l.text.begins_with("Cloth"):
+			var scroll := world.ui._build.find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+			scroll.scroll_vertical = maxi(0, int(l.global_position.y - scroll.global_position.y) + scroll.scroll_vertical - 120)
+			break
+	await _wait(6)
+	await _shot("trade_1_wares.png")
+	world.ui.toggle_build()
+	world.ui.show_realm("house", int(h["id"]))
+	await _wait(4)
+	var panel: RealmPanel = world.ui._realm
+	var want := Trade.wants(st, int(h["id"]))
+	panel._change_load(want[0], 40)
+	panel._change_load(want[1] if TerritorySystem.WARES.has(want[1]) else "ale", 20)
+	panel._escort = 2
+	panel.refresh()
+	await _wait(4)
+	var scroll := panel.find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+	scroll.scroll_vertical = 100000
+	await _wait(4)
+	await _shot("trade_2_seat.png")
+	world.ui.show_realm("village", -1)
+	await _wait(6)
+	await _shot("trade_3_map.png")
+	print("trade: on the road %s" % str(Trade.on_road(st)))
 
 
 ## How raids fought in the village turn out against the captains' odds

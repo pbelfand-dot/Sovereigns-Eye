@@ -5,15 +5,29 @@
     { "id": "food",  "name": "Food",  "color": "#d9b94c", "description": "Grain, bread and greens. Everyone eats every day; an empty granary makes the village miserable." },
     { "id": "wood",  "name": "Wood",  "color": "#b07a45", "description": "Timber for building and firewood for every hearth." },
     { "id": "stone", "name": "Stone", "color": "#b3aea4", "description": "Cut stone for foundations and walls. Build a Stonecutter's Yard to quarry it." },
+    { "id": "cloth", "name": "Cloth", "color": "#c9b8e8", "ware": true, "description": "Woollen cloth from the village's looms, spun from its own flocks' wool. The realm's richest trade." },
+    { "id": "ironware", "name": "Ironware", "color": "#9fb4c4", "ware": true, "description": "Nails, tools and fittings from the smith's forge, which burns charcoal." },
+    { "id": "ale", "name": "Ale", "color": "#d6a24a", "ware": true, "description": "Ale brewed at the tavern from the village's grain. Its price follows bread's." },
     { "id": "gold",  "name": "Gold",  "color": "#e8c35a", "description": "Your house's treasury (rents, dues and wages)." }
   ],
 
   "start": { "food": 150, "wood": 120, "stone": 60 },
 
   "storage": {
-    "_comment": "Most of each resource the village can hold: base + bonus for every finished building of a type.",
+    "_comment": "Most of each resource the village can hold: base + bonus for every finished building of a type. wares: the same for cloth, ironware and ale (Phase 6.2).",
     "base": 400,
-    "per_building": { "storehouse": 300 }
+    "per_building": { "storehouse": 300 },
+    "wares": { "base": 120, "per_building": { "storehouse": 80 } }
+  },
+
+  "crafts": {
+    "_comment": "Phase 6.2: craftsmen turn the stores into wares, per worker per day at normal productivity: 'makes' per_day of a ware from 'uses' of the stores. A craft only works a store's surplus: never below reserve_days of what the village itself eats and burns (more than the 10 days' bread that draws settlers, growth food_days_good), nor below reserve_share of the store's room, kept for building (the alewife stops brewing in a lean year, the smith when the woodpile is low); with too little, it makes what it can.",
+    "reserve_days": 12,
+    "reserve_share": 0.5,
+    "blacksmith": { "makes": "ironware", "per_day": 1.5, "uses": { "wood": 2.0 } },
+    "innkeeper": { "makes": "ale", "per_day": 4.0, "uses": { "food": 2.0 } },
+    "tavern_hand": { "makes": "ale", "per_day": 3.0, "uses": { "food": 1.5 } },
+    "weaver": { "makes": "cloth", "per_day": 1.0, "uses": {} }
   },
 
   "consumption": {
@@ -169,6 +183,8 @@
       "description": "Two more woodcutters fell timber in the forest.",
       "cost": { "wood": 30, "stone": 10, "gold": 20 }, "work": 36, "jobs": { "woodcutter": 2 }, "limits": [3, 3, 4, 5]
     },
+    { "type": "weavery", "name": "Weavers' Workshop", "description": "Two weavers work looms here, weaving cloth from the wool the village's flocks give. Cloth is the realm's richest trade.", "cost": { "wood": 40, "stone": 10, "gold": 30 }, "work": 36, "jobs": { "weaver": 2 }, "limits": [1, 2, 2, 3] },
+    { "type": "smithy", "name": "Smithy", "description": "A smith at the forge makes nails, tools and fittings from bar iron, burning charcoal (wood).", "cost": { "wood": 30, "stone": 40, "gold": 40 }, "work": 40, "jobs": { "blacksmith": 1 }, "limits": [0, 1, 1, 2] },
     {
       "type": "farmhouse", "name": "Farmstead",
       "description": "A farmer and a farmhand work new fields around the house.",

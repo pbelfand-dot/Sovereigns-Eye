@@ -12,7 +12,7 @@ extends RefCounted
 ##
 ## Static and deterministic. Numbers: data/market.json.
 
-const GOODS := ["food", "wood", "stone"]
+const GOODS := ["food", "wood", "stone", "cloth", "ironware", "ale"]
 
 
 static func cfg() -> Dictionary:
@@ -65,6 +65,10 @@ static func price(state: WorldState, good: String) -> float:
 	var p := float(g.get("price", 1.0)) * float((g.get("season", {}) as Dictionary).get(state.current_season(), 1.0))
 	if good == "food":
 		p *= float(harvest(state).get("price", 1.0))
+	elif g.has("follows"):
+		# Ale's price is set from grain's (the Assize of Bread and Ale).
+		var f := str(g["follows"])
+		p *= fair_price(state, f) / float(section("goods").get(f, {}).get("price", 1.0))
 	if state.market:
 		p *= 1.0 + float(state.market.pressure.get(good, 0.0))
 	return p
@@ -101,15 +105,17 @@ static func spread(state: WorldState) -> float:
 	return maxf(float(t.get("min_spread", 0.1)), s)
 
 
-## Units of each good the market takes or gives in a day.
-static func volume(state: WorldState) -> int:
+## Units of a good the market takes or gives in a day (wares in smaller
+## lots: their 'volume' share).
+static func volume(state: WorldState, good: String = "food") -> int:
 	var t := section("trade")
-	return int(t.get("volume", 25)) + halls(state) * int(t.get("volume_per_hall", 60))
+	var share := float(section("goods").get(good, {}).get("volume", 1.0))
+	return roundi((int(t.get("volume", 25)) + halls(state) * int(t.get("volume_per_hall", 60))) * share)
 
 
 ## Units of a good left to trade today.
 static func room(state: WorldState, good: String) -> int:
-	return maxi(0, volume(state) - state.market.traded_today(good, state.day()))
+	return maxi(0, volume(state, good) - state.market.traded_today(good, state.day()))
 
 
 ## Gold for `units` of a good: paid when buying (units > 0), received when

@@ -111,6 +111,37 @@ func _stores(st: WorldState) -> void:
 		var detail := "%+.1f a day  (made %.1f, used %.1f)" % [net, float(prod.get(r, 0.0)), float(cons.get(r, 0.0))]
 		row.add_child(UITheme.label(detail, 14, UITheme.value_color(snappedf(net, 0.1))))
 		_body.add_child(row)
+	# The craftsmen's wares (Phase 6.2).
+	var crafts := TerritorySystem.craft_summary(st)
+	for w: String in TerritorySystem.WARES:
+		var amount_w := TerritorySystem.amount(st, w)
+		if amount_w < 0.5 and not crafts.has(w):
+			continue
+		var def := TerritorySystem.resource_def(w)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		var name_l := UITheme.label(str(def.get("name", w)), 15, Color(str(def.get("color", "#ffffff"))))
+		name_l.custom_minimum_size.x = 70
+		name_l.tooltip_text = str(def.get("description", ""))
+		name_l.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.add_child(name_l)
+		var cap := TerritorySystem.capacity(st, w)
+		var amount_l := UITheme.label("%d / %d" % [floori(amount_w), roundi(cap)], 15, UITheme.BAD if amount_w >= cap - 0.5 else UITheme.TEXT)
+		amount_l.custom_minimum_size.x = 100
+		row.add_child(amount_l)
+		var c: Dictionary = crafts.get(w, {})
+		var detail := "no one makes it"
+		if not c.is_empty():
+			var uses: Array[String] = []
+			for r: String in c["uses"]:
+				uses.append("%.1f %s" % [float(c["uses"][r]), TerritorySystem.resource_name(r).to_lower()])
+			detail = "+%.1f a day from %d %s%s" % [float(c["made"]), int(c["makers"]), "craftsman" if int(c["makers"]) == 1 else "craftsmen",
+				(" (using " + ", ".join(uses) + ")") if not uses.is_empty() else ""]
+			for r: String in c["uses"]:
+				if TerritorySystem.amount(st, r) <= TerritorySystem.craft_floor(st, r) + 0.5:
+					detail = "idle: they use only %s above %d (kept for the village and for building)" % [TerritorySystem.resource_name(r).to_lower(), roundi(TerritorySystem.craft_floor(st, r))]
+		row.add_child(UITheme.label(detail, 14, UITheme.TEXT_DIM))
+		_body.add_child(row)
 	if TerritorySystem.is_hungry(st):
 		_body.add_child(_wrap("The granary is empty and the village is going hungry. Everyone is unhappier until there is food again.", 14, UITheme.BAD))
 	var season := st.current_season()
@@ -128,7 +159,7 @@ func _market(st: WorldState) -> void:
 	var halls := Market.halls(st)
 	var where := "The merchant's stall in the square" if halls == 0 else ("%d Market Hall%s" % [halls, "s" if halls != 1 else ""])
 	var m := Market.best_merchant(st)
-	_body.add_child(_wrap("%s: up to %d of each good a day. You pay %d%% over the price and get %d%% under it%s." % [where, Market.volume(st),
+	_body.add_child(_wrap("%s: up to %d of food, wood and stone a day (wares in smaller lots). You pay %d%% over the price and get %d%% under it%s." % [where, Market.volume(st),
 		roundi(Market.spread(st) * 100.0), roundi(Market.spread(st) * 100.0), (", %s haggling for you (Politics %d)" % [m.first_name, m.get_current("politics")]) if m else ""], 14, UITheme.TEXT))
 	var h := Market.harvest(st)
 	_body.add_child(_wrap("This year: %s. Food is %s until the next harvest; bread is dearest in spring and cheapest after the harvest." % [h["name"],
@@ -208,7 +239,7 @@ func room_note(st: WorldState) -> String:
 	var parts: Array[String] = []
 	for good: String in Market.GOODS:
 		var left := Market.room(st, good)
-		if left < Market.volume(st):
+		if left < Market.volume(st, good):
 			parts.append("%d %s" % [left, TerritorySystem.resource_name(good).to_lower()])
 	return ("Left to trade today: " + ", ".join(parts) + ".") if not parts.is_empty() else ""
 

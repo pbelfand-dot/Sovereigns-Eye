@@ -307,6 +307,10 @@ static func migrate(data: Dictionary) -> Dictionary:
 		if not data.has("market"):
 			data["market"] = {}
 		data["save_version"] = 19
+		version = 19
+	if version == 19:
+		# v20 (Phase 6.2): no carts on the road yet (MarketData reads none).
+		data["save_version"] = 20
 	return data
 
 

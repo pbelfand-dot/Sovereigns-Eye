@@ -339,6 +339,9 @@ func _build_court() -> void:
 			where = "fostered at %s until %d" % [st.realm.get_house(c.fostered_at()).get("seat", "?"), int(Realm.section("fostering").get("return_age", 16))]
 		elif c.away_at == "journey":
 			where = "on a journey"
+		elif c.away_at == "cart":
+			var left := maxi(1, c.away_until - st.day())
+			where = "on the road with a cart, home in %s" % ("a day" if left == 1 else "%d days" % left)
 		_court_box.add_child(_wrap_label("Away: %s." % where, 14, UITheme.ACCENT))
 	if c.is_visitor():
 		_build_court_visitor()

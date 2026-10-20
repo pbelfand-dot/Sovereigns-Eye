@@ -3,16 +3,21 @@ extends PanelContainer
 ## The realm map (J, Phase 5.2): the map on the left (RealmMap), what you
 ## know of the chosen place on the right. A house: its lord or lady, what
 ## it's known for, its renown, what it thinks of yours, the young you've met
-## there and your kin fostered there; ride to visit. A camp: the band, how
-## many, its hoard, your captains' odds; send the warband, or lead it.
+## there and your kin fostered there; ride to visit; load a cart for its
+## seat (Phase 6.2). A camp: the band, how many, its hoard, your captains'
+## odds; send the warband, or lead it.
 
 signal close_requested
 signal visit_requested(house_id: int)
 signal ride_requested(camp_id: int, lead: bool)
+signal cart_requested(house_id: int, load: Dictionary, escort: int)
 
 var world: VillageWorld
 var _map: RealmMap
 var _body: VBoxContainer
+## The cart being loaded (good -> units) and how many ride with it.
+var _load: Dictionary = {}
+var _escort: int = 0
 
 
 func _init() -> void:
@@ -86,6 +91,8 @@ func _village(st: WorldState) -> void:
 	var x := st.military.expedition
 	if not x.is_empty():
 		_line(_expedition_text(st), 14, UITheme.ACCENT)
+	for cart: Dictionary in Trade.on_road(st):
+		_line(_cart_text(st, cart), 14, UITheme.ACCENT)
 	var known := Military.known_camps(st)
 	if st.military.camps.size() > known.size():
 		_line("A band is camped somewhere in the woods; no one knows where yet. Its raid will show the way (or your woodcutters will come on it).", 14, UITheme.BAD)
@@ -148,6 +155,116 @@ func _house(st: WorldState, h: Dictionary) -> void:
 		_line(str(can["reason"]), 13, UITheme.BAD)
 	elif not st.military.raid.is_empty():
 		_line("%s is on the road to the village: your warband will meet it without you." % Military._cap(str(st.military.raid["name"])) if st.military.raid.has("host") else "A band is on the road to the village: your warband will meet it without you.", 13, UITheme.BAD)
+	_trade(st, h)
+
+
+## Phase 6.2: what the seat wants and pays, and a cart to load for it.
+func _trade(st: WorldState, h: Dictionary) -> void:
+	var id := int(h["id"])
+	_sub("Trade")
+	var wants := Trade.wants(st, id)
+	_line("They want %s, and pay well for %s. A seat pays the going price, no merchant's cut, more from a house that likes yours; it takes up to %d of each a visit." % [
+		" and ".join(wants.map(func(g: String) -> String: return TerritorySystem.resource_name(g).to_lower())), "them" if wants.size() > 1 else "it", Trade.take(st)], 13, UITheme.TEXT_DIM)
+	var cart := Trade.on_road(st).filter(func(c: Dictionary) -> bool: return int(c["house"]) == id)
+	if not cart.is_empty():
+		_line(_cart_text(st, cart[0]), 14, UITheme.ACCENT)
+		return
+	var cap := int(Trade.section("cart").get("load", 60))
+	var units := 0
+	for g: String in Market.GOODS:
+		_load[g] = clampi(int(_load.get(g, 0)), 0, floori(TerritorySystem.amount(st, g)))
+		units += int(_load[g])
+	for g: String in Market.GOODS:
+		var have := floori(TerritorySystem.amount(st, g))
+		if have <= 0 and not wants.has(g):
+			continue
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		var name := UITheme.label("%s%s" % [TerritorySystem.resource_name(g), " *" if wants.has(g) else ""], 14, UITheme.GOOD if wants.has(g) else UITheme.TEXT)
+		name.custom_minimum_size.x = 92
+		row.add_child(name)
+		row.add_child(UITheme.label("%.2f here, %.2f at market" % [Trade.seat_price(st, id, g), Market.sell_price(st, g)], 12, UITheme.TEXT_DIM))
+		var spacer := Control.new()
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(spacer)
+		var less := UITheme.button("-", func() -> void: _change_load(g, -10))
+		less.disabled = int(_load[g]) <= 0
+		row.add_child(less)
+		var n := UITheme.label("%d" % int(_load[g]), 14, UITheme.ACCENT)
+		n.custom_minimum_size.x = 28
+		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row.add_child(n)
+		var more := UITheme.button("+", func() -> void: _change_load(g, 10))
+		more.disabled = units >= cap or int(_load[g]) >= have
+		more.tooltip_text = "%d in the stores" % have
+		row.add_child(more)
+		_body.add_child(row)
+	var riders := Trade.escorts(st)
+	_escort = clampi(_escort, 0, mini(riders.size(), int(Trade.section("cart").get("escort_max", 4))))
+	var erow := HBoxContainer.new()
+	erow.add_theme_constant_override("separation", 6)
+	var elabel := UITheme.label("Escort: %d of the warband (%d fit to ride)" % [_escort, riders.size()], 14, UITheme.TEXT)
+	elabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	erow.add_child(elabel)
+	var eless := UITheme.button("-", func() -> void:
+		_escort -= 1
+		_refresh_details())
+	eless.disabled = _escort <= 0
+	erow.add_child(eless)
+	var emore := UITheme.button("+", func() -> void:
+		_escort += 1
+		_refresh_details())
+	emore.disabled = _escort >= mini(riders.size(), int(Trade.section("cart").get("escort_max", 4)))
+	erow.add_child(emore)
+	_body.add_child(erow)
+	var load := {}
+	for g: String in _load:
+		if int(_load[g]) > 0:
+			load[g] = int(_load[g])
+	var d := Trade.danger(st, id, true)
+	if (d["camps"] as Array).is_empty():
+		_line("No camp you know of lies near the road.", 13, UITheme.TEXT_DIM)
+	else:
+		_line("The road passes %s: about %d in 100 carts are waylaid each way. An escort fights for the load (and the gold home)." % [
+			" and ".join((d["camps"] as Array).map(func(c: Dictionary) -> String: return "the camp of %s (%d men)" % [c["band"], int(c["men"])])),
+			roundi(float(d["chance"]) * 100.0)], 13, UITheme.BAD)
+	var days := Trade.cart_days(st, id)
+	_line("%d of %d loaded%s." % [units, cap, (": worth some %d gold at the seat" % Trade.estimate(st, id, load)) if units > 0 else ""], 14, UITheme.TEXT)
+	var can := Trade.can_send(st, id, load)
+	var send := UITheme.button("Send the cart (%d days there, %d back)" % [days, days], func() -> void:
+		cart_requested.emit(id, load, _escort))
+	send.disabled = not can["ok"] or units <= 0
+	send.tooltip_text = str(can["reason"]) if not can["ok"] else ("Load the cart first." if units <= 0 else "A carter drives it (away, and not at work, until it's home).")
+	_body.add_child(send)
+	if not can["ok"] and not str(can["reason"]).is_empty():
+		_line(str(can["reason"]), 13, UITheme.BAD)
+
+
+func _change_load(good: String, by: int) -> void:
+	var cap := int(Trade.section("cart").get("load", 60))
+	var others := 0
+	for g: String in _load:
+		if g != good:
+			others += int(_load[g])
+	_load[good] = clampi(int(_load.get(good, 0)) + by, 0, mini(cap - others, floori(TerritorySystem.amount(world.state, good))))
+	_refresh_details()
+
+
+## The load sent: the next cart starts empty.
+func cart_sent() -> void:
+	_load = {}
+	_escort = 0
+	refresh()
+
+
+func _cart_text(st: WorldState, cart: Dictionary) -> String:
+	var seat := str(st.realm.get_house(int(cart["house"])).get("seat", "the seat"))
+	var people := 1 + (cart["escort"] as Array).size()
+	if str(cart["stage"]) == "out":
+		return "Your cart is on the road to %s with %s (%d with it): there by %s, home by %s." % [seat, Trade._goods_text(cart["load"]), people,
+			Calendar.format_date(int(cart["arrive"]) * Calendar.MINUTES_PER_DAY), Calendar.format_date(int(cart["back"]) * Calendar.MINUTES_PER_DAY)]
+	return "Your cart is on its way home from %s%s: home by %s." % [seat, (" with %d gold" % int(cart["gold"])) if int(cart["gold"]) > 0 else "",
+		Calendar.format_date(int(cart["back"]) * Calendar.MINUTES_PER_DAY)]
 
 
 func _camp(st: WorldState, c: Dictionary) -> void:

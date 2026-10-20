@@ -38,6 +38,7 @@ var _prompt: PanelContainer
 var _prompt_name: Label
 var _prompt_keys: Label
 var _map_banner: PanelContainer
+var _map_mode := false
 var _map_button: Button
 var _touch: TouchControls
 ## The last input came from a controller (prompts show its buttons).
@@ -209,6 +210,8 @@ func _process(_delta: float) -> void:
 	_layout_top_bar()
 	_update_stores_bar()
 	_update_battle_banner()
+	# The map table's banner, unless a panel covers the view.
+	_map_banner.visible = _map_mode and not (_realm.visible or _court.visible or _build.visible or _ledger.visible or _tree.visible)
 	if _place_hint.visible:
 		_update_place_hint()
 
@@ -485,6 +488,7 @@ func _build_realm() -> void:
 	_realm.close_requested.connect(toggle_realm)
 	_realm.visit_requested.connect(func(id: int) -> void: journey(id))
 	_realm.ride_requested.connect(func(id: int, lead: bool) -> void: ride_out(id, lead))
+	_realm.cart_requested.connect(send_cart)
 	# With the other panels: notices, menus and overlays stay on top of it.
 	_root.move_child(_realm, _tree.get_index() + 1)
 	_visit_overlay = ColorRect.new()
@@ -603,6 +607,18 @@ func ride_out(camp_id: int, lead: bool) -> void:
 	var summary: Dictionary = await world.pass_time(days, true)
 	summary["title"] = "Back from the camp"
 	_end_away(summary)
+
+
+## A cart sets out for a seat (Phase 6.2): the carter and its escort leave.
+func send_cart(house_id: int, load: Dictionary, escort: int) -> void:
+	var r := Trade.send(world.state, house_id, load, escort)
+	Game.notify.emit(str(r["text"]), Game.COLOR_INFO if r["ok"] else Game.COLOR_BAD)
+	Audio.play("coins" if r["ok"] else "ui_error")
+	if r["ok"]:
+		world.apply_life_events([{"text": "", "away": r["away"]}])
+		_realm.cart_sent()
+	else:
+		_realm.refresh()
 
 
 ## The summary of days away (and the fight at a camp, after it).
@@ -823,7 +839,8 @@ func _build_map_banner() -> void:
 
 
 func _on_mode_changed(mode: String) -> void:
-	_map_banner.visible = mode == "overview" and world.heir_ctl != null
+	_map_mode = mode == "overview" and world.heir_ctl != null
+	_map_banner.visible = _map_mode
 	_map_button.text = "Walk" if mode == "overview" else "Map"
 	_map_button.tooltip_text = InputSetup.fill("Back to walking as your heir ({keys:toggle_overview})" if mode == "overview" else "The map table: plan your lands from above ({keys:toggle_overview})")
 

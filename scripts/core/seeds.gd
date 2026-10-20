@@ -38,6 +38,16 @@ static func rng(world_seed: int, stream: String) -> RandomNumberGenerator:
 	return r
 
 
+## For streams named by a running count ("cart_1", "cart_2"...) whose first
+## draw decides something: neighbouring seeds start the generator on
+## neighbouring states and their first draws run together, so the seed is
+## mixed first.
+static func counted_rng(world_seed: int, stream: String) -> RandomNumberGenerator:
+	var r := RandomNumberGenerator.new()
+	r.seed = hash(derive(world_seed, stream)) & MAX_SEED
+	return r
+
+
 # --- Small deterministic pick helpers (never touch the global RNG) ---------
 
 static func pick(r: RandomNumberGenerator, items: Array) -> Variant:

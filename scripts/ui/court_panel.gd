@@ -88,6 +88,16 @@ func refresh() -> void:
 			deals.append("%s %s for %d gold" % [which, " and ".join(what), int(trade["got"] if which == "sold" else trade["paid"])])
 		if not deals.is_empty():
 			_body.add_child(_wrap("At market these ten days your steward %s (Build panel: Market)." % "; ".join(deals), 13, UITheme.TEXT_DIM))
+		# Phase 6.2: carts to the seats.
+		var carts: Array[String] = []
+		for cart: Dictionary in Trade.on_road(st):
+			carts.append("one on the road %s %s (home by %s)" % ["to" if str(cart["stage"]) == "out" else "from", st.realm.get_house(int(cart["house"])).get("seat", "?"),
+				Calendar.format_date(int(cart["back"]) * Calendar.MINUTES_PER_DAY)])
+		var last := st.market.last_cart
+		if not last.is_empty() and int(last["day"]) >= st.day() - Calendar.days_per_year():
+			carts.append("the last came home from %s %s" % [last["seat"], ("with %d gold" % int(last["gold"])) if int(last["gold"]) > 0 else "empty-handed"])
+		if not carts.is_empty():
+			_body.add_child(_wrap("Carts: %s (Realm map: J)." % "; ".join(carts), 13, UITheme.TEXT_DIM))
 	if h.in_debt:
 		_body.add_child(_wrap("Your coffers are empty and wages go unpaid. Loyalty is falling every day.", 14, UITheme.BAD))
 	_body.add_child(UITheme.label("Renown %d   -   Household %d / %d (more renown, more retainers)" % [h.renown, CourtSystem.retainer_count(st), CourtSystem.retainer_cap(st)], 15))

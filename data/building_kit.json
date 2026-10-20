@@ -83,6 +83,11 @@
         { "blocks": [ { "cells": [4, 3], "at": [0, 0], "stories": 1, "walls": "plaster", "ground": "plaster", "roof": "tiles", "ridge": "x", "door": true } ], "props": ["wagon", "crate", "crate"] }
       ]
     },
+    "weavery": {
+      "variants": [
+        { "blocks": [ { "cells": [4, 3], "at": [0, 0], "stories": 2, "walls": "plaster", "ground": "plaster", "roof": "thatch", "ridge": "x", "door": true } ], "props": ["crate", "crate"], "vines": 1 }
+      ]
+    },
     "storehouse": {
       "variants": [
         { "blocks": [ { "cells": [5, 4], "at": [0, 0], "stories": 1, "walls": "brick", "roof": "tiles", "ridge": "x", "door": true } ], "props": ["wagon", "crate", "crate", "crate"] }

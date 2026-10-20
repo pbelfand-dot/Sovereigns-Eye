@@ -53,6 +53,7 @@ func _init() -> void:
 		for e: Dictionary in Market.daily_update(st):
 			if e.has("harvest") and str(e["harvest"]) in ["dearth", "plenty"]:
 				print("   day %4d  %s" % [day, e["text"]])
+		Trade.daily_update(st)
 		for e: Dictionary in LifeSystem.daily_update(st):
 			for key: String in ["born", "gone", "moved"]:
 				if not e.has(key):

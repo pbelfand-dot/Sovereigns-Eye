@@ -21,6 +21,11 @@ var _next_id := 0
 func build(source: VillageLayout) -> void:
 	layout = source
 	astar.clear()
+	# Rebuilt whenever the layout changes (a lane laid, a building done):
+	# start the node lists afresh too, or their old ids name other nodes.
+	door_nodes.clear()
+	square_nodes.clear()
+	road_nodes.clear()
 	_next_id = 0
 	# Roads
 	for road in layout.roads:

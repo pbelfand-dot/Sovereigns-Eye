@@ -1,0 +1,34 @@
+{
+  "_comment": "Phase 6.2, carts to the noble houses' seats (Trade; carts kept in MarketData). Decided: a cart carries goods from the stores to a house's seat along the realm's roads, driven by a villager (a labourer, farmhand, woodcutter or farmer: away from work for the journey), with as many of the warband for escort as you spare. The seat buys at the realm's going price (no spread), dearer for what it wants and from a house that likes you, a share of each good per visit. A bandit camp near the road may waylay the cart on either leg: the escort fights them (as at a camp: the band on its own ground), and if it's beaten the goods (going) or the gold (coming home) are lost. A sale warms the house to yours (trade, not a favour: its rival doesn't mind). A house that holds yours in contempt won't deal with you.",
+
+  "wants": {
+    "_comment": "Each house wants two goods: one for what it's known for (by_known_for), one more from the seed among 'goods'. It pays 'premium' times the going price for them, 'plain' for anything else, more by regard_bonus per point of regard (up to max_regard), and takes up to 'take' units of each good a visit.",
+    "by_known_for": {"arms": "ironware", "command": "ironware", "learning": "cloth", "statecraft": "cloth", "stewardship": "ale"},
+    "goods": ["cloth", "ironware", "ale", "food", "stone"],
+    "premium": 1.6,
+    "plain": 1.0,
+    "regard_bonus": 0.002,
+    "max_regard": 100,
+    "take": 40,
+    "min_regard": -39
+  },
+
+  "cart": {
+    "_comment": "load: units a cart carries. slowness: a cart takes the seat's riding days times this (rounded up), each way. carters: who may drive one, the first spared first (a farmer or woodcutter on the road isn't in the fields or the woods). max: carts on the road at once (one to each seat). escort_max: of the warband. regard: the house's regard for a sale.",
+    "load": 60,
+    "slowness": 1.5,
+    "carters": ["laborer", "farmhand", "apprentice", "woodcutter", "farmer", "tavern_hand"],
+    "carter_age": [16, 55],
+    "max": 2,
+    "escort_max": 4,
+    "regard": 3
+  },
+
+  "ambush": {
+    "_comment": "A camp within reach_days of the road (on the realm map) may waylay a cart on each leg: chance_per_man for each of its men, at most max_chance. Its share of the band attack, on their own ground (Military's camp band).",
+    "reach_days": 1.0,
+    "chance_per_man": 0.04,
+    "max_chance": 0.6,
+    "share": 0.5
+  }
+}

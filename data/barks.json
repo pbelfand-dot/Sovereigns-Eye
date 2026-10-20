@@ -47,6 +47,7 @@
     "baker":         ["Fresh loaves by noon, {lord}.", "Ovens are hot. Stand back a pace."],
     "blacksmith":    ["Strike while it's hot, they say. They're right.", "This iron's got a temper on it."],
     "carpenter":     ["Measure twice, cut once.", "Good seasoned timber. Hard to come by."],
+    "weaver":        ["Over, under, over, under...", "Mind the warp threads, {lord}. One snaps, I start again."],
     "apprentice":    ["I'll get it right this time. I will.", "The master says my joints are crooked."],
     "merchant":      ["Fine cloth, {lord}, fresh from the coast!", "Prices are up again. Blame the roads."],
     "innkeeper":     ["The ale's good today, {lord}. Better than yesterday's.", "Another barrel to tap before the evening."],

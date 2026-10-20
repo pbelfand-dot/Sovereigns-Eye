@@ -19,6 +19,9 @@ extends RefCounted
 ## game, in headless tests and on saved games. Numbers: data/territory.json.
 
 const RESOURCES := ["food", "wood", "stone"]
+## Wares the craftsmen make from the stores (Phase 6.2), kept apart from
+## the raw stores, with their own room.
+const WARES := ["cloth", "ironware", "ale"]
 
 
 static func config() -> Dictionary:
@@ -101,6 +104,8 @@ static func capacity(state: WorldState, resource: String) -> float:
 	if resource == "gold":
 		return INF
 	var cfg := section("storage")
+	if WARES.has(resource):
+		cfg = cfg.get("wares", {})
 	var cap := float(cfg.get("base", 400))
 	var per: Dictionary = cfg.get("per_building", {})
 	for type: String in per:
@@ -186,6 +191,83 @@ static func worker_output(state: WorldState, c: CharacterData) -> Dictionary:
 	return out
 
 
+# --- Crafts (Phase 6.2) ------------------------------------------------------------------
+
+## What each craftsman at work would make and use in a day, before the
+## stores' limits: [{id, makes, made, uses: {resource: amount}}].
+static func craft_plans(state: WorldState) -> Array:
+	var out := []
+	var crafts := section("crafts")
+	for c in state.characters:
+		var def: Dictionary = crafts.get(c.occupation_id, {}) if crafts.get(c.occupation_id) is Dictionary else {}
+		if def.is_empty() or c.retainer or state.is_player(c) or c.is_away() or c.age < 14:
+			continue
+		if builder_site(state, c) != null or CastleSystem.is_builder(state, c):
+			continue
+		var p := productivity(c)
+		var uses := {}
+		var want: Dictionary = def.get("uses", {})
+		for r: String in want:
+			uses[r] = float(want[r]) * p
+		out.append({"id": c.id, "makes": str(def["makes"]), "made": float(def.get("per_day", 1.0)) * p, "uses": uses})
+	return out
+
+
+## The day's crafts: inputs taken from the stores (never food or wood below
+## reserve_days of what the village eats and burns), wares made (up to their
+## room). {made: {ware: amount}, used: {resource: amount}}
+static func craft(state: WorldState) -> Dictionary:
+	var made := {}
+	var used := {}
+	var spare := {}
+	for r: String in RESOURCES:
+		spare[r] = maxf(0.0, amount(state, r) - craft_floor(state, r))
+	for plan: Dictionary in craft_plans(state):
+		var ware := str(plan["makes"])
+		var f := 1.0
+		var uses: Dictionary = plan["uses"]
+		for r: String in uses:
+			if float(uses[r]) > 0.0:
+				f = minf(f, float(spare.get(r, 0.0)) / float(uses[r]))
+		var room := capacity(state, ware) - amount(state, ware) - float(made.get(ware, 0.0))
+		if float(plan["made"]) > 0.0:
+			f = minf(f, room / float(plan["made"]))
+		f = maxf(0.0, f)
+		for r: String in uses:
+			spare[r] = float(spare.get(r, 0.0)) - float(uses[r]) * f
+			used[r] = float(used.get(r, 0.0)) + float(uses[r]) * f
+		made[ware] = float(made.get(ware, 0.0)) + float(plan["made"]) * f
+	for r: String in used:
+		add(state, r, -float(used[r]))
+	for w: String in made:
+		add(state, w, float(made[w]))
+	return {"made": made, "used": used}
+
+
+## How low a craft may draw a store: the village's own needs come first,
+## reserve_days of what it eats and burns, and the store kept reserve_share
+## full for building (the smith works the woodpile's surplus, not the
+## timber for a settler's home).
+static func craft_floor(state: WorldState, r: String) -> float:
+	var c := section("crafts")
+	return maxf(float(consumption(state).get(r, 0.0)) * float(c.get("reserve_days", 12)), capacity(state, r) * float(c.get("reserve_share", 0.5)))
+
+
+## Per ware: {made a day, makers} at full stores (for the panels).
+static func craft_summary(state: WorldState) -> Dictionary:
+	var out := {}
+	for plan: Dictionary in craft_plans(state):
+		var w := str(plan["makes"])
+		if not out.has(w):
+			out[w] = {"made": 0.0, "makers": 0, "uses": {}}
+		out[w]["made"] += float(plan["made"])
+		out[w]["makers"] += 1
+		var uses: Dictionary = plan["uses"]
+		for r: String in uses:
+			out[w]["uses"][r] = float(out[w]["uses"].get(r, 0.0)) + float(uses[r])
+	return out
+
+
 static func production(state: WorldState) -> Dictionary:
 	var out := {}
 	for r: String in RESOURCES:
@@ -239,6 +321,12 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 		t.last_change[r] = got
 		if want > 0.0 and got < want - 0.5 and t.amount(r) >= capacity(state, r) - 0.01:
 			wasted.append(resource_name(r).to_lower())
+	# The craftsmen at work (Phase 6.2).
+	var crafted := craft(state)
+	for w: String in WARES:
+		t.last_change[w] = float(crafted["made"].get(w, 0.0))
+	for r: String in crafted["used"]:
+		t.last_change[r] = float(t.last_change.get(r, 0.0)) - float(crafted["used"][r])
 	if is_hungry(state) and not was_hungry:
 		events.append({"text": "The granary is empty! The village goes hungry. Build farms or ease the workload.", "kind": "bad"})
 		state.house.log_event(state.day(), "The granary ran empty.", "bad")
@@ -561,13 +649,29 @@ static func cancel(state: WorldState, site: ConstructionSite) -> Dictionary:
 		add(state, r, float(refunded[r]))
 	if not site.lane.is_empty():
 		for i in range(state.layout.roads.size() - 1, -1, -1):
-			if str(state.layout.roads[i].get("name", "")) == site.lane:
+			var road: Dictionary = state.layout.roads[i]
+			if str(road.get("name", "")) == site.lane and not _lane_in_use(state, road):
 				state.layout.roads.remove_at(i)
 	state.territory.sites.erase(site)
 	for s in state.territory.sites:
 		refresh_crew(state, s)
 	var what := "work on %s" % site.building.name if site.is_upgrade() else "the %s" % display_name(site.building.type)
 	return {"ok": true, "text": "You called off %s. Refunded %s." % [what, cost_text(refunded)]}
+
+
+## Another lane ends on this one (laid to a later building from it): it
+## stays, or that building would be cut off.
+static func _lane_in_use(state: WorldState, lane: Dictionary) -> bool:
+	var pts: PackedVector3Array = lane["points"]
+	for road in state.layout.roads:
+		if road == lane or not str(road.get("name", "")).begins_with("lane_"):
+			continue
+		var other: PackedVector3Array = road["points"]
+		for end in [other[0], other[other.size() - 1]]:
+			for i in range(1, pts.size()):
+				if Geometry3D.get_closest_point_to_segment(end, pts[i - 1], pts[i]).distance_to(end) < 2.0:
+					return true
+	return false
 
 
 static func _new_name(state: WorldState, type: String) -> String:
