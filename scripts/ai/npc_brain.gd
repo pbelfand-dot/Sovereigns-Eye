@@ -70,6 +70,8 @@ func activity_at(hour: float) -> String:
 
 ## Gives the brain an order (see `errand`); {} returns to the routine.
 func set_errand(e: Dictionary) -> void:
+	if str(errand.get("type", "")) == "shelter":
+		npc.hurry = false
 	errand = e
 	_steps.clear()
 	_current = {}
@@ -77,8 +79,22 @@ func set_errand(e: Dictionary) -> void:
 		block_activity = ""
 
 
-func _errand_update(_game_minutes: float) -> void:
+func _errand_update(game_minutes: float) -> void:
 	match str(errand.get("type", "")):
+		"shelter":
+			# Raiders about (Phase 5.1): home at a run, and stay in.
+			npc.hurry = true
+			var home := world.state.get_building(c.home_building_id)
+			if home == null:
+				npc.stop()
+				npc.set_anim("idle")
+				return
+			if _current.is_empty() and _steps.is_empty():
+				if c.inside_building_id == home.id:
+					return  # safe indoors
+				_go_inside(home, 1.0e6, "Sheltering from the raiders")
+			c.activity_text = "Sheltering from the raiders"
+			_advance(game_minutes)
 		"hold":
 			if c.inside_building_id >= 0:
 				_leave_building()

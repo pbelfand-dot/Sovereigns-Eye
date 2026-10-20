@@ -5,7 +5,7 @@ You can see what no one else can — every person's current ability *and* their
 hidden maximum potential. Somewhere in your village is a 14-year-old farmhand
 with S+ Leadership. Find them.
 
-> **Status: Phase 4 done: the years turn. People grow up, marry, have children who inherit their gifts, and die; you choose your own match and your kin's, name your heir, and play on as them when you die** (internal codename "Project Appraisal").
+> **Status: Phase 5 in progress: bandits raid the village and your warband fights them in the streets, with real risk. Phase 4 done: the years turn, marriages, heirs and succession** (internal codename "Project Appraisal").
 > Godot 4.7 · GDScript · Quaternius village kit and characters (see [docs/ART_PLAN.md](docs/ART_PLAN.md)).
 
 ![The title screen: the heir looks over the village at golden hour](docs/screenshots/main_menu.jpg)
@@ -90,6 +90,8 @@ Apple Silicon Macs run it natively; Godot 4.7 uses Metal by default.
 | 27 | Name your heir | Open one of your children's cards → **Court** → **Name ... your heir**. Any child, not just the eldest: pass over a dull firstborn for the gift the Eye found (the elder takes it ill, once) |
 | 28 | Live and die | You age like everyone. Around 62 you're told your health is failing; when you die you go on as your heir. A ruler under 16 has a regent (Court panel → **Choose another regent...**) |
 | 29 | Let the years pass | Court panel (**K**) → **Let a season pass** / **Let a year pass**: the days run and you read what happened. It stops early for what needs you: a suitor, a death in the family, your health. **Family tree** shows the house from its eldest forebear down |
+| 30 | Defend the village | Now and then bandits gather on a road and send word: pay, or they strike in two days. Court panel (**K**) → **Defence**: your captains' reckoning of your chances, **Pay them off**, or **Call the levy**. On the day, your warband (retainers, knights and the watch) forms a line across the band's road and the village runs for shelter |
+| 31 | Fight | Watch the fight in the village or join it: walk up to a raider and press **E** to strike. Anyone who falls may die, you too (real risk); the wounded rest. A win brings renown, the raiders' purse and Combat for those who stood; a loss, the band takes its loot. Find fighters with the Eye: Combat wins fights, Leadership holds a line |
 
 The same seed always creates the same village and the same people.
 
@@ -216,6 +218,24 @@ You don't play one life but a house. `Succession`, `data/succession.json`.
 ![The family tree after sixty years: five generations, three rulers, your named heir](docs/screenshots/succession_tree.jpg)
 ![A lord dies young: his son, thirteen, rules through his mother as regent](docs/screenshots/succession_regency.jpg)
 ![Letting a year pass: the village before and after, and the news](docs/screenshots/succession_years.jpg)
+
+### Raids and the warband (Phase 5, step 1)
+
+Combat and Leadership finally matter. `Military`, `Battle`, `data/military.json`.
+
+| | What happens |
+|---|---|
+| **A band on the road** | From the second year, now and then, a band of brigands (outlaws, deserters) camps on one of the roads and sends word: pay them, or they strike in two days. Bands grow with the village, its charter and renown, and harder ones come as the years go by. The Court panel's **Defence** shows them, your captains' reckoning of your chances (certain, good, even, poor, hopeless), **Pay them off** (they go, and the house is thought a little less of) and **Call the levy** |
+| **Your warband** | Your retainers and knights and the village watch (soldiers and the guard captain) answer the call; the levy is the strongest few villagers with farm tools, unwilling. Combat lands blows (a better fighter hits more and harder); armor turns them (knights most); Leadership holds a side together: a side breaks when enough of it has fallen, later with a good captain |
+| **The fight** | On the day, at ten, the band comes up its road. Your warband stands in a line across it on open ground, and the village runs home to shelter. When the band comes close, the line charges and the fight pairs off, each taking whoever is least beset: skill tells. A bar over every head shows what's left of them. Walk up to a raider and press **E** to strike: you're in the fight then, and fair game |
+| **Real risk** | Anyone who falls may die of their wounds (about a third): watchmen, knights, your best retainer, you. The rest lie wounded for ten days (they can't fight, and they're unhappy). If you fall and die, you go on as your heir |
+| **After** | Win: renown, the raiders' purse, and Combat for everyone who stood (more for each raider struck down). Lose: the band takes a share of your gold and food, and the village is shaken. Either way a report tells who did what |
+
+![The Court panel's Defence: a band on the road, your chances, pay or call the levy](docs/screenshots/battle_defence.jpg)
+![The warband's line across the road as the band comes up](docs/screenshots/battle_line.jpg)
+![The charge: the line wheels onto the band, swords and shields in hand](docs/screenshots/battle_charge.jpg)
+![The fight, close: your warband (green bars) against the raiders (red)](docs/screenshots/battle_melee.jpg)
+![After the fight, here lost at even odds: the loot taken, who struck down raiders, who fell, who died](docs/screenshots/battle_report.jpg)
 
 ### Controls
 
@@ -443,21 +463,29 @@ tools/run_tests.sh                       # Headless tests (generation, determini
                                          # court, territory, save/load, art pipeline, audio,
                                          # live world)
 godot --headless --path . --script res://tools/print_village.gd -- 12345   # census of a seed
-# Screenshots (needs a display): court | art | menus | build | barks | life | matches | succession | ...
+# Screenshots (needs a display): court | art | menus | build | barks | life | matches | succession | battle | ...
 godot --path . res://tools/capture.tscn -- 12345 /tmp/shots build
 # A village through the years, data only (population, births, deaths, weddings)
 godot --headless --path . --script res://tools/life_sim.gd -- 12345 40
 # ...with a steward bot building, gifted suitors taken and the most gifted child
 # named heir: a century passes through several rulers
 godot --headless --path . --script res://tools/life_sim.gd -- 12345 100 steward matches heirs
+# How raids fought in the village turn out against the captains' odds
+godot --headless --path . res://tools/capture.tscn -- 1 /tmp/stats battle_stats
 ```
 
 Saves live in `~/Library/Application Support/Godot/app_userdata/Sovereign's Eye/saves/`
 as readable JSON.
 
-## 9. Known limitations (Phase 4)
+## 9. Known limitations (Phase 5, step 1)
 
 * A Town holds 200 people; there is no charter beyond it yet.
+* Raids are the only fighting yet: no bandit camps to clear, no levies of
+  your own to send out, no castle walls (Phase 5 steps 2 and 3). Fighters swing
+  swords and axes but don't block on purpose or use the ground; there are no
+  bows.
+* A game saved during a fight comes back to the start of it (the band
+  returns to its road).
 * The house's own (kin and retainers) don't court on their own: match them
   from their card. Suitors come for the heir and kin, not for retainers.
 * A regent only moves the house's income; they don't yet make decisions of

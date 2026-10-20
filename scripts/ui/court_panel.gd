@@ -52,6 +52,7 @@ func refresh() -> void:
 	if player:
 		var role := CourtSystem.role_name(st, player)
 		_body.add_child(_person_button(player, "%s: %s (you), %d" % ["Heir" if role.begins_with("Heir") else role, player.full_name(), player.age]))
+	_defence(st)
 	_succession(st)
 	_marriages(st)
 	var income := CourtSystem.daily_income(st)
@@ -113,6 +114,55 @@ func refresh() -> void:
 		shown += 1
 		if shown >= 12:
 			break
+
+
+## Raiders on the way (pay them, call the levy), your captains' reckoning,
+## and the warband with its wounded (Phase 5.1).
+func _defence(st: WorldState) -> void:
+	var m := st.military
+	if m == null:
+		return
+	_heading("Defence")
+	var raid := m.raid
+	if world.battle:
+		var s := world.battle.standing()
+		_body.add_child(_wrap("A fight is on! Yours standing %d, raiders %d. Walk up to a raider and press %s to strike." % [s["ours"], s["theirs"], world.key_hint("interact")], 15, UITheme.BAD))
+	elif not raid.is_empty():
+		var when := Calendar.format_date(int(raid["day"]) * Calendar.MINUTES_PER_DAY)
+		_body.add_child(_wrap("%s, %d strong, are camped by the %s road. They strike on %s at %d o'clock." % [Military._cap(str(raid["name"])), int(raid["size"]), raid["road"], when, Military.strike_hour()], 15, UITheme.BAD))
+		var odds := Military.odds(st)
+		_body.add_child(_wrap("Your captains reckon your chances %s.%s" % [Military.odds_word(odds), " (The levy is called.)" if raid.get("levy", false) else ""], 14, UITheme.GOOD if odds >= 0.65 else (UITheme.TEXT if odds >= 0.4 else UITheme.BAD)))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		var pay := UITheme.button("Pay them off (%d gold)" % int(raid["tribute"]), func() -> void:
+			var r := Military.pay_off(st)
+			Game.notify.emit(str(r["text"]), Game.COLOR_INFO if r["ok"] else Game.COLOR_BAD)
+			Audio.play("coins" if r["ok"] else "ui_error")
+			refresh())
+		pay.disabled = st.house.gold < int(raid["tribute"])
+		pay.tooltip_text = "They go, and come back another year. A house that pays is thought a little less of." if not pay.disabled else "You haven't the gold."
+		row.add_child(pay)
+		if not raid.get("levy", false):
+			var lv := UITheme.button("Call the levy (%d)" % Military.levy(st).size(), func() -> void:
+				var r := Military.call_levy(st)
+				Game.notify.emit(str(r["text"]), Game.COLOR_INFO)
+				refresh())
+			lv.tooltip_text = "The strongest villagers take up farm tools and fight beside the watch. They won't like it, and they can die."
+			row.add_child(lv)
+		_body.add_child(row)
+	else:
+		_body.add_child(_wrap("No raiders about. Fights won: %d of %d." % [m.won, m.battles], 14, UITheme.TEXT_DIM))
+	var band := Military.warband(st)
+	var names: Array[String] = []
+	for c in band.slice(0, 10):
+		var skill := "%d" % c.get_current("combat")
+		if c.appraised:
+			skill += "/%d" % c.get_potential("combat")
+		names.append("%s (%s)" % [c.first_name, skill])
+	_body.add_child(_wrap("Your warband (Combat now%s): %s" % ["/potential" if band.any(func(c: CharacterData) -> bool: return c.appraised) else "", ", ".join(names) + ("..." if band.size() > 10 else "") if not names.is_empty() else "no one"], 13, UITheme.TEXT))
+	var hurt := st.characters.filter(func(c: CharacterData) -> bool: return Military.wounded(st, c))
+	if not hurt.is_empty():
+		_body.add_child(_wrap("Wounded: %s." % ", ".join(hurt.map(func(c: CharacterData) -> String: return "%s (until %s)" % [c.first_name, Calendar.format_date(c.wounded_until * Calendar.MINUTES_PER_DAY)])), 13, UITheme.ACCENT))
 
 
 ## Your health and heir, a regency while you're young, the family tree, and

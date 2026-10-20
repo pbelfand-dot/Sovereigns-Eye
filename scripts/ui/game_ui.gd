@@ -22,6 +22,10 @@ var _years_overlay: ColorRect
 var _years: YearsPanel
 var _ended_overlay: ColorRect
 var _ended_text: Label
+var _report_overlay: ColorRect
+var _report: BattleReportPanel
+var _battle_banner: PanelContainer
+var _battle_label: Label
 var _build: BuildPanel
 var _building_card: BuildingCard
 var _conversation: NegotiationPanel
@@ -76,6 +80,7 @@ func setup(owner_world: VillageWorld) -> void:
 	_build_pause_menu()
 	_build_years()
 	_build_ended()
+	_build_battle()
 	Game.keys_changed.connect(_refresh_keys)
 	world.selection_changed.connect(_on_selection_changed)
 	world.speed_changed.connect(_on_speed_changed)
@@ -194,6 +199,7 @@ func _process(_delta: float) -> void:
 	_update_prompt()
 	_layout_top_bar()
 	_update_stores_bar()
+	_update_battle_banner()
 	if _place_hint.visible:
 		_update_place_hint()
 
@@ -379,6 +385,61 @@ func pass_time(days: int) -> Dictionary:
 
 func is_years_open() -> bool:
 	return _years_overlay != null and _years_overlay.visible
+
+
+# --- Battles (Phase 5.1) ---------------------------------------------------------------------
+
+func _build_battle() -> void:
+	_battle_banner = PanelContainer.new()
+	_battle_banner.anchor_left = 0.5
+	_battle_banner.anchor_right = 0.5
+	_battle_banner.offset_left = -260
+	_battle_banner.offset_right = 260
+	_battle_banner.offset_top = 132
+	_battle_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_battle_banner.visible = false
+	_root.add_child(_battle_banner)
+	_battle_label = UITheme.label("", 17, UITheme.BAD, true)
+	_battle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_battle_banner.add_child(_battle_label)
+	_report_overlay = ColorRect.new()
+	_report_overlay.color = Color(0, 0, 0, 0.55)
+	_report_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_report_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_report_overlay.visible = false
+	_root.add_child(_report_overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_report_overlay.add_child(center)
+	_report = BattleReportPanel.new()
+	center.add_child(_report)
+	_report.closed.connect(func() -> void: _report_overlay.visible = false)
+
+
+## After a raid: who won and what it cost.
+func show_battle_report(report: Dictionary) -> void:
+	_battle_banner.visible = false
+	_report_overlay.visible = true
+	_report.show_report(report)
+	Audio.play("panel_open")
+	refresh()
+
+
+func is_report_open() -> bool:
+	return _report_overlay != null and _report_overlay.visible
+
+
+func _update_battle_banner() -> void:
+	var b := world.battle
+	_battle_banner.visible = b != null
+	if b:
+		var s := b.standing()
+		var raid := world.state.military.raid
+		_battle_label.text = "%s  -  yours standing %d, raiders %d" % [Military._cap(str(raid.get("name", "Raiders"))), s["ours"], s["theirs"]]
+		if b.heir_down():
+			_battle_label.text += "  -  you are down"
+		elif world.mode == "walk":
+			_battle_label.text += "  -  %s: strike a raider in reach" % world.key_hint("interact")
 
 
 # --- The house ended ------------------------------------------------------------------------
@@ -915,7 +976,7 @@ func _close_keys() -> void:
 
 
 func is_menu_open() -> bool:
-	return _pause_overlay.visible or is_years_open() or (_ended_overlay != null and _ended_overlay.visible)
+	return _pause_overlay.visible or is_years_open() or is_report_open() or (_ended_overlay != null and _ended_overlay.visible)
 
 
 func open_pause_menu() -> void:
@@ -970,6 +1031,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif is_years_open():
 			if not world.passing:
 				_years_overlay.visible = false
+		elif is_report_open():
+			_report_overlay.visible = false
 		elif _ended_overlay.visible:
 			pass
 		elif _conversation.visible:

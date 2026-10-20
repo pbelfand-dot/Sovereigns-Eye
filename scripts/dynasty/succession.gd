@@ -371,6 +371,8 @@ const STOPS := {
 	"health": "Your health is failing.",
 	"regency_end": "You have come of age.",
 	"ended": "The house is ended.",
+	"raid_warning": "Raiders are on their way.",
+	"raid": "Raiders are at the gate.",
 }
 
 

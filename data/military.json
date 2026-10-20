@@ -1,0 +1,67 @@
+{
+  "_comment": "Phase 5.1, the military (Military). Decided with the player: military first; real risk (anyone who falls in a fight may die); fights play out in the village. Bandits raid now and then, after a warning; you pay them off or fight. Your warband: retainers, knights, the village watch (soldiers) and, if you call it, the levy. Combat and Leadership finally matter, and the Eye finds your champions.",
+
+  "raids": {
+    "_comment": "The first raid comes no sooner than first_day; then one every gap_days (0.5 to 1.5 times, so no long droughts). warning_days ahead you hear of them. The band grows with the village (people and charter) and your renown draws bolder bands; hardened ones come as the years go by (combat_per_year added to their Combat, up to 90). Their purse is what they'll take if they win: loot_share of your gold, loot_food of the food store. Pay them off with tribute (a share of what they'd take) and they go.",
+    "first_day": 60,
+    "gap_days": 50,
+    "warning_days": 2,
+    "hour": 10,
+    "band_base": 4,
+    "band_per_people": 0.03,
+    "band_per_charter": 1,
+    "band_per_renown": 0.02,
+    "combat_per_year": 0.5,
+    "band_max": 14,
+    "combat": [12, 42],
+    "leader_combat": [35, 60],
+    "leader_leadership": [25, 60],
+    "loot_share": 0.35,
+    "loot_food": 0.25,
+    "tribute_share": 0.6,
+    "tribute_min": 40,
+    "names": ["the Blackwood brigands", "the Gallows Hill band", "the Red Ditch men", "outlaws from the fen", "the Mire Wolves", "deserters from the old war", "the Crowmoor gang"]
+  },
+
+  "warband": {
+    "_comment": "Who fights for you. Retainers (16+) and knights always answer; the watch (these occupations) defends the village; the levy (grown villagers, levy_max of them, the strongest first) only if you call it, which costs their happiness; they fight with farm tools and no training (levy_combat off their Combat). The heir may fight too.",
+    "watch": ["soldier", "guard_captain"],
+    "levy_max": 3,
+    "levy_combat": -18,
+    "levy_min_age": 16,
+    "levy_max_age": 55,
+    "levy_happiness": -6
+  },
+
+  "combat": {
+    "_comment": "Each fighter: hp, a blow every swing_seconds (real seconds at 1x) that lands with hit_base + (attacker Combat - defender Combat) * hit_per_point (clamped to hit_range), for damage_base + Combat * damage_per_point, less armor. Leadership of a side's captain steadies it: a side breaks when its fallen reach rout_base + captain Leadership * rout_per_point of its fighters (brave and craven shift it). A fallen fighter dies with death_chance (real risk: knights and retainers too), else lies wounded for wounded_days. reach: meters to strike; speed: run speed in battle.",
+    "hp": 100,
+    "swing_seconds": 1.2,
+    "hit_base": 0.55,
+    "hit_per_point": 0.006,
+    "hit_range": [0.15, 0.92],
+    "damage_base": 10,
+    "damage_per_point": 0.16,
+    "armor": { "knight": 0.4, "retainer": 0.2, "watch": 0.2, "levy": 0.0, "heir": 0.25, "raider": 0.1, "leader": 0.2 },
+    "rout_base": 0.35,
+    "rout_per_point": 0.003,
+    "traits": { "brave": 0.08, "craven": -0.1, "wrathful": 0.04, "patient": 0.02 },
+    "death_chance": 0.35,
+    "raider_death_chance": 0.6,
+    "wounded_days": 10,
+    "reach": 1.6,
+    "speed": 3.2,
+    "max_seconds": 240
+  },
+
+  "after": {
+    "_comment": "What a fight brings. Win: renown, the raiders' purse, Combat for those who fought (train_points each, more for each raider they struck down; never past potential), mourning for the dead (LifeSystem). Lose: the raiders take their loot and the village is shaken (happiness).",
+    "renown_win": 4,
+    "renown_per_raider": 1,
+    "purse_per_raider": 12,
+    "train_points": 2,
+    "train_points_per_kill": 2,
+    "happiness_loss": -8,
+    "renown_tribute": -2
+  }
+}

@@ -9,7 +9,24 @@
     "run": { "default": ["Jog_Fwd"], "speed": 1.0 },
     "idle": { "default": ["Idle", "Idle", "Idle_FoldArms"], "child": ["Idle"], "speed": 1.0 },
     "talk": { "default": ["Idle_Talking", "Idle_Talking", "Yes", "Idle_FoldArms"], "child": ["Dance", "Idle_Talking", "Yes"], "speed": 1.0 },
-    "work": { "default": ["Interact", "PickUp_Table"], "child": ["Idle"], "speed": 0.9 }
+    "work": { "default": ["Interact", "PickUp_Table"], "child": ["Idle"], "speed": 0.9 },
+    "fight_idle": { "default": ["Sword_Idle"], "speed": 1.0 },
+    "attack": { "default": ["Sword_Regular_A", "Sword_Regular_B", "Sword_Regular_C", "Sword_Attack"], "speed": 1.15 },
+    "hit": { "default": ["Hit_Chest", "Hit_Head"], "speed": 1.0 },
+    "block": { "default": ["Sword_Block"], "speed": 1.3 },
+    "fallen": { "default": ["Death01"], "speed": 1.0 }
+  },
+  "_one_shot": "Clips that play once and hold their last frame (a blow, a stagger, a fall: Phase 5.1 battles); every other clip loops.",
+  "one_shot": ["Sword_Regular_A", "Sword_Regular_B", "Sword_Regular_C", "Sword_Attack", "Hit_Chest", "Hit_Head", "Hit_Knockback", "Sword_Block", "Death01"],
+  "_weapons": "What fighters carry in a battle (Phase 5.1): a model for the right hand and maybe a shield for the left, by role, from the Quaternius fantasy props.",
+  "weapons": {
+    "root": "res://3D/props/quaternius-fantasy-props-standard/models/",
+    "sword": "Sword_Bronze.gltf",
+    "axe": "Axe_Bronze.gltf",
+    "shield": "Shield_Wooden.gltf",
+    "by_role": { "knight": ["sword", "shield"], "retainer": ["sword", "shield"], "watch": ["sword", "shield"], "heir": ["sword"], "levy": ["axe"], "raider": ["axe"], "leader": ["sword", "shield"] },
+    "hand": { "position": [0.0, 0.03, 0.02], "rotation": [90.0, 0.0, 0.0], "scale": 0.9 },
+    "off_hand": { "position": [0.04, 0.08, 0.0], "rotation": [0.0, 90.0, 0.0], "scale": 0.8 }
   },
   "work_by_occupation": {
     "farmer": ["Farm_Harvest", "Farm_PlantSeed", "Farm_Watering"],

@@ -272,6 +272,13 @@ static func migrate(data: Dictionary) -> Dictionary:
 					head = int(f.get("head", -1))
 			house["rulers"] = [{"id": head, "from": 0, "to": -1}] if head >= 0 else []
 		data["save_version"] = 15
+		version = 15
+	if version == 15:
+		# v16 (Phase 5.1, the military): no raid yet (the first is set on the
+		# next day's update) and no one wounded.
+		if not data.has("military"):
+			data["military"] = {}
+		data["save_version"] = 16
 	return data
 
 

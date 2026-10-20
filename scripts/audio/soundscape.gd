@@ -86,7 +86,7 @@ func _process(delta: float) -> void:
 	_music_check -= delta
 	if _music_check <= 0.0:
 		_music_check = 1.0
-		Audio.set_music(music_context(hour, world.ui != null and world.ui.is_court_open()))
+		Audio.set_music(world.music_override if not world.music_override.is_empty() else music_context(hour, world.ui != null and world.ui.is_court_open()))
 
 
 ## Which music fits the moment.
@@ -177,6 +177,11 @@ func _update_foley(delta: float, focus: Vector3, distance: float) -> void:
 			_play_at(event, p)
 			left += interval
 		_timers[npc.character.id] = left
+
+
+## Plays `event` at a place in the village (a blow in a fight).
+func play_at(event: String, at: Vector3) -> void:
+	_play_at(event, at)
 
 
 func _play_at(event: String, at: Vector3) -> void:

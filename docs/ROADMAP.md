@@ -15,7 +15,43 @@ playable build. Numbers and content live in `data/*.json`.
 | **4.1** | **The years turn: ageing, growing up, marriage, children who inherit gifts, gentle deaths, the lord's succession** (below) | Done |
 | **4.2** | **The house's matches: your own marriage, suitors from noble houses, matches for kin and retainers, your children's tutors** (below) | Done |
 | **4.3** | **Succession: name your heir, play on as them, regency, a family tree, "let the years pass"** (below) | Done |
-| 5+ | Wider realm, military | Next |
+| **5.1** | **Military: raids on the village, the warband, live battles with real risk** (below) | Done |
+| 5.2 | The wider realm: a map of the noble houses' seats, visits, regard, fostering kin; clearing bandit camps | Next |
+| 5.3 | Your castle (the castle kit is built), walls and a gatehouse | Later |
+
+## Military (Phase 5.1)
+
+Decided with the player: **military first** (before the wider realm),
+**real risk** (anyone who falls may die, knights and the heir too) and
+fights that **play out in the village** rather than as a report.
+
+- `Military` (static, `data/military.json`): raids are planned with a
+  warning (`plan_raid`: size from people, charter and renown, harder bands
+  as the years pass; the raiders are generated people kept out of the
+  village, ids below zero), paid off (`pay_off`) or fought; the warband
+  (retainers, knights, the watch, the levy if called); blows (`strike`:
+  Combat against Combat, armor by role), the breaking point (the captain's
+  Leadership, brave and craven), `resolve` for fights out of sight and
+  `odds` (the captains' reckoning, from fixed-seed fights), and `finish`
+  (the fallen die about a third of the time or lie wounded; Combat for
+  those who stood; renown and purse, or loot and a shaken village).
+- `Battle` (in the world): the band marches up its road; the warband,
+  warned two days before, stands in line on open ground across it; the
+  village shelters (a brain errand); at contact the fight pairs off (each
+  takes the nearest foe least beset), with the same `strike`, and a side
+  breaks on the fallen among those in the fight. You can strike (E) and be
+  struck. Health bars, sword and axe and shield in hand, sound, music.
+- Calibration (`capture.tscn ... battle_stats`, seeds 1 to 10 with and
+  without the levy): live fights won 10 of 20 against captains' odds that
+  averaged 0.61; across 60 fights out of sight, 32% of the fallen died (the
+  death roll is 0.35).
+  Over 40 years with the steward bot (`life_sim.gd ... steward`, which calls
+  the levy when the odds are poor and pays when even that isn't enough, but
+  never recruits a fighter): the watch alone, trained by its fights, holds
+  for 10 to 28 years on the seeds tried (9, 12345, 4242), losing now and
+  then; after that the bands outgrow it and it pays tribute, about a fifth
+  of its gold each time. Finding and training fighters with the Eye is the
+  answer.
 
 ## Succession (Phase 4.3)
 

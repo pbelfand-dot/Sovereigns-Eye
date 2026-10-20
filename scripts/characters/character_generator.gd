@@ -942,6 +942,46 @@ static func suitor(world: WorldState, house: Dictionary, target: CharacterData, 
 	return c
 
 
+## One of a raiding band (Military): grown, hard, made like anyone (looks,
+## traits) but never one of the village: not added to the world, id below
+## zero (`index` -> -1000 - index). The leader (index 0) is the band's best.
+static func raider(world: WorldState, band: String, index: int, stream: String) -> CharacterData:
+	var gen := CharacterGenerator.new()
+	gen._begin_settlers(world, "%s/%d" % [stream, index])
+	var r: Dictionary = GameData.load_file("military").get("raids", {})
+	var leader := index == 0
+	var c := CharacterData.new()
+	c.id = -1000 - index
+	c.gender = "male" if gen.rng_people.randf() < 0.85 else "female"
+	c.age = gen.rng_people.randi_range(19, 46 if leader else 40)
+	c.occupation_id = "raider"
+	c.social_status = "commoner"
+	var tmp := FamilyData.new()
+	tmp.name = ""
+	c.first_name = gen._pick_first_name(c.gender, tmp)
+	c.last_name = ""
+	gen._roll_traits(c, [])
+	var ap := GameData.appearance()
+	c.appearance = gen._roll_appearance(c, str(Seeds.pick(gen.rng_looks, ap["skin_tones"])), str(Seeds.pick(gen.rng_looks, ap["hair_colors"])))
+	c.appearance["face"] = FaceFeatures.roll(gen.rng_looks, c)
+	c.appearance["figure"] = FaceFeatures.roll_figure(gen.rng_figure, c)
+	TalentRoller.roll_attributes(gen.rng_talent, c, "military", [])
+	var cr: Array = r.get("leader_combat" if leader else "combat", [18, 55])
+	var years := maxf(0.0, float(world.day()) / Calendar.days_per_year())
+	var harder := roundi(years * float(r.get("combat_per_year", 0.0)))
+	var combat := mini(90, gen.rng_talent.randi_range(int(cr[0]), int(cr[1])) + harder)
+	c.set_attribute("combat", combat, maxi(c.get_potential("combat"), combat))
+	if leader:
+		var lr: Array = r.get("leader_leadership", [30, 70])
+		var lead := gen.rng_talent.randi_range(int(lr[0]), int(lr[1]))
+		c.set_attribute("leadership", lead, maxi(c.get_potential("leadership"), lead))
+	c.home_building_id = -1
+	c.work_building_id = -1
+	c.happiness = 50.0
+	c.activity_text = "Leading %s" % band if leader else "Raiding with %s" % band
+	return c
+
+
 func _begin_settlers(world: WorldState, stream: String) -> void:
 	state = world
 	_year_now = world.current_year()
