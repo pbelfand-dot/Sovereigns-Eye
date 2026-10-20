@@ -1,5 +1,5 @@
 {
-  "_comment": "Phase 5.1, the military (Military). Decided with the player: military first; real risk (anyone who falls in a fight may die); fights play out in the village. Bandits raid now and then, after a warning; you pay them off or fight. Your warband: retainers, knights, the village watch (soldiers) and, if you call it, the levy. Combat and Leadership finally matter, and the Eye finds your champions.",
+  "_comment": "Phase 5.1, the military (Military). Decided with the player: military first; real risk (anyone who falls in a fight may die); fights play out in the village. Bandits raid now and then, after a warning; you pay them off or fight. Phase 5.2: the bands live in camps on the realm map (camps): raids come from them, and you can send the warband to clear one. Your warband: retainers, knights, the village watch (soldiers) and, if you call it, the levy. Combat and Leadership finally matter, and the Eye finds your champions.",
 
   "raids": {
     "_comment": "The first raid comes no sooner than first_day; then one every gap_days (0.5 to 1.5 times, so no long droughts). warning_days ahead you hear of them. The band grows with the village (people and charter) and your renown draws bolder bands; hardened ones come as the years go by (combat_per_year added to their Combat, up to 90). Their purse is what they'll take if they win: loot_share of your gold, loot_food of the food store. Pay them off with tribute (a share of what they'd take) and they go.",
@@ -34,7 +34,7 @@
   },
 
   "combat": {
-    "_comment": "Each fighter: hp, a blow every swing_seconds (real seconds at 1x) that lands with hit_base + (attacker Combat - defender Combat) * hit_per_point (clamped to hit_range), for damage_base + Combat * damage_per_point, less armor. Leadership of a side's captain steadies it: a side breaks when its fallen reach rout_base + captain Leadership * rout_per_point of its fighters (brave and craven shift it). A fallen fighter dies with death_chance (real risk: knights and retainers too), else lies wounded for wounded_days. reach: meters to strike; speed: run speed in battle.",
+    "_comment": "Each fighter: hp, a blow every swing_seconds (real seconds at 1x) that lands with hit_base + (attacker Combat - defender Combat) * hit_per_point (clamped to hit_range), for damage_base + Combat * damage_per_point, less armor. Leadership of a side's captain steadies it: a side breaks when its fallen reach rout_base + captain Leadership * rout_per_point of its fighters (brave and craven shift it). A fallen fighter dies with death_chance (real risk: knights and retainers too; death_chance_gentle with the Gentle fights setting), else lies wounded for wounded_days. reach: meters to strike; speed: run speed in battle.",
     "hp": 100,
     "swing_seconds": 1.2,
     "hit_base": 0.55,
@@ -47,11 +47,27 @@
     "rout_per_point": 0.003,
     "traits": { "brave": 0.08, "craven": -0.1, "wrathful": 0.04, "patient": 0.02 },
     "death_chance": 0.35,
+    "death_chance_gentle": 0.1,
     "raider_death_chance": 0.6,
     "wounded_days": 10,
     "reach": 1.6,
     "speed": 3.2,
     "max_seconds": 240
+  },
+
+  "camps": {
+    "_comment": "Where the bands live (Phase 5.2). The first camp is made by first_day; while there are fewer than max_by_charter (by charter: hamlet, village, town...) another comes gap_days (0.5 to 1.5 times) after one is gone or made. A camp starts with start_share of the band a village like yours draws (raids: band_base and the rest) and gains a man every grow_days up to it; it sends its first raid no sooner than first_raid_days after it's made. Where it lies is hidden until its band raids (the warning says which road) or your woodcutters come on it (found_days after it's made). A raid brings the whole band. Beaten, it loses its fallen and scatters below min_men; winning or paid, it keeps its takings (hoard, starting at hoard_start). The warband can ride out to clear a camp it knows of (a camp's days each way; the fight on arrival, out of sight): the band fights on its own ground (home_combat on its Combat), loses everything if beaten (its hoard is yours, with renown_clear) and gains a man if it holds.",
+    "first_day": 45,
+    "gap_days": 70,
+    "max_by_charter": [1, 2, 2, 3],
+    "start_share": [0.6, 0.9],
+    "grow_days": 10,
+    "first_raid_days": 15,
+    "found_days": [20, 40],
+    "min_men": 2,
+    "hoard_start": [10, 30],
+    "home_combat": 10,
+    "renown_clear": 6
   },
 
   "after": {

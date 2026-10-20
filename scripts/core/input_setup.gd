@@ -38,6 +38,7 @@ const BINDINGS := {
 	"toggle_ledger": [KEY_L],
 	"toggle_court": [KEY_K],
 	"toggle_build": [KEY_B],
+	"toggle_realm": [KEY_J],
 	"turn_building": [KEY_T],
 	"toggle_help": [KEY_H],
 	"toggle_pause": [KEY_SPACE],
@@ -75,6 +76,7 @@ const PAD := {
 	"toggle_pause": [["button", JOY_BUTTON_DPAD_DOWN]],
 	"toggle_court": [["button", JOY_BUTTON_DPAD_LEFT]],
 	"toggle_ledger": [["button", JOY_BUTTON_DPAD_RIGHT]],
+	"toggle_realm": [["button", JOY_BUTTON_DPAD_UP]],
 	"menu": [["button", JOY_BUTTON_START], ["button", JOY_BUTTON_B]],
 }
 
@@ -102,7 +104,7 @@ const GROUPS := [
 		["toggle_overview", "Map table / walk"], ["cam_zoom_in", "Zoom in"], ["cam_zoom_out", "Zoom out"],
 		["focus_selected", "Follow who's selected"], ["toggle_pause", "Pause"],
 		["speed_1", "Speed 1x"], ["speed_2", "Speed 2x"], ["speed_3", "Speed 4x"], ["speed_4", "Speed 8x"],
-		["toggle_build", "Build"], ["toggle_court", "Court"], ["toggle_ledger", "Ledger"],
+		["toggle_build", "Build"], ["toggle_court", "Court"], ["toggle_ledger", "Ledger"], ["toggle_realm", "Realm map"],
 		["toggle_help", "Help"], ["quicksave", "Quicksave"], ["quickload", "Quickload"],
 	]],
 ]

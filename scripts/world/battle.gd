@@ -52,6 +52,8 @@ var _way_out := Vector3.ZERO
 var _rally := Vector3.ZERO
 ## The warband is still gathering at the rally point.
 var mustering := true
+## You called the fall back (an order): no more blows, the band loots.
+var fell_back := false
 var _after := 0.0
 var _k: Dictionary
 
@@ -197,6 +199,10 @@ func _tick(f: Dictionary, dt: float, delta: float) -> void:
 		if _move(npc, away, speed * 1.15, dt, delta) and f["side"] == "raiders":
 			f["fled"] = true
 			npc.visible = false
+		return
+	if fell_back and f["side"] == "raiders":
+		# The warband fell back in good order: the band goes for the loot.
+		_move(npc, _loot_point, speed, dt, delta)
 		return
 	if mustering and f["side"] == "house":
 		# Holding the line, facing the road they'll come by.
@@ -467,6 +473,28 @@ func heir_strike() -> bool:
 
 func heir_down() -> bool:
 	return not heir_f.is_empty() and heir_f["down"]
+
+
+# --- Orders (Phase 5.2) ----------------------------------------------------------------------
+
+## The line charges now, without waiting for the band to come up to it.
+func order_charge() -> bool:
+	if over or not mustering:
+		return false
+	mustering = false
+	Game.notify.emit("Charge!", Game.COLOR_GOOD)
+	return true
+
+
+## The warband falls back to the manor: the band has the village's loot,
+## but no more of yours fall.
+func order_fall_back() -> bool:
+	if over or not routed.is_empty():
+		return false
+	routed = "house"
+	fell_back = true
+	Game.notify.emit("You call the fall back. The raiders take what they came for.", Game.COLOR_BAD)
+	return true
 
 
 ## Raiders still standing, and yours ({ours, theirs}).

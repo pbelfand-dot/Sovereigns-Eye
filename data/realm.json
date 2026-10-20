@@ -1,0 +1,67 @@
+{
+  "_comment": "Phase 5.2, the wider realm (Realm, RealmData). Decided: the noble houses' seats and the bandit camps lie on a map around the village; each house holds you in some regard (RealmData 'standing', -100..100), raised by visits, gifts, talk, fostering and clearing camps near them, and fading a little each season; the heir rides out to visit (the days pass at home meanwhile): a gift, a talk with the lord, their young people seen with the Eye, a hand asked for your heir or kin; a kin child of 7 to 13 may be fostered at a friendly house until 16, learning what it's known for.",
+
+  "map": {
+    "_comment": "Map units: the village sits at the center of width x height; day_ride units are a day's ride. Seats lie seat_days away (whole days), camps camp_days; seats are spread round the compass.",
+    "width": 1000,
+    "height": 640,
+    "day_ride": 64,
+    "seat_days": [2, 4],
+    "camp_days": [1, 2]
+  },
+
+  "houses": {
+    "_comment": "What a house is known for: the attribute a fostered child learns there, and how it's said. Each house's young (household): between young[0] and young[1] of them, aged birth to away_at; past it they marry away and a child is born to the house.",
+    "known_for": {
+      "arms": { "attribute": "combat", "text": "known for its knights" },
+      "command": { "attribute": "leadership", "text": "known for its captains" },
+      "learning": { "attribute": "intelligence", "text": "known for its learning" },
+      "statecraft": { "attribute": "politics", "text": "known at court" },
+      "stewardship": { "attribute": "administration", "text": "known for its well-run lands" }
+    },
+    "household": { "young": [2, 4], "ages": [3, 22], "away_at": 25 }
+  },
+
+  "regard": {
+    "_comment": "Regard moves by these. drift: each season, toward nothing. A visit: visit; a talk with the lord: talk_base + the heir's Politics * talk_per_politics, unless it goes badly (gaffe_base + Politics * gaffe_per_politics, a chance; then gaffe). A gift: gift_per_gold for each gold, up to gift_max (gifts: the sizes offered). Fostering: foster_start, foster_season each season the child is there, foster_return when they come home. Clearing a camp within camp_reach_days of a seat: camp_cleared. A hand given: hand_given.",
+    "drift": 2,
+    "visit": 5,
+    "talk_base": 3,
+    "talk_per_politics": 0.1,
+    "gaffe_base": 0.3,
+    "gaffe_per_politics": -0.004,
+    "gaffe": -4,
+    "gifts": [25, 75, 150],
+    "gift_per_gold": 0.12,
+    "gift_max": 18,
+    "foster_start": 10,
+    "foster_season": 3,
+    "foster_return": 8,
+    "camp_cleared": 10,
+    "camp_reach_days": 3,
+    "hand_given": 15
+  },
+
+  "visits": {
+    "_comment": "Days spent at the seat (the ride there and back is the house's days each way); the heir rides out from min_age.",
+    "stay_days": 1,
+    "min_age": 14
+  },
+
+  "fostering": {
+    "_comment": "A kin child of min_age..max_age goes to a house that holds yours in at least min_regard; they come home at return_age, having trained train_per_season each season in what the house is known for (never past their potential).",
+    "min_age": 7,
+    "max_age": 13,
+    "return_age": 16,
+    "min_regard": 10,
+    "train_per_season": 3
+  },
+
+  "hands": {
+    "_comment": "At a seat you may ask (once a visit) for one of the house's young of an age to wed, for your heir or unmarried kin: the house must hold yours in min_regard; then the one asked weighs it (MatchSystem.consider, against its threshold) with their house's wish for the match added: wish_base + regard * wish_per_regard + your renown * wish_per_renown. The wedding is held when you come home, with the house's dowry.",
+    "min_regard": 10,
+    "wish_base": 0.2,
+    "wish_per_regard": 0.006,
+    "wish_per_renown": 0.003
+  }
+}

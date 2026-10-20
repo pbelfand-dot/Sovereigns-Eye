@@ -24,6 +24,7 @@ func _init() -> void:
 	var generations := 0
 	var raids := 0
 	var raids_won := 0
+	var camps_cleared := 0
 	print("%s, %d people, the heir %s (%d)" % [st.village_name, st.characters.size(), st.player().full_name(), st.player().age])
 	var days := years * Calendar.days_per_year()
 	for d in days:
@@ -78,14 +79,25 @@ func _init() -> void:
 					print("   day %4d  %s" % [day, paid["text"]])
 		if Military.due(st):
 			Military.fight(st, war)
+		# The steward sends the warband against a camp when the captains
+		# reckon the odds good (Phase 5.2), every tenth day at most.
+		if steward and day % 10 == 0 and st.military.expedition.is_empty() and st.military.raid.is_empty():
+			for camp in st.military.camps:
+				if Military.can_ride(st, int(camp["id"]))["ok"] and Military.camp_odds(st, int(camp["id"])) >= 0.65:
+					print("   day %4d  %s" % [day, Military.ride_out(st, int(camp["id"]))["text"]])
+					break
 		for e: Dictionary in war:
-			if e.has("battle") or e.has("raid_warning") or e.has("succession"):
+			if e.has("battle") or e.has("raid_warning") or e.has("succession") or e.has("camp_made"):
 				print("   day %4d  %s" % [day, e["text"]])
-				if e.has("battle"):
+				if e.has("battle") and e["battle"].get("camp", false):
+					camps_cleared += 1 if e["battle"]["won"] else 0
+				elif e.has("battle"):
 					raids += 1
 					raids_won += 1 if e["battle"]["won"] else 0
 			if e.has("gone"):
 				year_counts["died"] += 1
+		for e: Dictionary in Realm.daily_update(st):
+			print("   day %4d  %s" % [day, e["text"]])
 		if st.house.ended:
 			print("   day %4d  the house is ended" % day)
 			break
@@ -106,8 +118,8 @@ func _init() -> void:
 			for k: String in totals:
 				totals[k] += year_counts[k]
 				year_counts[k] = 0
-	print("\n%d years in %.1f s: born %d, died %d, left %d, weddings %d, departed on record %d, you have been %d people, raids %d (won %d)" % [years, (Time.get_ticks_msec() - started) / 1000.0,
-		totals["born"], totals["died"], totals["left"], totals["married"], st.departed.size(), generations + 1, raids, raids_won])
+	print("\n%d years in %.1f s: born %d, died %d, left %d, weddings %d, departed on record %d, you have been %d people, raids %d (won %d), camps cleared %d" % [years, (Time.get_ticks_msec() - started) / 1000.0,
+		totals["born"], totals["died"], totals["left"], totals["married"], st.departed.size(), generations + 1, raids, raids_won, camps_cleared])
 	var p := st.player()
 	if p == null:
 		print("The house is ended.")

@@ -3,7 +3,7 @@ extends Node
 ## character card tabs, ledger, night). Needs a real display/GPU (not
 ## --headless).
 ##
-##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk|life|matches|succession|battle]
+##   godot --path . res://tools/capture.tscn -- <seed> <output_dir> [court|art|menus|build|growth|charter|talk|life|matches|succession|battle|realm]
 ##
 ## "court" skips the village tour and only renders the Phase 2 screens
 ## (recruit view, retainer view, court panel, player card, a month later),
@@ -46,6 +46,7 @@ var matches_only := false
 var succession_only := false
 var battle_only := false
 var battle_stats := false
+var realm_only := false
 
 
 func _ready() -> void:
@@ -78,6 +79,7 @@ func _ready() -> void:
 	succession_only = args.has("succession")
 	battle_only = args.has("battle")
 	battle_stats = args.has("battle_stats")
+	realm_only = args.has("realm")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 
@@ -180,6 +182,10 @@ func _run() -> void:
 		return
 	if battle_only:
 		await _battle_shots()
+		get_tree().quit()
+		return
+	if realm_only:
+		await _realm_shots()
 		get_tree().quit()
 		return
 	if eye_only:
@@ -1573,6 +1579,81 @@ func _battle_shots() -> void:
 	_clear_toasts(world)
 	await _shot("battle_5_report.png")
 	print("battle: report %s" % world.state.military.last_report)
+
+
+## The wider realm (Phase 5.2): the realm map (the village, a house, a
+## camp), a visit (the young seen with the Eye, a gift given), the report
+## of a fight at a camp, and the Court panel's Defence with the camps.
+func _realm_shots() -> void:
+	Game.state = WorldGenerator.generate(seed_text)
+	var st := Game.state
+	st.minutes += 70.0 * Calendar.MINUTES_PER_DAY + 3.0 * 60.0
+	st.house.gold = 420
+	st.house.renown = 30
+	var made := Military.make_camp(st, Seeds.rng(st.world_seed, "capture_camp_a"))
+	Military.reveal_camp(st, made["camp"], "Your woodcutters have found where")
+	var regards := [34, 12, -14, 0]
+	for i in st.realm.houses.size():
+		st.realm.houses[i]["standing"] = regards[i % regards.size()]
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	add_child(world)
+	await _wait(5)
+	world.ui._help.visible = false
+	world.set_speed(0)
+	world.paused = true
+	_clear_toasts(world)
+	Input.warp_mouse(Vector2(4, 890))
+	var ui := world.ui
+	ui.toggle_realm()
+	await _wait(6)
+	await _shot("realm_0_map.png")
+	var h := st.realm.houses[0]
+	# A visit first (so the house's young are known), then the map on the house.
+	Realm.set_out(st, int(h["id"]))
+	world.apply_life_events([{"text": "", "away": [st.player_id]}])
+	st.minutes += float(int(h["days"])) * Calendar.MINUTES_PER_DAY
+	var welcome := Realm.arrive(st)
+	var young := st.realm.household(int(h["id"]))
+	for c in young.slice(0, 2):
+		Realm.look(st, c.id)
+	ui._realm.visible = false
+	ui._visit_overlay.visible = true
+	ui._visit.open(welcome)
+	ui._visit._did(Realm.give_gift(st, 75), "coins")
+	await _wait(6)
+	await _shot("realm_1_visit.png")
+	ui._visit_overlay.visible = false
+	Realm.take_leave(st)
+	var events: Array[Dictionary] = []
+	Realm.come_home(st, events)
+	world.apply_life_events(events)
+	_clear_toasts(world)
+	ui.show_realm("house", int(h["id"]))
+	await _wait(6)
+	await _shot("realm_2_house.png")
+	var camp := st.military.camps[0]
+	ui.show_realm("camp", int(camp["id"]))
+	await _wait(6)
+	await _shot("realm_3_camp.png")
+	# The warband rides out; the fight on arrival.
+	ui.toggle_realm()
+	var r := Military.ride_out(st, int(camp["id"]))
+	world.apply_life_events([{"text": "", "away": r["away"]}])
+	var report: Dictionary = {}
+	for d in int(camp["days"]):
+		st.minutes += Calendar.MINUTES_PER_DAY
+		for e: Dictionary in Military.daily_update(st):
+			if e.has("battle"):
+				report = e["battle"]
+	print("realm: camp fight %s" % report)
+	_clear_toasts(world)
+	ui.show_battle_report(report)
+	await _wait(6)
+	await _shot("realm_4_camp_report.png")
+	ui._report_overlay.visible = false
+	ui.toggle_court()
+	await _wait(6)
+	await _shot("realm_5_defence.png")
 
 
 ## How raids fought in the village turn out against the captains' odds

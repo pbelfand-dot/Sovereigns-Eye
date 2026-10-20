@@ -16,8 +16,45 @@ playable build. Numbers and content live in `data/*.json`.
 | **4.2** | **The house's matches: your own marriage, suitors from noble houses, matches for kin and retainers, your children's tutors** (below) | Done |
 | **4.3** | **Succession: name your heir, play on as them, regency, a family tree, "let the years pass"** (below) | Done |
 | **5.1** | **Military: raids on the village, the warband, live battles with real risk** (below) | Done |
-| 5.2 | The wider realm: a map of the noble houses' seats, visits, regard, fostering kin; clearing bandit camps | Next |
-| 5.3 | Your castle (the castle kit is built), walls and a gatehouse | Later |
+| **5.2** | **The wider realm: a map of the noble houses' seats, visits, regard, fostering kin; bandit camps to clear; battle orders, gentle fights** (below) | Done |
+| 5.3 | Your castle (the castle kit is built), walls and a gatehouse; houses that send help (or come against you) | Next |
+
+## The wider realm (Phase 5.2)
+
+Decided (going with the recommendations after 5.1): the wider realm next,
+real risk kept as the default with a **Gentle fights** choice per game, and
+two orders in a fight (**Charge now**, **Fall back**).
+
+- `RealmData` gains the map: each house's seat (`pos`, `days` 2 to 4 days'
+  ride, spread round the compass from the seed), what it's `known_for`
+  (arms, command, learning, statecraft, stewardship: the attribute a
+  fostered child learns), its lord or lady (`head`), the day you last
+  `visited`, the house's young you've met (`households`: CharacterData with
+  ids below -2000, never villagers, aged on each visit; past 25 they marry
+  away and children are born) and the heir's `trip`.
+- `Realm` (static, `data/realm.json`): regard (the houses' `standing`)
+  fades each season; a visit, gifts and a talk (Politics, or a gaffe) raise
+  it, as do fostering and clearing a camp near the seat. Visits: `set_out`
+  (the heir is away: `CharacterData.away_at`), `arrive`, `give_gift`,
+  `speak`, `look` (the Eye on their young), `ask_hand` (once a visit; the
+  house must be friendly, then `MatchSystem.consider` plus the house's
+  wish), `foster` (a kin child of 7 to 13; trains each season, home at 16
+  or to rule), `take_leave`, `come_home` (the betrothed is brought into the
+  village by `CharacterGenerator.bring_member` and wed, with the dowry).
+- Camps (`Military`, `data/military.json` "camps"): a band makes camp out
+  along one of the village's roads, hidden until its raid shows the way or
+  the woodcutters find it; it starts at most of the band the village draws
+  and grows, sends its whole band, keeps what it takes, and scatters when
+  beaten down. The warband rides against a known camp (`ride_out`: away
+  for the camp's days each way, the fight on arrival with `resolve`, the
+  band +10 Combat on its own ground; `finish_camp`); the village keeps only
+  who's left. With the heir at its head, the days pass as on a journey.
+- The world: bodies leave and come back (`away`/`back` events); journeys
+  run `pass_time(days, away)` (only a succession stops them); no saving
+  while the heir is away. UI: the realm map (`RealmMap`, drawn from the
+  seed: woods, hills, a river; regard rings), `RealmPanel` (J), the
+  `VisitPanel`, camps and the expedition in the Court panel's Defence,
+  camp fights in the battle report.
 
 ## Military (Phase 5.1)
 

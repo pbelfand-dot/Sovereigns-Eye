@@ -64,6 +64,9 @@ var battle: Battle
 var music_override := ""
 var _music_override_left := 0.0
 var _passed: Dictionary = {}
+## pass_time is running while the heir is away (a journey): only a
+## succession or the house's end stops it.
+var _away := false
 var selected: NPC
 var hovered: NPC
 
@@ -144,6 +147,8 @@ func _ready() -> void:
 	soundscape.setup(self)
 
 	Game.before_save.connect(sync_to_state)
+	if heir_away():
+		_home_from_away.call_deferred()
 	if state.house and state.house.ended:
 		_end_house.call_deferred("The house is ended.")
 	sky.set_time(state.minutes)
@@ -165,6 +170,8 @@ func _spawn_npcs() -> void:
 	for c in state.characters:
 		if LifeSystem.is_unseen(c) and not state.is_player(c):
 			continue  # babies stay at home until they can walk about (unless you're one)
+		if c.is_away() and not state.is_player(c):
+			continue  # away from the village (a camp, fostering)
 		var npc := NPC.new()
 		_npc_root.add_child(npc)
 		npc.setup(c)
@@ -327,6 +334,8 @@ func _check_new_day() -> void:
 		_on_life_event(e)
 	for e: Dictionary in Military.daily_update(state):
 		_on_life_event(e)
+	for e: Dictionary in Realm.daily_update(state):
+		_on_life_event(e)
 	for e: Dictionary in GrowthSystem.daily_update(state):
 		_on_growth_event(e)
 	_replan_crew_changes(crews_before)
@@ -451,6 +460,16 @@ func _on_life_event(e: Dictionary) -> void:
 		_end_house(str(e.get("text", "")))
 	if e.has("gone"):
 		remove_character_body(int(e["gone"]))
+	for id: int in e.get("away", []):
+		_leaves_village(id)
+	for id: int in e.get("back", []):
+		_comes_back(id)
+	if e.has("battle") and (e["battle"] as Dictionary).get("camp", false):
+		# A fight at a camp: the report when it comes (after a journey).
+		if passing:
+			_passed["report"] = e["battle"]
+		elif ui:
+			ui.show_battle_report(e["battle"])
 
 
 # --- Raids (Phase 5.1) ------------------------------------------------------------------------
@@ -502,9 +521,10 @@ func _on_battle_finished(report: Dictionary, events: Array) -> void:
 ## Let `days` pass (a season, a year) a few days a frame, quietly: the news is
 ## gathered for a summary instead of shown, and it stops early for what needs
 ## you (data/succession.json "pass_time" stop_on). Returns Succession.summary.
-func pass_time(days: int) -> Dictionary:
+func pass_time(days: int, away: bool = false) -> Dictionary:
 	if passing or battle != null or (state.house and state.house.ended):
 		return {}
+	_away = away
 	passing = true
 	end_conversation()
 	hush_remarks()
@@ -533,6 +553,8 @@ func pass_time(days: int) -> Dictionary:
 		if npc != me:
 			npc.brain.replan()
 	var summary := Succession.summary(state, before, _passed["news"], _passed["counts"], str(_passed["stop"]), done)
+	if _passed.has("report"):
+		summary["report"] = _passed["report"]
 	if ui:
 		ui.refresh()
 	return summary
@@ -556,7 +578,9 @@ func _note_passing(e: Dictionary) -> void:
 	for key: String in ["regency_end", "health", "visitor", "raid_warning", "raid", "succession", "ended"]:
 		if e.has(key):
 			stop = key
-	if not stop.is_empty() and str(_passed["stop"]).is_empty() and (Succession.section("pass_time").get("stop_on", []) as Array).has(stop):
+	# Away from the village, only what ends the journey stops it.
+	var stops: Array = ["succession", "ended"] if _away else Succession.section("pass_time").get("stop_on", [])
+	if not stop.is_empty() and str(_passed["stop"]).is_empty() and stops.has(stop):
 		_passed["stop"] = stop
 
 
@@ -594,10 +618,56 @@ func remove_character_body(character_id: int) -> void:
 	_compute_worker_slots()
 
 
+## Someone rides out (a camp, fostering) or you do (a journey): their body
+## leaves the village; yours waits out of sight.
+func _leaves_village(character_id: int) -> void:
+	if character_id != state.player_id:
+		remove_character_body(character_id)
+		return
+	var me := player_npc()
+	end_conversation()
+	set_view_mode("overview", true)
+	if me:
+		me.visible = false
+
+
+## Someone comes home: a body at the manor's door (or yours, back in your
+## boots).
+func _comes_back(character_id: int) -> void:
+	var c := state.get_character(character_id)
+	if c == null:
+		return
+	var manor := state.get_building(CourtSystem._building_of_type(state, "manor"))
+	var door := manor.door_position() if manor else state.layout.square_center
+	c.position = TerrainHeight.on_ground(door)
+	c.inside_building_id = -1
+	if character_id != state.player_id:
+		var npc := spawn_character(character_id)
+		if npc:
+			npc.teleport(c.position)
+		return
+	var me := player_npc()
+	if me == null:
+		me = spawn_character(character_id)
+	if me:
+		me.visible = true
+		me.teleport(c.position)
+		me.set_inside(false)
+	if heir_ctl:
+		set_view_mode("walk", true)
+	else:
+		_setup_heir()
+
+
+## Away from the village: on a journey or riding with the warband.
+func heir_away() -> bool:
+	return state.player() != null and state.player().is_away()
+
+
 ## Gives a character who joined the village (a settler) a body and a brain.
 func spawn_character(character_id: int) -> NPC:
 	var c := state.get_character(character_id)
-	if c == null or npcs.has(character_id) or (LifeSystem.is_unseen(c) and not state.is_player(c)):
+	if c == null or npcs.has(character_id) or (LifeSystem.is_unseen(c) and not state.is_player(c)) or (c.is_away() and not state.is_player(c)):
 		return npcs.get(character_id, null)
 	var npc := NPC.new()
 	_npc_root.add_child(npc)
@@ -1416,6 +1486,22 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		return
 	get_viewport().set_input_as_handled()
+
+
+## A game loaded with you away (it can't be saved so; a safeguard): you're
+## home, whatever was left at the seat.
+func _home_from_away() -> void:
+	var events: Array[Dictionary] = []
+	if not state.realm.trip.is_empty():
+		Realm.come_home(state, events)
+	var me := state.player()
+	if me and me.is_away():
+		me.away_at = ""
+		me.away_until = -1
+		if not state.military.expedition.is_empty():
+			state.military.expedition["heir"] = false
+		events.append({"text": "", "back": [me.id]})
+	apply_life_events(events)
 
 
 ## Writes live NPC positions back into the WorldState before saving.

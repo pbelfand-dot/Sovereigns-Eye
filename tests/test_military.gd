@@ -238,3 +238,34 @@ func test_a_raid_is_fought_in_the_village() -> void:
 	check(world.ui.is_report_open(), "you read how it went")
 	world.queue_free()
 	await frames(2)
+
+
+func test_orders_in_a_fight() -> void:
+	Game.state = _raided("mil-orders")
+	var st := Game.state
+	st.military.raid["day"] = st.day()
+	var world: VillageWorld = load("res://scenes/world/world.tscn").instantiate()
+	runner.add_child(world)
+	await frames(2)
+	st.minutes = float(st.day() * Calendar.MINUTES_PER_DAY + Military.strike_hour() * 60 + 1)
+	world._process(0.016)
+	var b := world.battle
+	check(b != null and b.mustering, "the line holds for the band to come up")
+	check(b.order_charge() and not b.mustering, "Charge: it goes now")
+	check(not b.order_charge(), "(once)")
+	for i in 40:
+		b._process(0.05)
+	var fallen_then := Military.fallen(b.ours)
+	check(b.order_fall_back() and b.routed == "house" and b.fell_back, "Fall back: the warband gives way")
+	var report: Dictionary = {}
+	b.finished.connect(func(r: Dictionary, _e: Array) -> void: report.merge(r))
+	for i in 400:
+		world._process(0.05)
+		if world.battle:
+			world.battle._process(0.05)
+		if world.battle == null:
+			break
+	check(not report.is_empty() and not report.get("won", true), "the band has the village's loot")
+	check_eq((report["ours"] as Array).filter(func(l: Dictionary) -> bool: return l["fell"]).size(), fallen_then, "and no more of yours fell")
+	world.queue_free()
+	await frames(2)

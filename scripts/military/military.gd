@@ -10,6 +10,11 @@ extends RefCounted
 ## Leadership holds it longer), and anyone who falls may die: real risk, for
 ## knights and the heir too.
 ##
+## Phase 5.2: the bands live in camps on the realm map. A camp grows, sends
+## its whole band to raid, keeps what it takes, and scatters when beaten
+## down; the warband can ride out to clear one (fought out of sight on
+## arrival), leaving the village the barer while it's away.
+##
 ## Static and deterministic. Numbers: data/military.json.
 
 
@@ -35,10 +40,12 @@ static func daily_update(state: WorldState) -> Array[Dictionary]:
 	var day := state.day()
 	var r := section("raids")
 	var rng := Seeds.rng(state.world_seed, "raids_%d" % day)
+	_expedition_daily(state, events)
+	_camps_daily(state, events)
 	if m.raid.is_empty():
 		if m.next_raid_day < 0:
 			m.next_raid_day = maxi(int(r.get("first_day", 30)), day + _gap(rng))
-		if day >= m.next_raid_day - int(r.get("warning_days", 2)):
+		if day >= m.next_raid_day - int(r.get("warning_days", 2)) and not _raiding_camps(state).is_empty():
 			events.append(plan_raid(state, rng))
 	elif not bool(m.raid.get("fought", false)):
 		if day == int(m.raid["day"]):
@@ -63,15 +70,17 @@ static func strike_hour() -> int:
 
 ## A band is coming: how many, from where, what they'd take and what
 ## they'd take to go away. Returns the warning.
+## The band comes from the strongest camp that isn't under attack (a band
+## grown to what the village draws is made if there's none, for tools).
 static func plan_raid(state: WorldState, rng: RandomNumberGenerator) -> Dictionary:
 	var m := state.military
 	var r := section("raids")
-	var people := state.characters.size()
-	var size := int(r.get("band_base", 3)) + roundi(people * float(r.get("band_per_people", 0.04))) + CharterSystem.current(state) * int(r.get("band_per_charter", 1)) \
-		+ roundi(state.house.renown * float(r.get("band_per_renown", 0.0)))
-	size = clampi(size, 2, int(r.get("band_max", 14)))
-	var band := str(Seeds.pick(rng, r.get("names", ["a band of outlaws"])))
-	var from := GrowthSystem.entry_point(state, rng)
+	var camps := _raiding_camps(state)
+	var camp: Dictionary = camps[0] if not camps.is_empty() else make_camp(state, rng, true)["camp"]
+	var size := maxi(2, int(camp["men"]))
+	var band := str(camp["band"])
+	var f: Array = camp["from"]
+	var from := Vector3(float(f[0]), float(f[1]), float(f[2]))
 	var day := state.day() + int(r.get("warning_days", 2))
 	var gold := state.house.gold
 	var loot_gold := roundi(gold * float(r.get("loot_share", 0.35)))
@@ -79,11 +88,12 @@ static func plan_raid(state: WorldState, rng: RandomNumberGenerator) -> Dictiona
 	m.raid = {"name": band, "day": day, "size": size, "from": [from.x, from.y, from.z], "road": compass(state, from),
 		"loot_gold": loot_gold, "loot_food": roundi(food * float(r.get("loot_food", 0.25))),
 		"tribute": maxi(int(r.get("tribute_min", 40)), roundi(loot_gold * float(r.get("tribute_share", 0.6)))),
-		"levy": false, "fought": false}
+		"levy": false, "fought": false, "camp": int(camp["id"])}
 	m.raiders.clear()
 	for i in size:
 		m.raiders.append(CharacterGenerator.raider(state, band, i, "raid_%d" % day))
-	var text := "%s, %d strong, are camped by the %s road. They'll strike in %d days unless you pay them %d gold. Court panel (K): Defence." % [
+	camp["known"] = true
+	var text := "%s, %d strong, have come down the %s road from their camp. They'll strike in %d days unless you pay them %d gold. Court panel (K): Defence." % [
 		_cap(band), size, m.raid["road"], int(r.get("warning_days", 2)), int(m.raid["tribute"])]
 	state.house.log_event(state.day(), "%s gathered on the %s road, %d strong." % [_cap(band), m.raid["road"], size], "bad")
 	return {"text": text, "kind": "bad", "raid_warning": true}
@@ -113,6 +123,9 @@ static func pay_off(state: WorldState) -> Dictionary:
 		return {"ok": false, "text": "You haven't the %d gold they ask." % cost}
 	state.house.gold -= cost
 	state.house.renown = maxi(0, state.house.renown + int(section("after").get("renown_tribute", -2)))
+	var camp := m.get_camp(int(m.raid.get("camp", -1)))
+	if not camp.is_empty():
+		camp["hoard"] = int(camp["hoard"]) + cost
 	var text := "You pay %s %d gold, and they move on." % [m.raid["name"], cost]
 	state.house.log_event(state.day(), text, "bad")
 	_clear(state)
@@ -153,7 +166,7 @@ static func warband(state: WorldState) -> Array[CharacterData]:
 	var watch: Array = w.get("watch", ["soldier", "guard_captain"])
 	var out: Array[CharacterData] = []
 	for c in state.characters:
-		if state.is_player(c) or c.is_visitor() or wounded(state, c) or c.age < 16:
+		if state.is_player(c) or c.is_visitor() or c.is_away() or wounded(state, c) or c.age < 16:
 			continue
 		if c.retainer or c.is_knight() or watch.has(c.occupation_id):
 			out.append(c)
@@ -171,7 +184,7 @@ static func levy(state: WorldState) -> Array[CharacterData]:
 	var watch: Array = w.get("watch", [])
 	var pool: Array[CharacterData] = []
 	for c in state.characters:
-		if state.is_player(c) or c.is_visitor() or CourtSystem.is_kin(state, c) or c.retainer or c.is_knight() or watch.has(c.occupation_id) or wounded(state, c):
+		if state.is_player(c) or c.is_visitor() or c.is_away() or CourtSystem.is_kin(state, c) or c.retainer or c.is_knight() or watch.has(c.occupation_id) or wounded(state, c):
 			continue
 		if c.age >= int(w.get("levy_min_age", 16)) and c.age <= int(w.get("levy_max_age", 55)):
 			pool.append(c)
@@ -386,29 +399,15 @@ static func fight(state: WorldState, events: Array[Dictionary], heir: bool = fal
 ## size, raiders_fallen, gold, food, renown, day}.
 static func finish(state: WorldState, winner: String, ours: Array, theirs: Array, events: Array[Dictionary]) -> Dictionary:
 	var m := state.military
-	var k := section("combat")
 	var a := section("after")
 	var band := str(m.raid.get("name", "the raiders"))
 	var rng := Seeds.rng(state.world_seed, "battle_after_%d" % state.day())
 	var won := winner == "house"
 	var report := {"won": won, "band": band, "ours": [], "size": theirs.size(), "raiders_fallen": fallen(theirs),
 		"gold": 0, "food": 0, "renown": 0, "day": state.day()}
-	var dead: Array[CharacterData] = []
-	for f: Dictionary in ours:
-		var c := state.get_character(int(f["id"]))
-		if c == null:
-			continue
-		var line := {"id": c.id, "name": c.display_name(), "gender": c.gender, "role": f["role"], "felled": int(f["felled"]), "fell": bool(f["down"]), "died": false, "wounded": false}
-		if f["down"]:
-			if rng.randf() < float(k.get("death_chance", 0.35)):
-				line["died"] = true
-				dead.append(c)
-			else:
-				line["wounded"] = true
-				c.wounded_until = state.day() + int(k.get("wounded_days", 10))
-		else:
-			c.train("combat", int(a.get("train_points", 2)) + int(f["felled"]) * int(a.get("train_points_per_kill", 2)))
-		(report["ours"] as Array).append(line)
+	var dead := _toll(state, ours, report, rng)
+	var camp := m.get_camp(int(m.raid.get("camp", -1)))
+	var scattered := ""
 	if won:
 		var renown := int(a.get("renown_win", 4)) + fallen(theirs) * int(a.get("renown_per_raider", 1))
 		var purse := theirs.size() * int(a.get("purse_per_raider", 12))
@@ -416,9 +415,16 @@ static func finish(state: WorldState, winner: String, ours: Array, theirs: Array
 		state.house.gold += purse
 		report["renown"] = renown
 		report["gold"] = purse
+		if not camp.is_empty():
+			camp["men"] = int(camp["men"]) - fallen(theirs)
+			if int(camp["men"]) < int(section("camps").get("min_men", 2)):
+				scattered = " What's left of them is scattered: their camp is empty."
+				_remove_camp(state, camp)
 	else:
 		var take := mini(int(m.raid.get("loot_gold", 0)), state.house.gold)
 		state.house.gold -= take
+		if not camp.is_empty():
+			camp["hoard"] = int(camp["hoard"]) + take
 		var food := 0
 		if state.territory:
 			food = mini(int(m.raid.get("loot_food", 0)), roundi(state.territory.amount("food")))
@@ -430,7 +436,7 @@ static func finish(state: WorldState, winner: String, ours: Array, theirs: Array
 	var lost := (report["ours"] as Array).filter(func(l: Dictionary) -> bool: return l["died"]).size()
 	var text := ""
 	if won:
-		text = "Your warband drove off %s: %d of %d raiders fell. %s" % [band, fallen(theirs), theirs.size(), "None of yours died." if lost == 0 else "%d of yours died." % lost]
+		text = "Your warband drove off %s: %d of %d raiders fell. %s%s" % [band, fallen(theirs), theirs.size(), "None of yours died." if lost == 0 else "%d of yours died." % lost, scattered]
 	elif ours.is_empty():
 		text = "No one stood against %s. They took %d gold and %d food." % [band, -int(report["gold"]), -int(report["food"])]
 	else:
@@ -445,3 +451,343 @@ static func finish(state: WorldState, winner: String, ours: Array, theirs: Array
 	for c in dead:
 		LifeSystem.die(state, c, "wounds taken fighting %s" % band, events)
 	return report
+
+
+## The chance a fallen fighter dies of their wounds (Gentle fights: far less).
+static func death_chance(state: WorldState) -> float:
+	var k := section("combat")
+	var gentle := state.military != null and state.military.gentle
+	return float(k.get("death_chance_gentle", 0.1)) if gentle else float(k.get("death_chance", 0.35))
+
+
+## Who of `ours` died, who lies wounded and who grew in Combat; each gets a
+## line in `report`. Returns the dead (for LifeSystem.die, after the news).
+static func _toll(state: WorldState, ours: Array, report: Dictionary, rng: RandomNumberGenerator) -> Array[CharacterData]:
+	var k := section("combat")
+	var a := section("after")
+	var dead: Array[CharacterData] = []
+	for f: Dictionary in ours:
+		var c := state.get_character(int(f["id"]))
+		if c == null:
+			continue
+		var line := {"id": c.id, "name": c.display_name(), "gender": c.gender, "role": f["role"], "felled": int(f["felled"]), "fell": bool(f["down"]), "died": false, "wounded": false}
+		if f["down"]:
+			if rng.randf() < death_chance(state):
+				line["died"] = true
+				dead.append(c)
+			else:
+				line["wounded"] = true
+				c.wounded_until = state.day() + int(k.get("wounded_days", 10))
+		else:
+			c.train("combat", int(a.get("train_points", 2)) + int(f["felled"]) * int(a.get("train_points_per_kill", 2)))
+		(report["ours"] as Array).append(line)
+	return dead
+
+
+# --- Camps (Phase 5.2) -----------------------------------------------------------------------
+
+## The band a village like yours draws: more people, a higher charter and
+## more renown draw bigger bands (up to band_max).
+static func band_target(state: WorldState) -> int:
+	var r := section("raids")
+	var size := int(r.get("band_base", 3)) + roundi(state.characters.size() * float(r.get("band_per_people", 0.04))) + CharterSystem.current(state) * int(r.get("band_per_charter", 1)) \
+		+ roundi(state.house.renown * float(r.get("band_per_renown", 0.0)))
+	return clampi(size, 2, int(r.get("band_max", 14)))
+
+
+## How many camps the land round a village of this charter holds.
+static func max_camps(state: WorldState) -> int:
+	var by: Array = section("camps").get("max_by_charter", [1])
+	return int(by[clampi(CharterSystem.current(state), 0, by.size() - 1)])
+
+
+## Camps that may send their band: not one the warband is riding against,
+## the strongest first.
+static func _raiding_camps(state: WorldState) -> Array[Dictionary]:
+	var m := state.military
+	var out: Array[Dictionary] = []
+	for c in m.camps:
+		if m.expedition.is_empty() or int(m.expedition["camp"]) != int(c["id"]):
+			out.append(c)
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["men"]) > int(b["men"]) if int(a["men"]) != int(b["men"]) else int(a["id"]) < int(b["id"]))
+	return out
+
+
+## Once a day: a camp is made when the land has room for one and its time
+## has come; camps grow toward the band the village draws.
+static func _camps_daily(state: WorldState, events: Array[Dictionary]) -> void:
+	var m := state.military
+	var c := section("camps")
+	var day := state.day()
+	if m.next_camp_day < 0:
+		m.next_camp_day = maxi(int(c.get("first_day", 45)), day + 1)
+	if m.camps.size() < max_camps(state) and day >= m.next_camp_day:
+		var made := make_camp(state, Seeds.rng(state.world_seed, "camp_%d" % day))
+		events.append(made)
+		if m.camps.size() == 1:
+			m.next_raid_day = maxi(m.next_raid_day, day + int(c.get("first_raid_days", 15)))
+	for camp in m.camps:
+		if not bool(camp.get("known", true)) and day >= int(camp.get("found", 0)):
+			events.append(reveal_camp(state, camp, "Your woodcutters have found where"))
+	var grow := maxi(1, int(c.get("grow_days", 10)))
+	var target := band_target(state)
+	for camp in m.camps:
+		var age := day - int(camp["founded"])
+		if age > 0 and age % grow == 0 and int(camp["men"]) < target:
+			camp["men"] = int(camp["men"]) + 1
+
+
+static func _camp_gap(state: WorldState) -> int:
+	var rng := Seeds.rng(state.world_seed, "camp_gap_%d" % state.day())
+	return maxi(1, roundi(float(section("camps").get("gap_days", 70)) * rng.randf_range(0.5, 1.5)))
+
+
+## A band makes camp on the realm map, out along one of the village's roads
+## (its raids come in by that road). `grown`: already as big as the village
+## draws (for tools and tests). Returns the news {text, kind, camp_made, camp}.
+static func make_camp(state: WorldState, rng: RandomNumberGenerator, grown: bool = false) -> Dictionary:
+	var m := state.military
+	var c := section("camps")
+	var names: Array = section("raids").get("names", ["a band of outlaws"])
+	var used := m.camps.map(func(x: Dictionary) -> String: return str(x["band"]))
+	var free := names.filter(func(n: String) -> bool: return not used.has(n))
+	var band := str(Seeds.pick(rng, free if not free.is_empty() else names))
+	var from := GrowthSystem.entry_point(state, rng)
+	var map := Realm.map_cfg()
+	var days_range: Array = map.get("camp_days", [1, 2])
+	var days := rng.randi_range(int(days_range[0]), int(days_range[1]))
+	var dir := Vector2(from.x - state.layout.square_center.x, from.z - state.layout.square_center.z)
+	dir = dir.normalized() if dir.length() > 0.1 else Vector2.from_angle(rng.randf() * TAU)
+	var pos := Realm.center() + dir * days * float(map.get("day_ride", 64))
+	var share: Array = c.get("start_share", [0.6, 0.9])
+	var hoard: Array = c.get("hoard_start", [10, 30])
+	var found: Array = c.get("found_days", [20, 40])
+	var men := band_target(state) if grown else maxi(2, roundi(band_target(state) * rng.randf_range(float(share[0]), float(share[1]))))
+	var camp := {"id": m.next_camp_id, "band": band, "pos": [float(roundi(pos.x)), float(roundi(pos.y))], "days": days,
+		"from": [from.x, from.y, from.z], "road": compass(state, from), "men": men,
+		"hoard": rng.randi_range(int(hoard[0]), int(hoard[1])), "founded": state.day(),
+		"known": grown, "found": state.day() + rng.randi_range(int(found[0]), int(found[1]))}
+	m.next_camp_id += 1
+	m.camps.append(camp)
+	m.next_camp_day = state.day() + _camp_gap(state)
+	var text := "Word in the village: a band has made camp somewhere in the woods round about." if not grown else \
+		"%s are camped out along the %s road, %s. Realm map (J)." % [_cap(band), camp["road"], Realm.days_text(days)]
+	state.house.log_event(state.day(), "A band made camp in the woods.", "bad")
+	return {"text": text, "kind": "bad", "camp_made": int(camp["id"]), "camp": camp}
+
+
+## Where a band camps becomes known (its raid, or your woodcutters). The
+## news, or {} if it was known.
+static func reveal_camp(state: WorldState, camp: Dictionary, how: String) -> Dictionary:
+	if bool(camp.get("known", true)):
+		return {}
+	camp["known"] = true
+	var text := "%s %s camped out along the %s road, %s. Realm map (J)." % [how, camp["band"], camp["road"], Realm.days_text(int(camp["days"]))]
+	state.house.log_event(state.day(), "%s camp along the %s road was found." % [_cap(str(camp["band"])), camp["road"]], "bad")
+	return {"text": text, "kind": "bad", "camp_found": int(camp["id"])}
+
+
+## Camps whose place you know (on the map, open to attack).
+static func known_camps(state: WorldState) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c in state.military.camps:
+		if bool(c.get("known", true)):
+			out.append(c)
+	return out
+
+
+static func _remove_camp(state: WorldState, camp: Dictionary) -> void:
+	var m := state.military
+	m.camps.erase(camp)
+	m.next_camp_day = maxi(m.next_camp_day, state.day() + _camp_gap(state))
+
+
+# --- Riding against a camp (Phase 5.2) -------------------------------------------------------
+
+## Who rides out: retainers, knights and the watch fit to fight (not the
+## levy, who won't leave their fields).
+static func riders(state: WorldState) -> Array[CharacterData]:
+	var w := section("warband")
+	var watch: Array = w.get("watch", ["soldier", "guard_captain"])
+	var out: Array[CharacterData] = []
+	for c in state.characters:
+		if state.is_player(c) or c.is_visitor() or c.is_away() or wounded(state, c) or c.age < 16:
+			continue
+		if c.retainer or c.is_knight() or watch.has(c.occupation_id):
+			out.append(c)
+	return out
+
+
+## The camp's band as fighters, on their own ground (home_combat).
+static func camp_band(state: WorldState, camp: Dictionary) -> Array[Dictionary]:
+	var theirs: Array[Dictionary] = []
+	var bonus := int(section("camps").get("home_combat", 6))
+	for i in maxi(1, int(camp["men"])):
+		var r := CharacterGenerator.raider(state, str(camp["band"]), i, "camp_%d" % int(camp["id"]))
+		var f := fighter(state, r, "raiders")
+		f["combat"] = int(f["combat"]) + bonus
+		theirs.append(f)
+	return theirs
+
+
+## The fight at the camp: the riders (or the party already out) and you if
+## you lead them, against the band.
+static func camp_sides(state: WorldState, camp: Dictionary, heir: bool, party: Array = []) -> Dictionary:
+	var ours: Array[Dictionary] = []
+	var people: Array[CharacterData] = riders(state)
+	if not party.is_empty():
+		people.clear()
+		for id: int in party:
+			var c := state.get_character(id)
+			if c and not state.is_player(c) and not wounded(state, c):
+				people.append(c)
+	for c in people:
+		ours.append(fighter(state, c, "house"))
+	if heir and state.player():
+		ours.append(fighter(state, state.player(), "house"))
+	return {"ours": ours, "theirs": camp_band(state, camp)}
+
+
+## The captains' reckoning of an attack on the camp (as for a raid).
+static func camp_odds(state: WorldState, camp_id: int, heir: bool = false, trials: int = 40) -> float:
+	var camp := state.military.get_camp(camp_id)
+	if camp.is_empty():
+		return 0.0
+	var wins := 0
+	for i in trials:
+		var s := camp_sides(state, camp, heir)
+		if s["ours"].is_empty():
+			return 0.0
+		if resolve(s["ours"], s["theirs"], Seeds.rng(state.world_seed, "camp_odds_%d_%d_%d" % [camp_id, state.day(), i]))["winner"] == "house":
+			wins += 1
+	return float(wins) / trials
+
+
+## Can the warband ride against this camp now? {ok, reason}
+static func can_ride(state: WorldState, camp_id: int, heir: bool = false) -> Dictionary:
+	var m := state.military
+	var camp := m.get_camp(camp_id)
+	if camp.is_empty():
+		return {"ok": false, "reason": "That camp is gone."}
+	if not bool(camp.get("known", true)):
+		return {"ok": false, "reason": "No one knows where they camp yet."}
+	if not m.expedition.is_empty():
+		return {"ok": false, "reason": "Your warband is already away."}
+	if not m.raid.is_empty() and int(m.raid.get("camp", -1)) == camp_id:
+		return {"ok": false, "reason": "Their band is already on the road to you: meet them at home."}
+	if due(state):
+		return {"ok": false, "reason": "A band strikes today: your warband is needed at home."}
+	if riders(state).is_empty() and not heir:
+		return {"ok": false, "reason": "You have no one to send: no retainers, knights or watch fit to fight."}
+	return {"ok": true, "reason": ""}
+
+
+## The warband rides against a camp (and you with it if `heir`): a camp's
+## days there, the fight on arrival, the same days home. {ok, text, away [ids]}
+static func ride_out(state: WorldState, camp_id: int, heir: bool = false) -> Dictionary:
+	var can := can_ride(state, camp_id, heir)
+	if not can["ok"]:
+		return {"ok": false, "text": can["reason"], "away": []}
+	var m := state.military
+	var camp := m.get_camp(camp_id)
+	var day := state.day()
+	var days := int(camp["days"])
+	var party: Array[int] = []
+	for c in riders(state):
+		party.append(c.id)
+	m.expedition = {"camp": camp_id, "band": str(camp["band"]), "party": party, "heir": heir,
+		"depart": day, "fight": day + days, "back": day + 2 * days, "fought": false}
+	var away: Array[int] = party.duplicate()
+	if heir and state.player():
+		away.append(state.player().id)
+	for id in away:
+		var c := state.get_character(id)
+		c.away_at = "camp"
+		c.away_until = day + 2 * days
+	var text := "%s ride%s out against %s, %s. %s" % ["You and your warband" if heir else "Your warband (%d)" % party.size(), "" if heir or party.size() != 1 else "s",
+		camp["band"], Realm.days_text(days), "The village is the barer while they're away." if not party.is_empty() else ""]
+	state.house.log_event(day, "The warband rode out against %s." % camp["band"], "office")
+	return {"ok": true, "text": text.strip_edges(), "away": away}
+
+
+## The expedition's days: the fight on arrival, home again after.
+static func _expedition_daily(state: WorldState, events: Array[Dictionary]) -> void:
+	var m := state.military
+	if m.expedition.is_empty():
+		return
+	var day := state.day()
+	if not bool(m.expedition["fought"]) and day >= int(m.expedition["fight"]):
+		_fight_camp(state, events)
+	if not m.expedition.is_empty() and day >= int(m.expedition["back"]):
+		_ride_home(state, events)
+
+
+static func _fight_camp(state: WorldState, events: Array[Dictionary]) -> void:
+	var m := state.military
+	var x := m.expedition
+	x["fought"] = true
+	var camp := m.get_camp(int(x["camp"]))
+	if camp.is_empty():
+		events.append({"text": "Your warband found the camp of %s empty: the band is scattered." % x["band"], "kind": "info"})
+		return
+	var heir := bool(x["heir"]) and state.player() != null and state.player().away_at == "camp"
+	var s := camp_sides(state, camp, heir, x["party"])
+	if s["ours"].is_empty():
+		events.append({"text": "No one was left to fight at the camp of %s." % x["band"], "kind": "bad"})
+		return
+	var r := resolve(s["ours"], s["theirs"], Seeds.rng(state.world_seed, "camp_fight_%d" % state.day()))
+	finish_camp(state, camp, r["winner"], r["ours"], r["theirs"], events)
+
+
+## What the fight at a camp leaves: the toll on yours as in any fight; won,
+## the camp is gone (its hoard and the band's purses are yours, renown, and
+## the houses near it are grateful); lost, the band holds and grows bolder.
+static func finish_camp(state: WorldState, camp: Dictionary, winner: String, ours: Array, theirs: Array, events: Array[Dictionary]) -> Dictionary:
+	var m := state.military
+	var a := section("after")
+	var band := str(camp["band"])
+	var rng := Seeds.rng(state.world_seed, "camp_after_%d" % state.day())
+	var won := winner == "house"
+	var report := {"won": won, "band": band, "ours": [], "size": theirs.size(), "raiders_fallen": fallen(theirs),
+		"gold": 0, "food": 0, "renown": 0, "day": state.day(), "camp": true}
+	var dead := _toll(state, ours, report, rng)
+	var lost := dead.size()
+	var text := ""
+	if won:
+		var gold := int(camp["hoard"]) + theirs.size() * int(a.get("purse_per_raider", 12))
+		var renown := int(section("camps").get("renown_clear", 6)) + fallen(theirs) * int(a.get("renown_per_raider", 1))
+		state.house.gold += gold
+		state.house.renown += renown
+		report["gold"] = gold
+		report["renown"] = renown
+		var grateful := Realm.camp_cleared(state, camp)
+		report["grateful"] = grateful
+		_remove_camp(state, camp)
+		text = "Your warband took the camp of %s: %d of %d fell and the rest fled. Their hoard of %d gold is yours. %s%s" % [band, fallen(theirs), theirs.size(), gold,
+			"None of yours died." if lost == 0 else "%d of yours died." % lost, (" %s %s grateful." % [", ".join(grateful), "is" if grateful.size() == 1 else "are"]) if not grateful.is_empty() else ""]
+	else:
+		camp["men"] = mini(int(camp["men"]) + 1, int(section("raids").get("band_max", 14)))
+		text = "%s held their camp against your warband. %s" % [_cap(band), "None of yours died." if lost == 0 else "%d of yours died." % lost]
+	state.house.log_event(state.day(), text, "office" if won else "bad")
+	m.battles += 1
+	if won:
+		m.won += 1
+	m.last_report = report
+	events.append({"text": text, "kind": "good" if won else "bad", "battle": report})
+	for c in dead:
+		LifeSystem.die(state, c, "wounds taken at the camp of %s" % band, events)
+	return report
+
+
+static func _ride_home(state: WorldState, events: Array[Dictionary]) -> void:
+	var m := state.military
+	var back: Array[int] = []
+	for c in state.characters:
+		if c.away_at == "camp":
+			c.away_at = ""
+			c.away_until = -1
+			back.append(c.id)
+	var band := str(m.expedition.get("band", "the band"))
+	m.expedition = {}
+	if not back.is_empty():
+		events.append({"text": "Your warband is home from the camp of %s." % band, "kind": "info", "back": back})

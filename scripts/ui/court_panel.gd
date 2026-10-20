@@ -151,7 +151,21 @@ func _defence(st: WorldState) -> void:
 			row.add_child(lv)
 		_body.add_child(row)
 	else:
-		_body.add_child(_wrap("No raiders about. Fights won: %d of %d." % [m.won, m.battles], 14, UITheme.TEXT_DIM))
+		_body.add_child(_wrap("No raiders on the road. Fights won: %d of %d." % [m.won, m.battles], 14, UITheme.TEXT_DIM))
+	if not m.expedition.is_empty():
+		var x := m.expedition
+		var when := "they fight on %s" % Calendar.format_date(int(x["fight"]) * Calendar.MINUTES_PER_DAY) if not bool(x.get("fought", false)) else "home by %s" % Calendar.format_date(int(x["back"]) * Calendar.MINUTES_PER_DAY)
+		_body.add_child(_wrap("Your warband is away against %s: %s. The village is the barer for it." % [x["band"], when], 14, UITheme.ACCENT))
+	if m.camps.size() > Military.known_camps(st).size():
+		_body.add_child(_wrap("A band is camped somewhere in the woods; no one knows where yet.", 13, UITheme.BAD))
+	for camp in Military.known_camps(st):
+		var b := UITheme.button("%s: some %d men, camped %s %s" % [Military._cap(str(camp["band"])), int(camp["men"]), Realm.days_text(int(camp["days"])), camp["road"]], func() -> void:
+			world.ui.show_realm("camp", int(camp["id"])))
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.tooltip_text = "On the realm map (%s): send the warband to clear the camp." % world.key_hint("toggle_realm")
+		_body.add_child(b)
+	if m.camps.is_empty():
+		_body.add_child(_wrap("No bands are camped near the village.", 13, UITheme.TEXT_DIM))
 	var band := Military.warband(st)
 	var names: Array[String] = []
 	for c in band.slice(0, 10):
@@ -163,6 +177,13 @@ func _defence(st: WorldState) -> void:
 	var hurt := st.characters.filter(func(c: CharacterData) -> bool: return Military.wounded(st, c))
 	if not hurt.is_empty():
 		_body.add_child(_wrap("Wounded: %s." % ", ".join(hurt.map(func(c: CharacterData) -> String: return "%s (until %s)" % [c.first_name, Calendar.format_date(c.wounded_until * Calendar.MINUTES_PER_DAY)])), 13, UITheme.ACCENT))
+	var gentle := CheckBox.new()
+	gentle.text = "Gentle fights"
+	gentle.button_pressed = m.gentle
+	gentle.tooltip_text = "For this game: those who fall in a fight die far less often (one in ten, not one in three)."
+	gentle.add_theme_font_size_override("font_size", 14)
+	gentle.toggled.connect(func(on: bool) -> void: m.gentle = on)
+	_body.add_child(gentle)
 
 
 ## Your health and heir, a regency while you're young, the family tree, and
